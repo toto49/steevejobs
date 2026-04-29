@@ -6,7 +6,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <BorderPane stylesheets="@../../../../style/connexion.css" xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.eseo.steevejobs.HelloController"
+            fx:controller="com.eseo.steevejobs.controller.BienvenueController"
             style="-fx-background-color: white;">
 
     <center>
@@ -42,7 +42,7 @@
 
                 <Region VBox.vgrow="ALWAYS"/>
 
-                <Hyperlink text="mot de passe oublié ?"
+                <Hyperlink fx:id="mdpoublie" text="mot de passe oublié ?" onAction="#mdpOublieClicked"
                            style="-fx-text-fill: #5C85D6; -fx-font-size: 12px; -fx-underline: true; -fx-border-color: transparent;"/>
             </VBox>
 

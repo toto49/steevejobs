@@ -63,7 +63,7 @@ public class HelloApplication extends Application {
         stage.initStyle(StageStyle.TRANSPARENT);
         headerGlobal = creerHeaderPersonnalise(stage);
 
-        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("view/menu-view.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("view/bienvenue-view.fxml"));
         Parent vuePrincipale = fxmlLoader.load();
 
         VBox.setVgrow(vuePrincipale, Priority.ALWAYS);

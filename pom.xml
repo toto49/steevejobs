@@ -93,6 +93,17 @@
             <artifactId>mysql-connector-j</artifactId>
             <version>9.6.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>2.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.mail</groupId>
+            <artifactId>jakarta.mail-api</artifactId>
+            <version>2.2.0-M1</version>
+            <scope>compile</scope>
+        </dependency>
 
     </dependencies>
 
