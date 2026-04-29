@@ -1,0 +1,25 @@
+
+.ma-checkbox .box {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+.ma-checkbox {
+    -fx-text-fill: #5C85D6;
+}
+
+.ma-checkbox .mark {
+    -fx-background-color: transparent;
+    -fx-shape: none;
+}
+
+.ma-checkbox:selected .mark {
+    -fx-shape: "M0,5 L3,8 L10,0 L10,2 L3,10 L0,7 Z";
+    -fx-background-color: #2196F3;
+    -fx-mark-color: #2196F3;
+}
+.text-field, .password-field {
+    -fx-highlight-fill: #5C85D6;
+    -fx-highlight-text-fill: white;
+}
