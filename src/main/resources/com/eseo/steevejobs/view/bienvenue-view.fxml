@@ -6,7 +6,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <BorderPane stylesheets="@../../../../style/connexion.css" xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.eseo.steevejobs.HelloController"
+            fx:controller="com.eseo.steevejobs.controller.BienvenueController"
             style="-fx-background-color: white;">
 
     <center>
@@ -16,41 +16,35 @@
                 <padding>
                     <Insets top="40" right="50" bottom="40" left="50"/>
                 </padding>
-
                 <Region VBox.vgrow="ALWAYS"/>
-
                 <ImageView fitHeight="160" fitWidth="160" preserveRatio="true">
                     <Image url="@../../../../images/logo.png"/>
                 </ImageView>
-
                 <Region prefHeight="20"/>
-
                 <TextField promptText="E-MAIL" alignment="CENTER"
-                           style="-fx-background-radius: 25; -fx-border-radius: 25; -fx-text-fill: black;  -fx-border-color: #000000; -fx-background-color: transparent; -fx-pref-height: 45; -fx-font-family: 'Arial';"/>
-
+                           style="-fx-background-radius: 25; -fx-border-radius: 25; -fx-text-fill: black; -fx-border-color: #000000; -fx-background-color: transparent; -fx-pref-height: 45; -fx-font-family: 'Arial';"/>
                 <PasswordField promptText="MDP" alignment="CENTER"
-                               style="-fx-background-radius: 25; -fx-text-fill: black;  -fx-border-radius: 25; -fx-border-color: #000000; -fx-background-color: transparent; -fx-pref-height: 45; -fx-font-family: 'Arial';"/>
-
+                               style="-fx-background-radius: 25; -fx-text-fill: black; -fx-border-radius: 25; -fx-border-color: #000000; -fx-background-color: transparent; -fx-pref-height: 45; -fx-font-family: 'Arial';"/>
                 <Region prefHeight="10"/>
-
                 <Button text="LOGIN" onAction="#onLoginClick" maxWidth="Infinity"
                         style="-fx-background-color: #5C85D6; -fx-text-fill: white; -fx-background-radius: 25; -fx-pref-height: 50; -fx-font-weight: bold; -fx-font-size: 16px; -fx-cursor: hand;"/>
-
                 <HBox alignment="CENTER_LEFT">
                     <CheckBox text="Enregistrer mes informations" styleClass="ma-checkbox" />
                 </HBox>
-
                 <Region VBox.vgrow="ALWAYS"/>
-
-                <Hyperlink text="mot de passe oublié ?"
+                <Hyperlink fx:id="mdpoublie" text="mot de passe oublié ?" onAction="#mdpOublieClicked"
                            style="-fx-text-fill: #5C85D6; -fx-font-size: 12px; -fx-underline: true; -fx-border-color: transparent;"/>
             </VBox>
 
             <StackPane fx:id="rightPane" HBox.hgrow="ALWAYS"
-                       style="-fx-background-color: #5C85D6; -fx-background-image: url('@../../../../images/happy.png'); -fx-background-size: cover; -fx-background-position: center center;">
+                       style="-fx-background-color: #5C85D6;
+                              -fx-background-image: url('/images/image.jpg');
+                              -fx-background-size: cover;
+                              -fx-background-position: center center;
+                              -fx-background-repeat: no-repeat;">
 
                 <Label text="BIENVENUE." StackPane.alignment="BOTTOM_RIGHT"
-                       style="-fx-background-color: #5C85D6; -fx-text-fill: white; -fx-font-size: 60px; -fx-font-weight: bold; -fx-padding: 15 40 15 40;">
+                       style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 60px; -fx-font-weight: bold; -fx-padding: 15 40 15 40;">
                     <StackPane.margin>
                         <Insets bottom="40" right="40"/>
                     </StackPane.margin>
