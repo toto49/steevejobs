@@ -2,6 +2,15 @@ package com.eseo.steevejobs.model;
 
 //Commentaires géré par IA
 
+import java.util.List;
+import java.util.ArrayList;
+
+/**
+ * Classe représentant un utilisateur du système.
+ * Elle regroupe les informations personnelles, professionnelles
+ * ainsi que les plannings associés.
+ */
+
 public class User {
     /** Identifiant unique de l'utilisateur */
     private int id;
@@ -16,15 +25,21 @@ public class User {
 
     /** Adresse postale de l'utilisateur */
     private String adresse;
+
     /** Rôle de l'utilisateur */
     private String role;
+
     /** Poste occupé dans l'entreprise */
     private String poste;
+
     /** Numéro de téléphone */
     private String tel;
 
-    /** Détermine si le compte est actif */
+    /** Indique si le compte est actif ou désactivé */
     private boolean actif;
+
+    /** Liste des plannings associés à cet utilisateur */
+    private List<Planning> plannings;
 
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés.
@@ -37,7 +52,7 @@ public class User {
      * @param role Rôle de l'utilisateur
      * @param tel Numéro de téléphone
      * @param poste Poste occupé
-     * @param actif Compte actif
+     * @param actif Indique si le compte est actif
      */
 
     public User( int id, String nom, String prenom, String email, String passwordHash, String adresse, String role, String tel, String poste, boolean actif) {
@@ -51,6 +66,8 @@ public class User {
         this.tel = tel;
         this.poste = poste;
         this.actif = actif;
+
+        this.plannings = new ArrayList<>();
     }
 
     /** --- Getters & Setters classiques --- */
@@ -85,7 +102,6 @@ public class User {
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
-
     public String getAdresse() {
         return adresse;
     }
@@ -115,5 +131,11 @@ public class User {
     }
     public void setActif(boolean actif) {
         this.actif = actif;
+    }
+    public List<Planning> getPlannings() {
+        return plannings;
+    }
+    public void setPlannings(List<Planning> plannings) {
+        this.plannings = plannings;
     }
 }
