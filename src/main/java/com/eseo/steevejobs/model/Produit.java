@@ -17,7 +17,7 @@ public class Produit {
     private String nom;
 
     /** Prix hors taxe du produit */
-    private BigDecimal prix;
+    private BigDecimal prix_unitaire;
 
     /** Taux de TVA appliqué au produit */
     private BigDecimal taux_tva;
@@ -43,10 +43,10 @@ public class Produit {
      * @param actif     statut actif/inactif
      */
 
-    public Produit(int id, String nom, BigDecimal prix, BigDecimal taux_tva, int quantite, BigDecimal poids, boolean actif) {
+    public Produit(int id, String nom, BigDecimal prix_unitaire, BigDecimal taux_tva, int quantite, BigDecimal poids, boolean actif) {
         this.id = id;
         this.nom = nom;
-        this.prix = prix;
+        this.prix_unitaire = prix_unitaire;
         this.taux_tva = taux_tva;
         this.quantite = quantite;
         this.poids = poids;
@@ -68,10 +68,10 @@ public class Produit {
         this.nom = nom;
     }
     public BigDecimal getPrix() {
-        return prix;
+        return prix_unitaire;
     }
     public void setPrix(BigDecimal prix) {
-        this.prix = prix;
+        this.prix_unitaire = prix;
     }
     public BigDecimal getTaux_tva() {
         return taux_tva;
