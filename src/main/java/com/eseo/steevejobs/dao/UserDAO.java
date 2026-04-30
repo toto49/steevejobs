@@ -17,9 +17,9 @@ import java.util.List;
 public class UserDAO {
 
     /**
-     * Create user.
-     * @param user the user
-     * @throws SQLException the sql exception
+     * Créer un utilisateur.
+     * @param user l'utilisateur
+     * @throws SQLException l'exception SQL
      */
     public void createUser(User user) throws SQLException {
         String sql = "INSERT INTO USER (nom, prenom, email, mdp, adresse, tel, role, poste, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -48,9 +48,9 @@ public class UserDAO {
     }
 
     /**
-     * Update user.
-     * @param user the user
-     * @throws SQLException the sql exception
+     * Mettre à jour l'utilisateur.
+     * @param user l'utilisateur
+     * @throws SQLException l'exception SQL
      */
     public void updateUser(User user) throws SQLException {
         String sql = "UPDATE USER SET nom = ?, prenom = ?, email = ?, mdp = ?, adresse = ?, tel = ?, role = ?, poste = ?, actif = ? WHERE id_user = ?";
@@ -74,10 +74,10 @@ public class UserDAO {
     }
 
     /**
-     * Delete user.
-     * @param id the user id
-     * @return the boolean
-     * @throws SQLException the sql exception
+     Supprimer l'utilisateur.
+     @param id l'identifiant de l'utilisateur
+     @return la valeur booléenne
+     @throws SQLException l'exception SQL
      */
     public boolean deleteUser(int id) throws SQLException {
         String sql = "DELETE FROM USER WHERE id_user = ?";
@@ -93,10 +93,10 @@ public class UserDAO {
     }
 
     /**
-     * Get by id user.
-     * @param id the user id
-     * @return the user
-     * @throws SQLException the sql exception
+     * Récupérer l'utilisateur par son identifiant.
+     * @param id l'identifiant de l'utilisateur
+     * @return l'utilisateur
+     * @throws SQLException l'exception SQL
      */
     public User getById(int id) throws SQLException {
         String sql = "SELECT * FROM USER WHERE id_user = ?";
@@ -126,10 +126,10 @@ public class UserDAO {
     }
 
     /**
-     * Get by email user.
-     * @param email the email
-     * @return the user
-     * @throws SQLException the sql exception
+     * Récupérer l'utilisateur par son adresse e-mail.
+     * @param email l'adresse e-mail
+     * @return l'utilisateur
+     * @throws SQLException l'exception SQL
      */
     public User getByEmail(String email) throws SQLException {
         String sql = "SELECT * FROM USER WHERE email = ?";
@@ -159,11 +159,11 @@ public class UserDAO {
     }
 
     /**
-     * Authenticate user
-     * @param email        the email
-     * @param passwordHash the password hash
-     * @return the user if authenticated, null otherwise
-     * @throws SQLException the sql exception
+     * Authentifier l'utilisateur
+     * @param email l'adresse e-mail
+     * @param passwordHash le hachage du mot de passe
+     * @return l'utilisateur si authentifié, null sinon
+     * @throws SQLException l'exception SQL
      */
     public User authenticate(String email, String passwordHash) throws SQLException {
         String sql = "SELECT * FROM USER WHERE email = ? AND mdp = ? AND actif = 1";
@@ -192,11 +192,30 @@ public class UserDAO {
             }
         }
     }
-
     /**
-     * Find all list
-     * @return the list
-     * @throws SQLException the sql exception
+     * Mise à jour du mot de passe
+     * @param id l'identifiant de l'utilisateur
+     * @param newPasswordHash le hachage du nouveau mot de passe
+     * @return la valeur booléenne
+     * @throws SQLException l'exception SQL
+     */
+    public boolean updatePassword(int id, String newPasswordHash) throws SQLException {
+        String sql = "UPDATE USER SET mdp = ? WHERE id_user = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, newPasswordHash);
+            stmt.setInt(2, id);
+
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        }
+    }
+    /**
+     * Trouver toute la liste
+     * @return la liste
+     * @throws SQLException l'exception SQL
      */
     public List<User> findAll() throws SQLException {
         List<User> users = new ArrayList<>();
@@ -225,10 +244,10 @@ public class UserDAO {
     }
 
     /**
-     * Find by role list
-     * @param role the role
-     * @return the list
-     * @throws SQLException the sql exception
+     * Recherche par liste de rôles
+     * @param role le rôle
+     * @return la liste
+     * @throws SQLException l'exception SQL
      */
     public List<User> findByRole(String role) throws SQLException {
         List<User> users = new ArrayList<>();
@@ -259,9 +278,9 @@ public class UserDAO {
     }
 
     /**
-     * Find active users list
-     * @return the list
-     * @throws SQLException the sql exception
+     * Trouver la liste des utilisateurs actifs
+     * @return la liste
+     * @throws SQLException l'exception SQL
      */
     public List<User> findActiveUsers() throws SQLException {
         List<User> users = new ArrayList<>();
@@ -290,10 +309,10 @@ public class UserDAO {
     }
 
     /**
-     * Search by name list
-     * @param searchTerm the search term
-     * @return the list
-     * @throws SQLException the sql exception
+     * Recherche par liste de noms
+     * @param searchTerm le terme de recherche
+     * @return la liste
+     * @throws SQLException l'exception SQL
      */
     public List<User> searchByName(String searchTerm) throws SQLException {
         List<User> users = new ArrayList<>();
@@ -326,10 +345,10 @@ public class UserDAO {
     }
 
     /**
-     * Deactivate user
-     * @param id the user id
-     * @return the boolean
-     * @throws SQLException the sql exception
+     * Désactiver l'utilisateur
+     * @param id l'identifiant de l'utilisateur
+     * @return la valeur booléenne
+     * @throws SQLException l'exception SQL
      */
     public boolean deactivateUser(int id) throws SQLException {
         String sql = "UPDATE USER SET actif = 0 WHERE id_user = ?";
@@ -345,10 +364,10 @@ public class UserDAO {
     }
 
     /**
-     * Activate user
-     * @param id the user id
-     * @return the boolean
-     * @throws SQLException the sql exception
+     * Activer l'utilisateur
+     * @param id l'identifiant de l'utilisateur
+     * @return la valeur booléenne
+     * @throws SQLException l'exception SQL
      */
     public boolean activateUser(int id) throws SQLException {
         String sql = "UPDATE USER SET actif = 1 WHERE id_user = ?";
@@ -365,10 +384,10 @@ public class UserDAO {
 
 
     /**
-     * Email exists
-     * @param email the email
-     * @return the boolean
-     * @throws SQLException the sql exception
+     * L'adresse e-mail existe
+     * @param email l'adresse e-mail
+     * @return la valeur booléenne
+     * @throws SQLException l'exception SQL
      */
     public boolean emailExists(String email) throws SQLException {
         String sql = "SELECT COUNT(*) FROM USER WHERE email = ?";
@@ -386,11 +405,8 @@ public class UserDAO {
         }
         return false;
     }
-
     /**
-     * Count users
-     *  @return the int
-     *  @throws SQLException the sql exception
+     * Compte user
      */
     public int countUsers() throws SQLException {
         String sql = "SELECT COUNT(*) FROM USER";
@@ -407,9 +423,7 @@ public class UserDAO {
     }
 
     /**
-     * Count active users
-     * @return the int
-     * @throws SQLException the sql exception
+     * Compte user active
      */
     public int countActiveUsers() throws SQLException {
         String sql = "SELECT COUNT(*) FROM USER WHERE actif = 1";
