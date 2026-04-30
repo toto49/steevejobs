@@ -8,16 +8,17 @@ import java.util.List;
 
 /**
  * Data Access Object dédié aux opérations sur la table des utilisateurs.
- *  * <p>
- *  * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- *  * et sauvegarder les objets {@link com.eseo.steevejobs.model.User} en base de données.
- *  * </p>
+ * * <p>
+ * * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
+ * * et sauvegarder les objets {@link com.eseo.steevejobs.model.User} en base de données.
+ * * </p>
  */
 
 public class UserDAO {
 
     /**
      * Créer un utilisateur.
+     *
      * @param user l'utilisateur
      * @throws SQLException l'exception SQL
      */
@@ -49,6 +50,7 @@ public class UserDAO {
 
     /**
      * Mettre à jour l'utilisateur.
+     *
      * @param user l'utilisateur
      * @throws SQLException l'exception SQL
      */
@@ -74,10 +76,11 @@ public class UserDAO {
     }
 
     /**
-     Supprimer l'utilisateur.
-     @param id l'identifiant de l'utilisateur
-     @return la valeur booléenne
-     @throws SQLException l'exception SQL
+     * Supprimer l'utilisateur.
+     *
+     * @param id l'identifiant de l'utilisateur
+     * @return la valeur booléenne
+     * @throws SQLException l'exception SQL
      */
     public boolean deleteUser(int id) throws SQLException {
         String sql = "DELETE FROM USER WHERE id_user = ?";
@@ -94,6 +97,7 @@ public class UserDAO {
 
     /**
      * Récupérer l'utilisateur par son identifiant.
+     *
      * @param id l'identifiant de l'utilisateur
      * @return l'utilisateur
      * @throws SQLException l'exception SQL
@@ -127,6 +131,7 @@ public class UserDAO {
 
     /**
      * Récupérer l'utilisateur par son adresse e-mail.
+     *
      * @param email l'adresse e-mail
      * @return l'utilisateur
      * @throws SQLException l'exception SQL
@@ -160,7 +165,8 @@ public class UserDAO {
 
     /**
      * Authentifier l'utilisateur
-     * @param email l'adresse e-mail
+     *
+     * @param email        l'adresse e-mail
      * @param passwordHash le hachage du mot de passe
      * @return l'utilisateur si authentifié, null sinon
      * @throws SQLException l'exception SQL
@@ -192,9 +198,11 @@ public class UserDAO {
             }
         }
     }
+
     /**
      * Mise à jour du mot de passe
-     * @param id l'identifiant de l'utilisateur
+     *
+     * @param id              l'identifiant de l'utilisateur
      * @param newPasswordHash le hachage du nouveau mot de passe
      * @return la valeur booléenne
      * @throws SQLException l'exception SQL
@@ -212,8 +220,10 @@ public class UserDAO {
             return rowsAffected > 0;
         }
     }
+
     /**
      * Trouver toute la liste
+     *
      * @return la liste
      * @throws SQLException l'exception SQL
      */
@@ -245,6 +255,7 @@ public class UserDAO {
 
     /**
      * Recherche par liste de rôles
+     *
      * @param role le rôle
      * @return la liste
      * @throws SQLException l'exception SQL
@@ -279,6 +290,7 @@ public class UserDAO {
 
     /**
      * Trouver la liste des utilisateurs actifs
+     *
      * @return la liste
      * @throws SQLException l'exception SQL
      */
@@ -310,6 +322,7 @@ public class UserDAO {
 
     /**
      * Recherche par liste de noms
+     *
      * @param searchTerm le terme de recherche
      * @return la liste
      * @throws SQLException l'exception SQL
@@ -346,6 +359,7 @@ public class UserDAO {
 
     /**
      * Désactiver l'utilisateur
+     *
      * @param id l'identifiant de l'utilisateur
      * @return la valeur booléenne
      * @throws SQLException l'exception SQL
@@ -365,6 +379,7 @@ public class UserDAO {
 
     /**
      * Activer l'utilisateur
+     *
      * @param id l'identifiant de l'utilisateur
      * @return la valeur booléenne
      * @throws SQLException l'exception SQL
@@ -385,6 +400,7 @@ public class UserDAO {
 
     /**
      * L'adresse e-mail existe
+     *
      * @param email l'adresse e-mail
      * @return la valeur booléenne
      * @throws SQLException l'exception SQL
@@ -405,6 +421,7 @@ public class UserDAO {
         }
         return false;
     }
+
     /**
      * Compte user
      */

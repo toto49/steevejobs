@@ -2,15 +2,14 @@ package com.eseo.steevejobs.model;
 
 //Commentaires géré par IA
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Classe représentant un utilisateur du système.
  * Elle regroupe les informations personnelles, professionnelles
  * ainsi que les plannings associés.
  */
-
 public class User {
     /** Identifiant unique de l'utilisateur */
     private int id;
@@ -42,6 +41,14 @@ public class User {
     private List<Planning> plannings;
 
     /**
+     * Constructeur par défaut (vide).
+     * Indispensable pour créer un objet sans paramètres (ex: dans ton DatabaseSeeder).
+     */
+    public User() {
+        this.plannings = new ArrayList<>();
+    }
+
+    /**
      * Constructeur complet permettant d'initialiser toutes les propriétés.
      * @param id Identifiant unique
      * @param nom Nom de famille
@@ -54,7 +61,6 @@ public class User {
      * @param poste Poste occupé
      * @param actif Indique si le compte est actif
      */
-
     public User( int id, String nom, String prenom, String email, String passwordHash, String adresse, String role, String tel, String poste, boolean actif) {
         this.id = id;
         this.nom = nom;

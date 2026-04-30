@@ -55,7 +55,7 @@ public class MenuController {
     @FXML
     public void initialize() {
         instance = this;
-        chargerPage("bienvenue");
+        chargerPage("home");
         if (btnAccueil != null) updateButtonStyles(btnAccueil);
     }
 
@@ -157,7 +157,7 @@ public class MenuController {
 
 
     private void updateButtonStyles(Button boutonActif) {
-        // On définit les styles (transparents pour ne voir que l'icône)
+
         String STYLE_INACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
         String STYLE_ACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
 
@@ -186,13 +186,11 @@ public class MenuController {
     private SVGPath extraireIcone(Button btn) {
         Object graphic = btn.getGraphic();
 
-        // Cas 1 : C'est un Group (votre structure actuelle)
         if (graphic instanceof javafx.scene.Group group) {
             if (!group.getChildren().isEmpty() && group.getChildren().get(0) instanceof SVGPath) {
                 return (SVGPath) group.getChildren().get(0);
             }
         }
-        // Cas 2 : C'est directement le SVGPath
         else if (graphic instanceof SVGPath) {
             return (SVGPath) graphic;
         }
