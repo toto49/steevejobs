@@ -153,7 +153,15 @@ public class UserService {
         if (passwordHash == null || passwordHash.trim().isEmpty()) {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         }
-        return userDAO.authenticate(email, passwordHash);
+        User user = userDAO.authenticate(email, passwordHash);
+
+        if (user != null) {
+            if (!user.isActif()) {
+                throw new IllegalStateException("Ce compte est désactivé. Veuillez contacter l'administrateur.");
+            }
+        }
+
+        return user;
     }
 
     /**
