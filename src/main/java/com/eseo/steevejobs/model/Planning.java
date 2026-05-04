@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 
 public class Planning {
 
-    /** Identifiant unique du planning (généralement clé primaire en base). */
+    /** Identifiant unique du planning. */
     private int id;
 
     /** Date et heure de début du créneau de travail. */
@@ -33,11 +33,11 @@ public class Planning {
     /**
      * Constructeur permettant d'initialiser un planning complet.
      *
-     * @param id identifiant unique
-     * @param jour_debut date/heure de début
-     * @param jour_fin date/heure de fin
-     * @param type type de planning
-     * @param user utilisateur concerné
+     * @param id            identifiant unique
+     * @param jour_debut    date/heure de début
+     * @param jour_fin      date/heure de fin
+     * @param type          type de planning
+     * @param user          utilisateur concerné
      */
 
     public Planning(int id, LocalDateTime jour_debut, LocalDateTime jour_fin, String type, User user) {

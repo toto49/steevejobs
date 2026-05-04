@@ -34,13 +34,13 @@ public class Produit {
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés du produit.
      *
-     * @param id        identifiant unique
-     * @param nom       nom du produit
-     * @param prix      prix hors taxe
-     * @param taux_tva  taux de TVA
-     * @param quantite  quantité en stock
-     * @param poids     poids du produit
-     * @param actif     statut actif/inactif
+     * @param id            identifiant unique
+     * @param nom           nom du produit
+     * @param prix_unitaire prix hors taxe
+     * @param taux_tva      taux de TVA
+     * @param quantite      quantité en stock
+     * @param poids         poids du produit
+     * @param actif         statut actif/inactif
      */
 
     public Produit(int id, String nom, BigDecimal prix_unitaire, BigDecimal taux_tva, int quantite, BigDecimal poids, boolean actif) {

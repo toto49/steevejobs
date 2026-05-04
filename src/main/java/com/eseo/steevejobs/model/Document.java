@@ -1,20 +1,23 @@
 package com.eseo.steevejobs.model;
 
+import com.eseo.steevejobs.model.Enum.DocumentStatut;
+import com.eseo.steevejobs.model.Enum.DocumentType;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class Document {
     private int id;
-    private Enum type;
+    private DocumentType type;
     private LocalDateTime date;
     private BigDecimal prix_ht;
     private BigDecimal prix_ttc;
-    private Enum statut;
+    private DocumentStatut statut;
     private String url;
-    // TODO rajouter id tiers;
-    // TODO rajouter id vendeur;
+    private Tiers tiers;
+    private User creator;
 
-    public Document(int id, Enum type, LocalDateTime date,  BigDecimal prix_ht, BigDecimal prix_ttc, Enum statut, String url) {
+    public Document(int id, DocumentType type, LocalDateTime date,  BigDecimal prix_ht, BigDecimal prix_ttc, DocumentStatut statut, String url) {
         this.id = id;
         this.type = type;
         this.date = date;
@@ -22,6 +25,7 @@ public class Document {
         this.prix_ttc = prix_ttc;
         this.statut = statut;
         this.url = url;
+        this.tiers = new Tiers()
 
     }
 
@@ -31,10 +35,10 @@ public class Document {
     public void setId(int id) {
         this.id = id;
     }
-    public Enum getType() {
+    public DocumentType getType() {
         return type;
     }
-    public void setType(Enum type) {
+    public void setType(DocumentType type) {
         this.type = type;
     }
     public LocalDateTime getDate() {
@@ -55,10 +59,10 @@ public class Document {
     public void setPrix_ttc(BigDecimal prix_ttc) {
         this.prix_ttc = prix_ttc;
     }
-    public Enum getStatut() {
+    public DocumentStatut getStatut() {
         return statut;
     }
-    public void setStatut(Enum statut) {
+    public void setStatut(DocumentStatut statut) {
         this.statut = statut;
     }
     public String getUrl() {

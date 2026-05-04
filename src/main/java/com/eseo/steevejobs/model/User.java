@@ -40,26 +40,23 @@ public class User {
     /** Liste des plannings associés à cet utilisateur */
     private List<Planning> plannings;
 
-    /**
-     * Constructeur par défaut (vide).
-     * Indispensable pour créer un objet sans paramètres (ex: dans ton DatabaseSeeder).
-     */
+
     public User() {
         this.plannings = new ArrayList<>();
     }
 
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés.
-     * @param id Identifiant unique
-     * @param nom Nom de famille
-     * @param prenom Prénom
-     * @param email Adresse email
-     * @param passwordHash Mot de passe chiffré
-     * @param adresse Adresse postale
-     * @param role Rôle de l'utilisateur
-     * @param tel Numéro de téléphone
-     * @param poste Poste occupé
-     * @param actif Indique si le compte est actif
+     * @param id            Identifiant unique
+     * @param nom           Nom de famille
+     * @param prenom        Prénom
+     * @param email         Adresse email
+     * @param passwordHash  Mot de passe chiffré
+     * @param adresse       Adresse postale
+     * @param role          Rôle de l'utilisateur
+     * @param tel           Numéro de téléphone
+     * @param poste         Poste occupé
+     * @param actif         Indique si le compte est actif
      */
     public User( int id, String nom, String prenom, String email, String passwordHash, String adresse, String role, String tel, String poste, boolean actif) {
         this.id = id;
