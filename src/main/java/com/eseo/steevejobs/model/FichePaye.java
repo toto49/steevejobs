@@ -12,18 +12,20 @@ public class FichePaye {
 
     /***/
     private String url;
-    // TODO rajouter une liste de fiches de paye
+
+    private User employe;
 
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés de la Fiche de paye
      * @param id        identifiant unique
      * @param mois      Mois correspondant à la paie
-     * @param url       Emplacement du fichier
+     * @param url       Lien vers le fichier
      * */
-    public FichePaye(int id, LocalDateTime mois, String url) {
+    public FichePaye(int id, LocalDateTime mois, String url, User employe) {
         this.id = id;
         this.mois = mois;
         this.url = url;
+        this.employe = employe;
     }
 
     public int getId() {
@@ -43,6 +45,12 @@ public class FichePaye {
     }
     public void setUrl(String url) {
         this.url = url;
+    }
+    public User getEmploye() {
+        return employe;
+    }
+    public void setEmploye(User employe) {
+        this.employe = employe;
     }
 
 }

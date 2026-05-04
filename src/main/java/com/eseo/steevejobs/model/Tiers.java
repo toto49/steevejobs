@@ -1,18 +1,26 @@
 package com.eseo.steevejobs.model;
 
+import com.eseo.steevejobs.model.Enum.TiersType;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class Tiers {
     private int id;
     private String nom;
     private String prenom;
-    private Enum type;
+    private TiersType type;
     private String email;
     private String adresse;
     private String tel;
     private String siret;
     private String num_tva;
     private boolean actif;
+    private List<Document> documents;
 
-    public Tiers( int id, String nom, String prenom, Enum type, String email, String adresse, String tel, String siret, String num_tva ) {
+    public Tiers() { this.documents = new ArrayList<>();}
+
+    public Tiers( int id, String nom, String prenom, TiersType type, String email, String adresse, String tel, String siret, String num_tva ) {
         this.id = id;
         this.nom = nom;
         this.prenom = prenom;
@@ -23,6 +31,8 @@ public class Tiers {
         this.siret = siret;
         this.num_tva = num_tva;
         this.actif = true;
+
+        this.documents = new ArrayList<>();
     }
 
     public int  getId() {
@@ -43,10 +53,10 @@ public class Tiers {
     public void setPrenom(String prenom) {
         this.prenom = prenom;
     }
-    public Enum getType() {
+    public TiersType getType() {
         return type;
     }
-    public void setType(Enum type) {
+    public void setType(TiersType type) {
         this.type = type;
     }
     public String getEmail() {
@@ -84,5 +94,14 @@ public class Tiers {
     }
     public void setActif(boolean actif) {
         this.actif = actif;
+    }
+    public List<Document> getDocuments() {
+        return documents;
+    }
+    public void addDocument(Document document) {
+        this.documents.add(document);
+    }
+    public void removeDocument(Document document) {
+        this.documents.remove(document);
     }
 }

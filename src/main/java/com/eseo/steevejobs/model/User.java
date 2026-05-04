@@ -40,10 +40,15 @@ public class User {
     /** Liste des plannings associés à cet utilisateur */
     private List<Planning> plannings;
 
+    private List<FichePaye> fichesPaye;
+
+
 
     public User() {
         this.plannings = new ArrayList<>();
+        this.fichesPaye = new ArrayList<>();
     }
+
 
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés.
@@ -71,6 +76,7 @@ public class User {
         this.actif = actif;
 
         this.plannings = new ArrayList<>();
+        this.fichesPaye = new ArrayList<>();
     }
 
     /** --- Getters & Setters classiques --- */
@@ -138,7 +144,20 @@ public class User {
     public List<Planning> getPlannings() {
         return plannings;
     }
-    public void setPlannings(List<Planning> plannings) {
-        this.plannings = plannings;
+    public void addPlanning(Planning planning) {
+        this.plannings.add(planning);
     }
+    public void removePlanning(Planning planning) {
+        this.plannings.remove(planning);
+    }
+    public List<FichePaye> getFichesPaye() {
+        return fichesPaye;
+    }
+    public void addFichePaye(FichePaye fichePaye) {
+        this.fichesPaye.add(fichePaye);
+    }
+    public void removeFichePaye(FichePaye fichePaye) {
+        this.fichesPaye.remove(fichePaye);
+    }
+
 }
