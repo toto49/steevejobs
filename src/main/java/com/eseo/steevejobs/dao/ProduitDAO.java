@@ -21,14 +21,14 @@ public class ProduitDAO {
      * @throws SQLException exception SQL
      */
     public void createProduit(Produit produit) throws SQLException {
-        String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO PRODUITS (nom, prixUnitaire, tauxTva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, produit.getNom());
             stmt.setBigDecimal(2, produit.getPrix());
-            stmt.setBigDecimal(3, produit.getTaux_tva());
+            stmt.setBigDecimal(3, produit.getTauxTva());
             stmt.setInt(4, produit.getQuantite());
             stmt.setBigDecimal(5, produit.getPoid());
             stmt.setBoolean(6, produit.isActif());
@@ -49,14 +49,14 @@ public class ProduitDAO {
      * @throws SQLException exception SQL
      */
     public void updateProduit(Produit produit) throws SQLException {
-        String sql = "UPDATE PRODUITS SET nom = ?, prix_unitaire = ?, taux_tva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
+        String sql = "UPDATE PRODUITS SET nom = ?, prixUnitaire = ?, tauxTva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, produit.getNom());
             stmt.setBigDecimal(2, produit.getPrix());
-            stmt.setBigDecimal(3, produit.getTaux_tva());
+            stmt.setBigDecimal(3, produit.getTauxTva());
             stmt.setInt(4, produit.getQuantite());
             stmt.setBigDecimal(5, produit.getPoid());
             stmt.setBoolean(6, produit.isActif());
@@ -103,8 +103,8 @@ public class ProduitDAO {
                     return new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prix_unitaire"),
-                            rs.getBigDecimal("taux_tva"),
+                            rs.getBigDecimal("prixUnitaire"),
+                            rs.getBigDecimal("tauxTva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -133,8 +133,8 @@ public class ProduitDAO {
                     return new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prix_unitaire"),
-                            rs.getBigDecimal("taux_tva"),
+                            rs.getBigDecimal("prixUnitaire"),
+                            rs.getBigDecimal("tauxTva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -163,8 +163,8 @@ public class ProduitDAO {
                 produits.add(new Produit(
                         rs.getInt("id_produits"),
                         rs.getString("nom"),
-                        rs.getBigDecimal("prix_unitaire"),
-                        rs.getBigDecimal("taux_tva"),
+                        rs.getBigDecimal("prixUnitaire"),
+                        rs.getBigDecimal("tauxTva"),
                         rs.getInt("quantite"),
                         rs.getBigDecimal("poids"),
                         rs.getBoolean("actif")
@@ -193,8 +193,8 @@ public class ProduitDAO {
                     produits.add(new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prix_unitaire"),
-                            rs.getBigDecimal("taux_tva"),
+                            rs.getBigDecimal("prixUnitaire"),
+                            rs.getBigDecimal("tauxTva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -225,8 +225,8 @@ public class ProduitDAO {
                     produits.add(new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prix_unitaire"),
-                            rs.getBigDecimal("taux_tva"),
+                            rs.getBigDecimal("prixUnitaire"),
+                            rs.getBigDecimal("tauxTva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")

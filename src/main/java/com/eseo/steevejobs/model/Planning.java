@@ -19,10 +19,10 @@ public class Planning {
     private int id;
 
     /** Date et heure de début du créneau de travail. */
-    private LocalDateTime jour_debut;
+    private LocalDateTime jourDebut;
 
     /** Date et heure de fin du créneau de travail. */
-    private LocalDateTime jour_fin;
+    private LocalDateTime jourFin;
 
     /** Type de planning (ex : "présence", "télétravail", "absence"). */
     private String type;
@@ -34,16 +34,16 @@ public class Planning {
      * Constructeur permettant d'initialiser un planning complet.
      *
      * @param id            identifiant unique
-     * @param jour_debut    date/heure de début
-     * @param jour_fin      date/heure de fin
+     * @param jourDebut    date/heure de début
+     * @param jourFin      date/heure de fin
      * @param type          type de planning
      * @param user          utilisateur concerné
      */
 
-    public Planning(int id, LocalDateTime jour_debut, LocalDateTime jour_fin, String type, User user) {
+    public Planning(int id, LocalDateTime jourDebut, LocalDateTime jourFin, String type, User user) {
         this.id = id;
-        this.jour_debut = jour_debut;
-        this.jour_fin = jour_fin;
+        this.jourDebut = jourDebut;
+        this.jourFin = jourFin;
         this.type = type;
         this.user = user;
     }
@@ -59,17 +59,17 @@ public class Planning {
     public void setId(int id) {
         this.id = id;
     }
-    public LocalDateTime getJour_debut() {
-        return jour_debut;
+    public LocalDateTime getJourDebut() {
+        return jourDebut;
     }
-    public void setJour_debut(LocalDateTime jour_debut) {
-        this.jour_debut = jour_debut;
+    public void setJourDebut(LocalDateTime jourDebut) {
+        this.jourDebut = jourDebut;
     }
-    public LocalDateTime getJour_fin() {
-        return jour_fin;
+    public LocalDateTime getJourFin() {
+        return jourFin;
     }
-    public void setJour_fin(LocalDateTime jour_fin) {
-        this.jour_fin = jour_fin;
+    public void setJourFin(LocalDateTime jourFin) {
+        this.jourFin = jourFin;
     }
     public String getType() {
         return type;
