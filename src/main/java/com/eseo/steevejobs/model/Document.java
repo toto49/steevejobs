@@ -1,40 +1,60 @@
 package com.eseo.steevejobs.model;
 
+import com.eseo.steevejobs.model.Enum.DocumentStatut;
+import com.eseo.steevejobs.model.Enum.DocumentType;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class Document {
     private int id;
-    private Enum type;
+    private DocumentType type;
     private LocalDateTime date;
-    private BigDecimal prix_ht;
-    private BigDecimal prix_ttc;
-    private Enum statut;
+    private BigDecimal prixHt;
+    private BigDecimal prixTtc;
+    private DocumentStatut statut;
     private String url;
-    // TODO rajouter id tiers;
-    // TODO rajouter id vendeur;
+    private Tiers tiers;
+    private final User creator;
 
-    public Document(int id, Enum type, LocalDateTime date,  BigDecimal prix_ht, BigDecimal prix_ttc, Enum statut, String url) {
+    public Document(int id, DocumentType type, LocalDateTime date, BigDecimal prixHt, BigDecimal prixTtc, DocumentStatut statut, String url, Tiers tiers, User creator) {
         this.id = id;
         this.type = type;
         this.date = date;
-        this.prix_ht = prix_ht;
-        this.prix_ttc = prix_ttc;
+        this.prixHt = prixHt;
+        this.prixTtc = prixTtc;
         this.statut = statut;
         this.url = url;
+        this.tiers = tiers;
+        this.creator = creator;
 
     }
 
+    public Tiers getTiers() {
+        return tiers;
+    }
+
+    public void setTiers(Tiers tiers) {
+        this.tiers = tiers;
+    }
+
+    public User getCreator() {
+        return creator;
+    }
+
+    public User SetCreator(User creator) {
+        return this.creator;
+    }
     public int getId() {
         return id;
     }
     public void setId(int id) {
         this.id = id;
     }
-    public Enum getType() {
+    public DocumentType getType() {
         return type;
     }
-    public void setType(Enum type) {
+    public void setType(DocumentType type) {
         this.type = type;
     }
     public LocalDateTime getDate() {
@@ -43,22 +63,26 @@ public class Document {
     public void setDate(LocalDateTime date) {
         this.date = date;
     }
-    public BigDecimal getPrix_ht() {
-        return prix_ht;
+
+    public BigDecimal getPrixHt() {
+        return prixHt;
     }
-    public void setPrix_ht(BigDecimal prix_ht) {
-        this.prix_ht = prix_ht;
+
+    public void setPrixHt(BigDecimal prixHt) {
+        this.prixHt = prixHt;
     }
-    public BigDecimal getPrix_ttc() {
-        return prix_ttc;
+
+    public BigDecimal getPrixTtc() {
+        return prixTtc;
     }
-    public void setPrix_ttc(BigDecimal prix_ttc) {
-        this.prix_ttc = prix_ttc;
+
+    public void setPrixTtc(BigDecimal prixTtc) {
+        this.prixTtc = prixTtc;
     }
-    public Enum getStatut() {
+    public DocumentStatut getStatut() {
         return statut;
     }
-    public void setStatut(Enum statut) {
+    public void setStatut(DocumentStatut statut) {
         this.statut = statut;
     }
     public String getUrl() {
