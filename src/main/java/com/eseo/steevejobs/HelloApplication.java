@@ -15,6 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -107,11 +108,20 @@ public class HelloApplication extends Application {
             if (headerGlobal != null) {
                 headerGlobal.setStyle("-fx-background-color: #ffffff; -fx-padding: 0 0 0 8; -fx-background-radius: 11 11 0 0;");
             }
+            Rectangle masque = new Rectangle();
+            masque.widthProperty().bind(rootGlobal.widthProperty());
+            masque.heightProperty().bind(rootGlobal.heightProperty());
+            masque.setArcWidth(24);
+            masque.setArcHeight(24);
+
+            rootGlobal.setClip(masque);
+
         } else {
             rootGlobal.setStyle("-fx-background-radius: 0; -fx-border-radius: 0; -fx-border-width: 0; -fx-background-color: -color-bg-default;");
             if (headerGlobal != null) {
                 headerGlobal.setStyle("-fx-background-color: #ffffff; -fx-padding: 0 0 0 8; -fx-background-radius: 0;");
             }
+            rootGlobal.setClip(null);
         }
     }
 
@@ -158,15 +168,15 @@ public class HelloApplication extends Application {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         String svgReduire = "M 0,5 H 10 V 6 H 0 Z";
-        Button btnReduire = creerBoutonHeader(svgReduire, "#F2F2F2", "#000000");
+        Button btnReduire = creerBoutonHeader(svgReduire, "#F2F2F2", "#000000", false);
         btnReduire.setOnAction(e -> stage.setIconified(true));
 
         String svgAgrandir = "M 0,0 H 10 V 10 H 0 Z M 1,1 V 9 H 9 V 1 Z";
-        Button btnAgrandir = creerBoutonHeader(svgAgrandir, "#F2F2F2", "#000000");
+        Button btnAgrandir = creerBoutonHeader(svgAgrandir, "#F2F2F2", "#000000", false);
         btnAgrandir.setOnAction(e -> toggleMaximize(stage));
 
         String svgFermer = "M 1,0 L 5,4 L 9,0 L 10,1 L 6,5 L 10,9 L 9,10 L 5,6 L 1,10 L 0,9 L 4,5 L 0,1 Z";
-        Button btnFermer = creerBoutonHeader(svgFermer, "#e81123", "#ffffff");
+        Button btnFermer = creerBoutonHeader(svgFermer, "#e81123", "#ffffff", true);
         btnFermer.setOnAction(e -> Platform.exit());
 
 
@@ -233,7 +243,7 @@ public class HelloApplication extends Application {
         return header;
     }
 
-    private Button creerBoutonHeader(String svgData, String hoverBgColor, String hoverIconColor) {
+    private Button creerBoutonHeader(String svgData, String hoverBgColor, String hoverIconColor, boolean estBoutonCoin) {
         Button btn = new Button();
         javafx.scene.shape.SVGPath icon = new javafx.scene.shape.SVGPath();
         icon.setContent(svgData);
@@ -243,7 +253,9 @@ public class HelloApplication extends Application {
         btn.setStyle("-fx-background-color: transparent; -fx-padding: 3 15; -fx-background-radius: 0; -fx-border-radius: 0;");
 
         btn.setOnMouseEntered(e -> {
-            btn.setStyle("-fx-background-color: " + hoverBgColor + "; -fx-padding: 3 15; -fx-background-radius: 0; -fx-border-radius: 0; -fx-cursor: hand;");
+            String radius = (estBoutonCoin && !isMaximized) ? "0 11 0 0" : "0";
+
+            btn.setStyle("-fx-background-color: " + hoverBgColor + "; -fx-padding: 3 15; -fx-background-radius: " + radius + "; -fx-border-radius: 0; -fx-cursor: hand;");
             icon.setFill(javafx.scene.paint.Color.web(hoverIconColor));
         });
 
