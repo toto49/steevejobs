@@ -21,7 +21,7 @@ public class ProduitDAO {
      * @throws SQLException exception SQL
      */
     public void createProduit(Produit produit) throws SQLException {
-        String sql = "INSERT INTO PRODUITS (nom, prixUnitaire, tauxTva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -49,7 +49,7 @@ public class ProduitDAO {
      * @throws SQLException exception SQL
      */
     public void updateProduit(Produit produit) throws SQLException {
-        String sql = "UPDATE PRODUITS SET nom = ?, prixUnitaire = ?, tauxTva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
+        String sql = "UPDATE PRODUITS SET nom = ?, prix_unitaire = ?, taux_tva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -133,8 +133,8 @@ public class ProduitDAO {
                     return new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prixUnitaire"),
-                            rs.getBigDecimal("tauxTva"),
+                            rs.getBigDecimal("prix_unitaire"),
+                            rs.getBigDecimal("taux_tva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -163,8 +163,8 @@ public class ProduitDAO {
                 produits.add(new Produit(
                         rs.getInt("id_produits"),
                         rs.getString("nom"),
-                        rs.getBigDecimal("prixUnitaire"),
-                        rs.getBigDecimal("tauxTva"),
+                        rs.getBigDecimal("prix_unitaire"),
+                        rs.getBigDecimal("taux_tva"),
                         rs.getInt("quantite"),
                         rs.getBigDecimal("poids"),
                         rs.getBoolean("actif")
