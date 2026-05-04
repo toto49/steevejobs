@@ -6,7 +6,6 @@ import com.eseo.steevejobs.service.ConnexionService;
 import com.eseo.steevejobs.service.MailService;
 import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.UserService;
-
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -22,8 +21,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 
 public class BienvenueController {
@@ -97,7 +94,7 @@ public class BienvenueController {
                     }
 
                     String token = ConnexionService.generateRandomMdp(12);
-                    String hashedToken = hashPassword(token);
+                    String hashedToken = userService.hashPassword(token);
 
                     User user = userService.getUserByEmail(email);
                     userService.updateUserPassword(user.getId(), hashedToken);
@@ -139,7 +136,7 @@ public class BienvenueController {
         }
 
         try {
-            String passwordHash = hashPassword(password);
+            String passwordHash = userService.hashPassword(password);
 
 
             User connectedUser = userService.authenticate(mail, passwordHash);
@@ -176,22 +173,5 @@ public class BienvenueController {
         }
     }
 
-    private String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes());
-            StringBuilder hexString = new StringBuilder();
 
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Erreur lors du hachage du mot de passe", e);
-        }
-    }
 }

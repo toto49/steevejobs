@@ -172,10 +172,12 @@ public class UserDAO {
      * @throws SQLException l'exception SQL
      */
     public User authenticate(String email, String passwordHash) throws SQLException {
-        String sql = "SELECT * FROM USER WHERE email = ? AND mdp = ? AND actif = 1";
+
+        String sql = "SELECT * FROM USER WHERE email = ? AND mdp = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+
             stmt.setString(1, email);
             stmt.setString(2, passwordHash);
 
@@ -194,7 +196,7 @@ public class UserDAO {
                             rs.getBoolean("actif")
                     );
                 }
-                return null;
+                return null; 
             }
         }
     }
