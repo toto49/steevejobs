@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="720.0" prefWidth="1280.0"
+            style="-fx-background-color: #f4f5f7;" xmlns="http://javafx.com/javafx/11"
+            fx:controller="com.eseo.steevejobs.controller.AdminUserController">
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #6a8bce;"
+              BorderPane.alignment="CENTER">
+            <padding>
+                <Insets left="20.0"/>
+            </padding>
+            <Label fx:id="headerTitle" textFill="WHITE" text="&lt; USERS">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
+        </HBox>
+    </top>
+
+    <center>
+        <HBox spacing="10.0" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+            </padding>
+
+
+            <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #d1d5db; -fx-border-radius: 10;"
+                  HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+                </padding>
+
+
+                <HBox alignment="CENTER_RIGHT" prefHeight="50.0" spacing="15.0">
+                    <TextField fx:id="searchField" promptText="Recherchez utilisateur" prefWidth="250.0"
+                               style="-fx-background-radius: 15; -fx-text-fill: black; -fx-mark-color: #2196F3; -fx-background-color: #e5e7eb;"/>
+                    <Button fx:id="addUserBtn" onAction="#CreateUser" text="+ Add User"
+                            style="-fx-background-color: #aebce1; -fx-background-radius: 15; -fx-text-fill: #374151;"/>
+                </HBox>
+
+
+                <TableView fx:id="userTable" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+                    <columns>
+                        <TableColumn fx:id="colCheckbox" prefWidth="40.0"/>
+                        <TableColumn fx:id="colName" prefWidth="250.0" text="Nom Complet"/>
+                        <TableColumn fx:id="colJob" prefWidth="150.0" text="Métier"/>
+                        <TableColumn fx:id="colRole" prefWidth="200.0" text="Rôle"/>
+                        <TableColumn fx:id="colStatus" prefWidth="100.0" text="Status"/>
+                        <TableColumn fx:id="colActions" prefWidth="50.0" text="⋮"/>
+                    </columns>
+                </TableView>
+
+
+                <HBox alignment="CENTER_LEFT" prefHeight="50.0" spacing="20.0">
+
+                    <Label fx:id="paginationInfoLabel" text="0 employés" textFill="#6b7280"/>
+                    <Pagination fx:id="pagination" maxPageIndicatorCount="5" HBox.hgrow="ALWAYS"/>
+                </HBox>
+            </VBox>
+
+
+            <VBox prefWidth="350.0"
+                  style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #d1d5db; -fx-border-radius: 10;">
+
+
+                <VBox alignment="CENTER_LEFT" prefHeight="100.0"
+                      style="-fx-background-color: #aebce1; -fx-background-radius: 10 10 0 0;">
+                    <padding>
+                        <Insets left="20.0" top="20.0"/>
+                    </padding>
+                    <Label fx:id="detailsHeaderTitle" text="Details Utilisateur" style="-fx-text-fill: black">
+                        <font>
+                            <Font size="22.0"/>
+                        </font>
+                    </Label>
+                </VBox>
+
+                <VBox spacing="15.0">
+                    <padding>
+                        <Insets bottom="20.0" left="20.0" right="20.0" top="40.0"/>
+                    </padding>
+
+
+                    <Label fx:id="detailsName" text="" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+                    <Label fx:id="detailsJob" text="" textFill="#4b5563"/>
+
+                    <Separator/>
+
+                    <Label fx:id="personalInfoHeader" text="Informations Personnelles"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
+                    <GridPane vgap="10.0" hgap="10.0">
+                        <Label fx:id="lblEmail" text="E-mail" textFill="#6b7280" GridPane.columnIndex="0"
+                               GridPane.rowIndex="0"/>
+                        <Label fx:id="detailsEmailVal" text="" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                        <Label fx:id="lblPhone" text="Tel" textFill="#6b7280" GridPane.columnIndex="0"
+                               GridPane.rowIndex="1"/>
+                        <Label fx:id="detailsPhoneVal" text="" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                        <Label fx:id="lblAddress" text="Adresse" textFill="#6b7280" GridPane.columnIndex="0"
+                               GridPane.rowIndex="2"/>
+                        <Label fx:id="detailsAddressVal" text="" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                               wrapText="true"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <Label fx:id="eventsHeader" text="Prochains Événements"
+                           style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
+                    <VBox fx:id="eventsContainer" spacing="10.0"/>
+                </VBox>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>

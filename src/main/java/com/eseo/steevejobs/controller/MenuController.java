@@ -102,7 +102,7 @@ public class MenuController {
      */
     @FXML
     void afficherAccueil(ActionEvent event) {
-        chargerPage("bienvenue");
+        chargerPage("home");
         updateButtonStyles(btnAccueil);
         changerTitre("Accueil");
     }
@@ -114,7 +114,7 @@ public class MenuController {
      */
     @FXML
     void afficherPlanning(ActionEvent event) {
-        chargerPage("bienvenue");
+        chargerPage("adminuser");
         updateButtonStyles(btnPlanning);
         changerTitre("Emprunter");
     }
