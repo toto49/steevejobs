@@ -231,12 +231,11 @@ public class AdminUserController {
 
                 MenuItem editItem = new MenuItem("Modifier le profil");
                 MenuItem deactivateItem = new MenuItem("Désactiver / Activer");
-                MenuItem deleteItem = new MenuItem("Supprimer définitivement");
-                deleteItem.setStyle("-fx-text-fill: red;");
+                deactivateItem.setStyle("-fx-text-fill: red;");
 
                 editItem.setOnAction(event -> {
                     User user = getTableView().getItems().get(getIndex());
-                    System.out.println("Ouvrir l'édition pour : " + user.getNom());
+                    showEditUserPopup(user);
                 });
 
                 deactivateItem.setOnAction(event -> {
@@ -253,19 +252,7 @@ public class AdminUserController {
                     }
                 });
 
-                deleteItem.setOnAction(event -> {
-                    User user = getTableView().getItems().get(getIndex());
-                    try {
-                        if (showConfirmation("Confirmer", "Supprimer définitivement " + user.getNom() + " ?")) {
-                            userService.deleteUser(user.getId());
-                            loadDataFromDatabase();
-                        }
-                    } catch (SQLException e) {
-                        showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
-                    }
-                });
-
-                menuButton.getItems().addAll(editItem, deactivateItem, new SeparatorMenuItem(), deleteItem);
+                menuButton.getItems().addAll(editItem, new SeparatorMenuItem(), deactivateItem);
             }
 
             @Override
@@ -280,6 +267,128 @@ public class AdminUserController {
         });
     }
 
+    private void showEditUserPopup(User user) {
+        Label message = new Label("Modifier les informations de l'utilisateur :");
+        message.setStyle("-fx-font-size: 14px; -fx-padding: 10; -fx-text-fill: black; -fx-font-weight: bold;");
+
+        TextField nomField = new TextField(user.getNom() != null ? user.getNom() : "");
+        nomField.setPromptText("Nom");
+        nomField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
+        TextField prenomField = new TextField(user.getPrenom() != null ? user.getPrenom() : "");
+        prenomField.setPromptText("Prénom");
+        prenomField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
+        TextField emailField = new TextField(user.getEmail() != null ? user.getEmail() : "");
+        emailField.setPromptText("Email");
+        emailField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
+        TextField telField = new TextField(user.getTel() != null ? user.getTel() : "");
+        telField.setPromptText("Téléphone");
+        telField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
+        ComboBox<String> roleBox = new ComboBox<>();
+        roleBox.getItems().addAll("ADMIN", "RH", "Employe");
+        roleBox.setValue(user.getRole());
+        roleBox.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+        roleBox.setMaxWidth(Double.MAX_VALUE);
+
+        TextField posteField = new TextField(user.getPoste() != null ? user.getPoste() : "");
+        posteField.setPromptText("Poste (ex: Développeur)");
+        posteField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
+        Label popupMessageLabel = new Label("");
+        popupMessageLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: red;");
+
+        Button btnSave = new Button("Enregistrer");
+        btnSave.setStyle("-fx-font-size: 14px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+
+        Button btnResetPwd = new Button("Réinit. Mot de passe");
+        btnResetPwd.setStyle("-fx-font-size: 14px; -fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+
+        HBox buttonBox = new HBox(15, btnResetPwd, btnSave);
+        buttonBox.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox layout = new VBox(10, message, nomField, prenomField, emailField, telField, roleBox, posteField, popupMessageLabel, buttonBox);
+        layout.setStyle("-fx-background-color: #f4f5f7; -fx-padding: 20; -fx-border-color: #d1d5db;");
+
+        Stage popup = new Stage();
+        popup.initModality(Modality.APPLICATION_MODAL);
+        popup.setTitle("Modifier l'Utilisateur");
+        popup.setScene(new Scene(layout, 400, 450));
+        popup.setResizable(false);
+        popup.show();
+        btnSave.setOnAction(e -> {
+            String nom = nomField.getText().trim();
+            String prenom = prenomField.getText().trim();
+            String email = emailField.getText().trim();
+            String tel = telField.getText().trim();
+            String role = roleBox.getValue();
+            String poste = posteField.getText().trim();
+
+            if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty() || role == null) {
+                popupMessageLabel.setText("Veuillez remplir les champs obligatoires (Nom, Prénom, Email, Rôle).");
+                popupMessageLabel.setStyle("-fx-text-fill: red;");
+                return;
+            }
+
+            try {
+                user.setNom(nom);
+                user.setPrenom(prenom);
+                user.setEmail(email);
+                user.setTel(tel);
+                user.setRole(role);
+                user.setPoste(poste);
+
+                userService.updateUser(user);
+
+                loadDataFromDatabase();
+                popup.close();
+                showAlert(Alert.AlertType.INFORMATION, "Succès", "Le profil a été mis à jour avec succès.");
+            } catch (Exception ex) {
+                popupMessageLabel.setText("Erreur lors de la mise à jour : " + ex.getMessage());
+                popupMessageLabel.setStyle("-fx-text-fill: red;");
+            }
+        });
+        btnResetPwd.setOnAction(e -> {
+            if (showConfirmation("Confirmation", "Voulez-vous vraiment réinitialiser le mot de passe de " + user.getPrenom() + " " + user.getNom() + " ?")) {
+
+                btnResetPwd.setDisable(true);
+                popupMessageLabel.setText("Génération et envoi du mot de passe en cours...");
+                popupMessageLabel.setStyle("-fx-text-fill: blue;");
+
+                new Thread(() -> {
+                    try {
+                        String plainToken = ConnexionService.generateRandomMdp(12);
+                        String hashedToken = userService.hashPassword(plainToken);
+
+                        userService.updateUserPassword(user.getId(), hashedToken);
+
+                        MailService.EnvoyerMail(
+                                user.getEmail(),
+                                "Réinitialisation de votre mot de passe",
+                                "Bonjour " + user.getPrenom() + ",\n\nVotre mot de passe a été réinitialisé par un administrateur.\n\nVoici votre nouveau mot de passe temporaire : " + plainToken + "\n\nNous vous conseillons fortement de le modifier dès votre prochaine connexion."
+                        );
+
+                        Platform.runLater(() -> {
+                            popupMessageLabel.setText("Mot de passe réinitialisé avec succès !");
+                            popupMessageLabel.setStyle("-fx-text-fill: green;");
+                            btnResetPwd.setDisable(false);
+                            showAlert(Alert.AlertType.INFORMATION, "Succès", "Le nouveau mot de passe a été envoyé à " + user.getEmail());
+                        });
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        Platform.runLater(() -> {
+                            popupMessageLabel.setText("Erreur lors de la réinitialisation.");
+                            popupMessageLabel.setStyle("-fx-text-fill: red;");
+                            btnResetPwd.setDisable(false);
+                        });
+                    }
+                }).start();
+            }
+        });
+    }
 
     @FXML
     private void CreateUser(ActionEvent actionEvent) {
@@ -384,7 +493,6 @@ public class AdminUserController {
             }).start();
         });
     }
-
 
     private VBox createEventCard(String time, String title, String color) {
         VBox card = new VBox(5);
