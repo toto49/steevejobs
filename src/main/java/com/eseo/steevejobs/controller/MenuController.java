@@ -114,9 +114,9 @@ public class MenuController {
      */
     @FXML
     void afficherPlanning(ActionEvent event) {
-        chargerPage("adminuser");
+        chargerPage("calendrier");
         updateButtonStyles(btnPlanning);
-        changerTitre("Emprunter");
+        changerTitre("Calendrier");
     }
 
     /**
