@@ -17,10 +17,12 @@ public class ProduitDAO {
 
     /**
      * Créer un nouveau produit
+     *
      * @param produit le produit à créer
+     * @return
      * @throws SQLException exception SQL
      */
-    public void createProduit(Produit produit) throws SQLException {
+    public boolean createProduit(Produit produit) throws SQLException {
         String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -28,7 +30,7 @@ public class ProduitDAO {
 
             stmt.setString(1, produit.getNom());
             stmt.setBigDecimal(2, produit.getPrix());
-            stmt.setBigDecimal(3, produit.getTaux_tva());
+            stmt.setBigDecimal(3, produit.getTauxTva());
             stmt.setInt(4, produit.getQuantite());
             stmt.setBigDecimal(5, produit.getPoid());
             stmt.setBoolean(6, produit.isActif());
@@ -40,30 +42,38 @@ public class ProduitDAO {
                     produit.setId(generatedKeys.getInt(1));
                 }
             }
+            return true;
+
+        } catch (SQLException e) {
+            return false;
         }
     }
 
     /**
      * Mettre à jour un produit existant
+     *
      * @param produit le produit à mettre à jour
+     * @return
      * @throws SQLException exception SQL
      */
-    public void updateProduit(Produit produit) throws SQLException {
+    public boolean updateProduit(Produit produit) throws SQLException {
         String sql = "UPDATE PRODUITS SET nom = ?, prix_unitaire = ?, taux_tva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
+        int rowsAffected;
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, produit.getNom());
             stmt.setBigDecimal(2, produit.getPrix());
-            stmt.setBigDecimal(3, produit.getTaux_tva());
+            stmt.setBigDecimal(3, produit.getTauxTva());
             stmt.setInt(4, produit.getQuantite());
             stmt.setBigDecimal(5, produit.getPoid());
             stmt.setBoolean(6, produit.isActif());
             stmt.setInt(7, produit.getId());
 
-            stmt.executeUpdate();
+            rowsAffected = stmt.executeUpdate();
         }
+        return rowsAffected > 0;
     }
 
     /**
