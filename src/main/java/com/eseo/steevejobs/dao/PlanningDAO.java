@@ -55,6 +55,7 @@ public class PlanningDAO {
         String sql = "UPDATE PLANNING SET jour_debut = ?, jour_fin = ?, type = ?, id_user = ? WHERE id_planning = ?";
 
         int rowsAffected;
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
