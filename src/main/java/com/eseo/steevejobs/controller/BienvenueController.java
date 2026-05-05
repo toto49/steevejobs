@@ -46,6 +46,7 @@ public class BienvenueController {
             mail_connexion.setText(prefService.recupererEmail());
             save_connexion.setSelected(true);
         }
+        mdp_connexion.setOnAction(event -> onLoginClick(null));
     }
 
     @FXML
