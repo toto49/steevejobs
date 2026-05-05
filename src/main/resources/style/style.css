@@ -1,6 +1,7 @@
 /* Fond principal bleu clair */
 .root-pane {
     -fx-background-color: #92B4F2;
+    -fx-text-fill: black;
 }
 
 /* Titre principal */

@@ -150,7 +150,7 @@ public class MenuController {
      */
     @FXML
     void afficherParametres(ActionEvent event) {
-        chargerPage("parametre");
+        chargerPage("parametres");
         updateButtonStyles(btnParametres);
         changerTitre("Paramètres");
     }

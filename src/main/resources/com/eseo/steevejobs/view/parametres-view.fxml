@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="768.0" prefWidth="1024.0" styleClass="root-pane"
+            stylesheets="@../../../../style/style.css" xmlns="http://javafx.com/javafx/19"
+            fx:controller="com.eseo.steevejobs.controller.ParametresController">
+
+    <center>
+        <VBox prefHeight="200.0" prefWidth="100.0" style="-fx-background-color: #DDE8FF;" BorderPane.alignment="CENTER">
+            <children>
+                <HBox alignment="CENTER_LEFT" prefHeight="80.0" style="-fx-background-color: #82A9F1;">
+                    <padding>
+                        <Insets left="20.0" right="20.0"/>
+                    </padding>
+                    <children>
+                        <Button mnemonicParsing="false" onAction="#handleRetour"
+                                style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
+                                text="&lt; RETOUR"/>
+                        <Label alignment="CENTER" maxWidth="1.7976931348623157E308"
+                               style="-fx-font-size: 24px; -fx-font-weight: bold;" text="PARAMÈTRES DE L'APPLICATION"
+                               textFill="WHITE" HBox.hgrow="ALWAYS"/>
+                    </children>
+                </HBox>
+                <GridPane hgap="40.0" vgap="30.0" VBox.vgrow="ALWAYS">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                    </rowConstraints>
+                    <padding>
+                        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0"/>
+                    </padding>
+                    <children>
+
+                        <VBox spacing="30.0">
+                            <children>
+
+                                <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #CCCCCC; -fx-border-radius: 10;"
+                                      styleClass="card">
+                                    <children>
+                                        <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="PRÉFÉRENCES">
+                                            <padding>
+                                                <Insets bottom="15.0"/>
+                                            </padding>
+                                        </Label>
+                                        <HBox alignment="CENTER_LEFT" spacing="20.0">
+                                            <children>
+                                                <Label text="NOTIFICATIONS PUSH :"/>
+                                                <CheckBox fx:id="pushNotificationsToggle" mnemonicParsing="false"/>
+                                            </children>
+                                            <padding>
+                                                <Insets bottom="20.0" top="10.0"/>
+                                            </padding>
+                                        </HBox>
+                                        <Button alignment="CENTER" mnemonicParsing="false" onAction="#testpush"
+                                                style="-fx-background-color: #5584D5; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"
+                                                text="TESTER LES NOTIFICATIONS PUSH"/>
+                                    </children>
+                                    <padding>
+                                        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+                                    </padding>
+                                </VBox>
+
+                                <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #CCCCCC; -fx-border-radius: 10;"
+                                      styleClass="card">
+                                    <children>
+                                        <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="SÉCURITÉ">
+                                            <padding>
+                                                <Insets bottom="15.0"/>
+                                            </padding>
+                                        </Label>
+                                        <GridPane vgap="15.0">
+                                            <columnConstraints>
+                                                <ColumnConstraints hgrow="SOMETIMES" maxWidth="200.0" minWidth="10.0"
+                                                                   prefWidth="180.0"/>
+                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="200.0"/>
+                                            </columnConstraints>
+                                            <rowConstraints>
+                                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                            </rowConstraints>
+                                            <children>
+                                                <Label text="ANCIEN MOT DE PASSE :"/>
+                                                <PasswordField fx:id="ancienMdpField" GridPane.columnIndex="1"/>
+                                                <Label text="NOUVEAU MOT DE PASSE :" GridPane.rowIndex="1"/>
+                                                <PasswordField fx:id="nouveauMdpField" GridPane.columnIndex="1"
+                                                               GridPane.rowIndex="1"/>
+                                                <Label text="CONFIRMER NOUVEAU MDP :" GridPane.rowIndex="2"/>
+                                                <PasswordField fx:id="confirmerMdpField" GridPane.columnIndex="1"
+                                                               GridPane.rowIndex="2"/>
+                                            </children>
+                                        </GridPane>
+                                        <HBox alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                                            <children>
+                                                <Button mnemonicParsing="false" onAction="#validerSecurite"
+                                                        style="-fx-background-color: #5584D5; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 8 30; -fx-cursor: hand;"
+                                                        text="VALIDER"/>
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                    <padding>
+                                        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+                                    </padding>
+                                </VBox>
+
+                            </children>
+                        </VBox>
+
+                        <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #CCCCCC; -fx-border-radius: 10;"
+                              styleClass="card" GridPane.columnIndex="1">
+                            <children>
+                                <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="MES INFORMATIONS">
+                                    <padding>
+                                        <Insets bottom="20.0"/>
+                                    </padding>
+                                </Label>
+
+                                <GridPane hgap="10.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="100.0" minWidth="10.0"
+                                                           prefWidth="80.0"/>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="200.0"/>
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                    </rowConstraints>
+                                    <children>
+                                        <Label text="MAIL :"/>
+                                        <TextField fx:id="mailField" GridPane.columnIndex="1"/>
+
+                                        <Label text="TEL :" GridPane.rowIndex="1"/>
+                                        <TextField fx:id="telField" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                                        <Label text="NOM :" GridPane.rowIndex="2"/>
+                                        <TextField fx:id="nomField" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                                        <Label text="PRÉNOM :" GridPane.rowIndex="3"/>
+                                        <TextField fx:id="prenomField" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                    </children>
+                                </GridPane>
+
+                                <HBox alignment="BOTTOM_CENTER" style="-fx-padding: 20 0 0 0;" VBox.vgrow="ALWAYS">
+                                    <children>
+                                        <Button mnemonicParsing="false" onAction="#enregistrerInformations"
+                                                style="-fx-background-color: #5584D5; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;"
+                                                text="ENREGISTRER LES MODIFICATIONS"/>
+                                    </children>
+                                </HBox>
+                            </children>
+                            <padding>
+                                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+                            </padding>
+                        </VBox>
+
+                    </children>
+                </GridPane>
+            </children>
+        </VBox>
+    </center>
+</BorderPane>
