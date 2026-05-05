@@ -22,7 +22,7 @@ public class PlanningDAO {
      * @param planning le planning à créer
      * @throws SQLException exception SQL
      */
-    public void createPlanning(Planning planning) throws SQLException {
+    public boolean createPlanning(Planning planning) throws SQLException {
         String sql = "INSERT INTO PLANNING (jour_debut, jour_fin, type, id_user) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -39,7 +39,10 @@ public class PlanningDAO {
                 if (generatedKeys.next()) {
                     planning.setId(generatedKeys.getInt(1));
                 }
-            }
+            }return true;
+
+        } catch (SQLException e) {
+            return false;
         }
     }
 
@@ -48,9 +51,10 @@ public class PlanningDAO {
      * @param planning le planning à mettre à jour
      * @throws SQLException exception SQL
      */
-    public void updatePlanning(Planning planning) throws SQLException {
+    public boolean updatePlanning(Planning planning) throws SQLException {
         String sql = "UPDATE PLANNING SET jour_debut = ?, jour_fin = ?, type = ?, id_user = ? WHERE id_planning = ?";
 
+        int rowsAffected;
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -60,8 +64,9 @@ public class PlanningDAO {
             stmt.setInt(4, planning.getUser().getId());
             stmt.setInt(5, planning.getId());
 
-            stmt.executeUpdate();
+            rowsAffected = stmt.executeUpdate();
         }
+        return rowsAffected > 0;
     }
 
     /**
