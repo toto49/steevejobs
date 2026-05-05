@@ -2,19 +2,54 @@ package com.eseo.steevejobs.model;
 
 import java.time.LocalDateTime;
 
-public class Message {
-    private int id;
-    private String contenu;
-    private String piece_jointe;
-    private LocalDateTime date_envoi;
-    // TODO rajouter un id auteur
-    // TODO rajouter un id ticket
+//Commentaires géré par IA
 
-    public Message(int id, String contenu, String piece_jointe, LocalDateTime date_envoi) {
+/**
+ * Représente un message appartenant à un ticket de support.
+ *
+ * Un message est écrit par un utilisateur (auteur) et est
+ * obligatoirement rattaché à un ticket. Il peut contenir
+ * un texte, une pièce jointe et une date d’envoi.
+ */
+
+public class Message {
+    /** Identifiant unique du message */
+    private int id;
+
+    /** Contenu textuel du message */
+    private String contenu;
+
+    /** Pièce jointe associée au message (URL ou chemin de fichier) */
+    private String pieceJointe;
+
+    /** Date et heure d’envoi du message */
+    private LocalDateTime dateEnvoi;
+
+    /** Utilisateur ayant rédigé le message */
+    private User auteur;
+
+    /** Ticket auquel ce message est rattaché */
+    private Ticket ticket;
+
+    /**
+     * Constructeur complet permettant d'initialiser
+     * toutes les propriétés du message.
+     *
+     * @param id           identifiant du message
+     * @param contenu      contenu textuel
+     * @param pieceJointe  pièce jointe éventuelle
+     * @param dateEnvoi    date d’envoi du message
+     * @param auteur       auteur du message
+     * @param ticket       ticket associé
+     */
+
+    public Message(int id, String contenu, String pieceJointe, LocalDateTime dateEnvoi, User auteur, Ticket ticket) {
         this.id = id;
         this.contenu = contenu;
-        this.piece_jointe = piece_jointe;
-        this.date_envoi = date_envoi;
+        this.pieceJointe = pieceJointe;
+        this.dateEnvoi = dateEnvoi;
+        this.auteur = auteur;
+        this.ticket = ticket;
     }
 
     public int  getId() {
@@ -29,16 +64,28 @@ public class Message {
     public void setContenu(String contenu) {
         this.contenu = contenu;
     }
-    public String getPiece_jointe() {
-        return piece_jointe;
+    public String getPieceJointe() {
+        return pieceJointe;
     }
-    public void setPiece_jointe(String piece_jointe) {
-        this.piece_jointe = piece_jointe;
+    public void setPieceJointe(String pieceJointe) {
+        this.pieceJointe = pieceJointe;
     }
-    public LocalDateTime getDate_envoi() {
-        return date_envoi;
+    public LocalDateTime getDateEnvoi() {
+        return dateEnvoi;
     }
-    public void setDate_envoi(LocalDateTime date_envoi) {
-        this.date_envoi = date_envoi;
+    public void setDateEnvoi(LocalDateTime dateEnvoi) {
+        this.dateEnvoi = dateEnvoi;
+    }
+    public User getAuteur() {
+        return auteur;
+    }
+    public void setAuteur(User auteur) {
+        this.auteur = auteur;
+    }
+    public Ticket getTicket() {
+        return ticket;
+    }
+    public void setTicket(Ticket ticket) {
+        this.ticket = ticket;
     }
 }
