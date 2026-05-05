@@ -34,6 +34,9 @@ public class ParametresController {
 
     @FXML
     private CheckBox pushNotificationsToggle;
+    @FXML
+    private CheckBox ConnexionCheck;
+
     private Preferences prefs;
     private UserService userService;
     private SessionService sessionService;
@@ -43,29 +46,19 @@ public class ParametresController {
     public void initialize() {
         this.userService = new UserService();
         this.sessionService = new SessionService();
+        User utilisateur = SessionService.getUtilisateurConnecte();
 
-        if (sessionService.hasEmailSauvegarde()) {
-            String emailConnecte = sessionService.recupererEmail();
-
-            try {
-                User utilisateur = userService.getUserByEmail(emailConnecte);
-
-                if (utilisateur != null) {
-                    setUtilisateurConnecte(utilisateur);
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Erreur", "Utilisateur introuvable dans la base de données.");
-                }
-            } catch (SQLException e) {
-                showAlert(Alert.AlertType.ERROR, "Erreur DB", "Impossible de charger les données : " + e.getMessage());
-            } catch (IllegalArgumentException e) {
-                System.err.println("Erreur : " + e.getMessage());
-            }
+        if (utilisateur != null) {
+            setUtilisateurConnecte(utilisateur);
         } else {
-            System.err.println("Aucun utilisateur n'est connecté en session.");
+            System.err.println("Aucun utilisateur n'est connecté en mémoire !");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Aucun utilisateur connecté.");
         }
         prefs = Preferences.userNodeForPackage(getClass());
         boolean isPushSaved = prefs.getBoolean("push_enabled", false);
         pushNotificationsToggle.setSelected(isPushSaved);
+        boolean isConnexionSaved = sessionService.hasEmailSauvegarde();
+        ConnexionCheck.setSelected(isConnexionSaved);
     }
 
     private void setUtilisateurConnecte(User user) {
@@ -73,8 +66,17 @@ public class ParametresController {
         if (user != null) {
             mailField.setText(user.getEmail() != null ? user.getEmail() : "");
             nomField.setText(user.getNom() != null ? user.getNom() : "");
+        }
+    }
 
+    @FXML
+    void toggleConnexionSave(ActionEvent event) {
+        if (currentUser == null) return;
 
+        if (ConnexionCheck.isSelected()) {
+            sessionService.sauvegarderEmail(currentUser.getEmail());
+        } else {
+            sessionService.effacerEmail();
         }
     }
 
@@ -93,7 +95,10 @@ public class ParametresController {
             currentUser.setEmail(nouvelEmail);
             currentUser.setNom(nomField.getText().trim());
             userService.updateUser(currentUser);
-            sessionService.sauvegarderEmail(nouvelEmail);
+            if (ConnexionCheck.isSelected()) {
+                sessionService.sauvegarderEmail(nouvelEmail);
+            }
+
             String contenuemail =
                     "Bonjour,\n\n" +
                             "Vos informations personnelles ont été modifiées.\n" +
