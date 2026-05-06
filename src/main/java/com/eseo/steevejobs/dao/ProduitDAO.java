@@ -17,11 +17,13 @@ public class ProduitDAO {
 
     /**
      * Créer un nouveau produit
+     *
      * @param produit le produit à créer
+     * @return
      * @throws SQLException exception SQL
      */
-    public void createProduit(Produit produit) throws SQLException {
-        String sql = "INSERT INTO PRODUITS (nom, prixUnitaire, tauxTva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
+    public boolean createProduit(Produit produit) throws SQLException {
+        String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -40,16 +42,23 @@ public class ProduitDAO {
                     produit.setId(generatedKeys.getInt(1));
                 }
             }
+            return true;
+
+        } catch (SQLException e) {
+            return false;
         }
     }
 
     /**
      * Mettre à jour un produit existant
+     *
      * @param produit le produit à mettre à jour
+     * @return
      * @throws SQLException exception SQL
      */
-    public void updateProduit(Produit produit) throws SQLException {
-        String sql = "UPDATE PRODUITS SET nom = ?, prixUnitaire = ?, tauxTva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
+    public boolean updateProduit(Produit produit) throws SQLException {
+        String sql = "UPDATE PRODUITS SET nom = ?, prix_unitaire = ?, taux_tva = ?, quantite = ?, poids = ?, actif = ? WHERE id_produits = ?";
+        int rowsAffected;
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -62,8 +71,9 @@ public class ProduitDAO {
             stmt.setBoolean(6, produit.isActif());
             stmt.setInt(7, produit.getId());
 
-            stmt.executeUpdate();
+            rowsAffected = stmt.executeUpdate();
         }
+        return rowsAffected > 0;
     }
 
     /**
@@ -103,8 +113,8 @@ public class ProduitDAO {
                     return new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prixUnitaire"),
-                            rs.getBigDecimal("tauxTva"),
+                            rs.getBigDecimal("prix_unitaire"),
+                            rs.getBigDecimal("taux_tva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -133,8 +143,8 @@ public class ProduitDAO {
                     return new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prixUnitaire"),
-                            rs.getBigDecimal("tauxTva"),
+                            rs.getBigDecimal("prix_unitaire"),
+                            rs.getBigDecimal("taux_tva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -163,8 +173,8 @@ public class ProduitDAO {
                 produits.add(new Produit(
                         rs.getInt("id_produits"),
                         rs.getString("nom"),
-                        rs.getBigDecimal("prixUnitaire"),
-                        rs.getBigDecimal("tauxTva"),
+                        rs.getBigDecimal("prix_unitaire"),
+                        rs.getBigDecimal("taux_tva"),
                         rs.getInt("quantite"),
                         rs.getBigDecimal("poids"),
                         rs.getBoolean("actif")
@@ -193,8 +203,8 @@ public class ProduitDAO {
                     produits.add(new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prixUnitaire"),
-                            rs.getBigDecimal("tauxTva"),
+                            rs.getBigDecimal("prix_unitaire"),
+                            rs.getBigDecimal("taux_tva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")
@@ -225,8 +235,8 @@ public class ProduitDAO {
                     produits.add(new Produit(
                             rs.getInt("id_produits"),
                             rs.getString("nom"),
-                            rs.getBigDecimal("prixUnitaire"),
-                            rs.getBigDecimal("tauxTva"),
+                            rs.getBigDecimal("prix_unitaire"),
+                            rs.getBigDecimal("taux_tva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
                             rs.getBoolean("actif")

@@ -22,8 +22,8 @@ public class PlanningDAO {
      * @param planning le planning à créer
      * @throws SQLException exception SQL
      */
-    public void createPlanning(Planning planning) throws SQLException {
-        String sql = "INSERT INTO PLANNING (jourDebut, jourFin, type, id_user) VALUES (?, ?, ?, ?)";
+    public boolean createPlanning(Planning planning) throws SQLException {
+        String sql = "INSERT INTO PLANNING (jour_debut, jour_fin, type, id_user) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -39,7 +39,10 @@ public class PlanningDAO {
                 if (generatedKeys.next()) {
                     planning.setId(generatedKeys.getInt(1));
                 }
-            }
+            }return true;
+
+        } catch (SQLException e) {
+            return false;
         }
     }
 
@@ -48,8 +51,10 @@ public class PlanningDAO {
      * @param planning le planning à mettre à jour
      * @throws SQLException exception SQL
      */
-    public void updatePlanning(Planning planning) throws SQLException {
-        String sql = "UPDATE PLANNING SET jourDebut = ?, jourFin = ?, type = ?, id_user = ? WHERE id_planning = ?";
+    public boolean updatePlanning(Planning planning) throws SQLException {
+        String sql = "UPDATE PLANNING SET jour_debut = ?, jour_fin = ?, type = ?, id_user = ? WHERE id_planning = ?";
+
+        int rowsAffected;
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -60,8 +65,9 @@ public class PlanningDAO {
             stmt.setInt(4, planning.getUser().getId());
             stmt.setInt(5, planning.getId());
 
-            stmt.executeUpdate();
+            rowsAffected = stmt.executeUpdate();
         }
+        return rowsAffected > 0;
     }
 
     /**
@@ -115,8 +121,8 @@ public class PlanningDAO {
                     );
                     return new Planning(
                             rs.getInt("id_planning"),
-                            rs.getTimestamp("jourDebut").toLocalDateTime(),
-                            rs.getTimestamp("jourFin").toLocalDateTime(),
+                            rs.getTimestamp("jour_debut").toLocalDateTime(),
+                            rs.getTimestamp("jour_fin").toLocalDateTime(),
                             rs.getString("type"),
                             user
                     );
@@ -138,7 +144,7 @@ public class PlanningDAO {
                 "FROM PLANNING p " +
                 "INNER JOIN USER u ON p.id_user = u.id_user " +
                 "WHERE p.id_user = ? " +
-                "ORDER BY p.jourDebut";
+                "ORDER BY p.jour_debut";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -160,8 +166,8 @@ public class PlanningDAO {
                     );
                     plannings.add(new Planning(
                             rs.getInt("id_planning"),
-                            rs.getTimestamp("jourDebut").toLocalDateTime(),
-                            rs.getTimestamp("jourFin").toLocalDateTime(),
+                            rs.getTimestamp("jour_debut").toLocalDateTime(),
+                            rs.getTimestamp("jour_fin").toLocalDateTime(),
                             rs.getString("type"),
                             user
                     ));
@@ -181,7 +187,7 @@ public class PlanningDAO {
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
                 "FROM PLANNING p " +
                 "INNER JOIN USER u ON p.id_user = u.id_user " +
-                "ORDER BY p.jourDebut";
+                "ORDER BY p.jour_debut";
 
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -202,8 +208,8 @@ public class PlanningDAO {
                 );
                 plannings.add(new Planning(
                         rs.getInt("id_planning"),
-                        rs.getTimestamp("jourDebut").toLocalDateTime(),
-                        rs.getTimestamp("jourFin").toLocalDateTime(),
+                        rs.getTimestamp("jour_debut").toLocalDateTime(),
+                        rs.getTimestamp("jour_fin").toLocalDateTime(),
                         rs.getString("type"),
                         user
                 ));

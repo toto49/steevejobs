@@ -46,6 +46,7 @@ public class BienvenueController {
             mail_connexion.setText(prefService.recupererEmail());
             save_connexion.setSelected(true);
         }
+        mdp_connexion.setOnAction(event -> onLoginClick(null));
     }
 
     @FXML
@@ -137,17 +138,14 @@ public class BienvenueController {
 
         try {
             String passwordHash = userService.hashPassword(password);
-
-
             User connectedUser = userService.authenticate(mail, passwordHash);
 
             if (connectedUser == null) {
-
                 errror_connexion.setText("Erreur : identifiants incorrects.");
                 errror_connexion.setStyle("-fx-fill: red; -fx-font-weight: bold;");
             } else {
-
                 errror_connexion.setText("");
+                SessionService.setUtilisateurConnecte(connectedUser);
 
                 if (save) {
                     prefService.sauvegarderEmail(mail);

@@ -1,9 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.AnchorPane?>
-<AnchorPane xmlns:fx="http://javafx.com/fxml"
-            xmlns="http://javafx.com/javafx"
-            fx:controller="com.eseo.steevejobs.controller.HomeController"
-            prefHeight="400.0" prefWidth="600.0">
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" styleClass="root-pane" stylesheets="@../../../../style/style.css"
+            xmlns="http://javafx.com/javafx/17" fx:controller="com.eseo.steevejobs.controller.HomeController">
 
-</AnchorPane>
+
+    <center>
+        <VBox spacing="10.0" styleClass="main-content">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+            </padding>
+
+
+            <HBox alignment="CENTER_LEFT">
+                <Label styleClass="header-title" text="&lt; APP CENTER"/>
+            </HBox>
+            <VBox styleClass="apps-container" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="30.0" left="30.0" right="30.0" top="30.0"/>
+                </padding>
+                <ScrollPane fitToWidth="true"
+                            style="-fx-background-color: transparent; -fx-padding: 0;"
+                            VBox.vgrow="ALWAYS">
+                    <FlowPane fx:id="appsGrid" alignment="TOP_CENTER" hgap="25.0" vgap="25.0"/>
+                </ScrollPane>
+            </VBox>
+        </VBox>
+    </center>
+</BorderPane>
