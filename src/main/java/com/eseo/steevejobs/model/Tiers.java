@@ -1,18 +1,84 @@
 package com.eseo.steevejobs.model;
 
+import com.eseo.steevejobs.model.Enum.TiersType;
+
+import java.util.ArrayList;
+import java.util.List;
+
+//Commentaires géré par IA
+
+/**
+ * Représente un tiers de l'entreprise.
+ *
+ * Un tiers correspond à une personne ou une entité externe
+ * (client particulier ou entreprise) pouvant être destinataire
+ * de documents commerciaux tels que des devis ou des factures.
+ *
+ * Un tiers peut être associé à plusieurs documents.
+ */
+
 public class Tiers {
+
+    /** Identifiant unique du tiers */
     private int id;
+
+    /** Nom du tiers (ou raison sociale pour une entreprise) */
     private String nom;
+
+    /** Prénom du tiers (utilisé principalement pour les particuliers) */
     private String prenom;
-    private Enum type;
+
+    /** Type du tiers (CLIENTS ou FOURNISSEUR) */
+    private TiersType type;
+
+    /** Adresse email du tiers */
     private String email;
+
+    /** Adresse postale du tiers */
     private String adresse;
+
+    /** Numéro de téléphone du tiers */
     private String tel;
+
+    /** Numéro SIRET (uniquement pour les entreprises) */
     private String siret;
+
+    /** Numéro de TVA intracommunautaire */
     private String num_tva;
+
+    /** Indique si le tiers est actif ou non */
     private boolean actif;
 
-    public Tiers( int id, String nom, String prenom, Enum type, String email, String adresse, String tel, String siret, String num_tva ) {
+    /** Liste des documents associés à ce tiers */
+    private List<Document> documents;
+
+    /**
+     * Constructeur par défaut.
+     *
+     * Initialise la liste des documents afin d'éviter
+     * toute erreur de type NullPointerException.
+     */
+
+    public Tiers() { this.documents = new ArrayList<>();}
+
+    /**
+     * Constructeur complet permettant d'initialiser
+     * toutes les informations d'un tiers.
+     *
+     * Le tiers est actif par défaut.
+     *
+     * @param id        identifiant du tiers
+     * @param nom       nom ou raison sociale
+     * @param prenom    prénom (facultatif selon le type)
+     * @param type      type du tiers
+     * @param email     email de contact
+     * @param adresse   adresse postale
+     * @param tel       numéro de téléphone
+     * @param siret     numéro SIRET
+     * @param num_tva   numéro de TVA
+     */
+
+    public Tiers( int id, String nom, String prenom, TiersType type, String email, String adresse, String tel, String siret, String num_tva ) {
         this.id = id;
         this.nom = nom;
         this.prenom = prenom;
@@ -23,6 +89,8 @@ public class Tiers {
         this.siret = siret;
         this.num_tva = num_tva;
         this.actif = true;
+
+        this.documents = new ArrayList<>();
     }
 
     public int  getId() {
@@ -43,10 +111,10 @@ public class Tiers {
     public void setPrenom(String prenom) {
         this.prenom = prenom;
     }
-    public Enum getType() {
+    public TiersType getType() {
         return type;
     }
-    public void setType(Enum type) {
+    public void setType(TiersType type) {
         this.type = type;
     }
     public String getEmail() {
@@ -84,5 +152,14 @@ public class Tiers {
     }
     public void setActif(boolean actif) {
         this.actif = actif;
+    }
+    public List<Document> getDocuments() {
+        return documents;
+    }
+    public void addDocument(Document document) {
+        this.documents.add(document);
+    }
+    public void removeDocument(Document document) {
+        this.documents.remove(document);
     }
 }

@@ -1,16 +1,19 @@
 package com.eseo.steevejobs.model;
 
-//Commentaires géré par IA
-
 import java.util.ArrayList;
 import java.util.List;
 
+//Commentaires géré par IA
+
 /**
- * Classe représentant un utilisateur du système.
- * Elle regroupe les informations personnelles, professionnelles
- * ainsi que les plannings associés.
+ * Représente un utilisateur du système.
+ *
+ * Un utilisateur correspond à un employé de l'entreprise.
+ * Il possède des informations personnelles et professionnelles,
+ * ainsi que des éléments qui lui sont directement rattachés,
  */
-public class User {
+
+ public class User {
     /** Identifiant unique de l'utilisateur */
     private int id;
 
@@ -37,27 +40,41 @@ public class User {
     /** Indique si le compte est actif ou désactivé */
     private boolean actif;
 
-    /** Liste des plannings associés à cet utilisateur */
+    /** Liste des plannings et fiches de paye associés à cet utilisateur */
     private List<Planning> plannings;
 
+    private List<FichePaye> fichesPaye;
+
+    /**
+     * Constructeur par défaut.
+     *
+     * Initialise les listes afin d'éviter toute
+     * NullPointerException lors de leur utilisation.
+     */
 
     public User() {
         this.plannings = new ArrayList<>();
+        this.fichesPaye = new ArrayList<>();
     }
 
     /**
-     * Constructeur complet permettant d'initialiser toutes les propriétés.
-     * @param id            Identifiant unique
-     * @param nom           Nom de famille
-     * @param prenom        Prénom
-     * @param email         Adresse email
-     * @param passwordHash  Mot de passe chiffré
-     * @param adresse       Adresse postale
-     * @param role          Rôle de l'utilisateur
-     * @param tel           Numéro de téléphone
-     * @param poste         Poste occupé
-     * @param actif         Indique si le compte est actif
+     * Constructeur complet permettant d'initialiser
+     * toutes les propriétés principales de l'utilisateur.
+     *
+     * Les listes (plannings et fiches de paie) sont initialisées vides.
+     *
+     * @param id            identifiant unique
+     * @param nom           nom de famille
+     * @param prenom        prénom
+     * @param email         adresse email
+     * @param passwordHash  mot de passe chiffré
+     * @param adresse       adresse postale
+     * @param role          rôle dans l'application
+     * @param tel           numéro de téléphone
+     * @param poste         poste occupé
+     * @param actif         état du compte utilisateur
      */
+
     public User( int id, String nom, String prenom, String email, String passwordHash, String adresse, String role, String tel, String poste, boolean actif) {
         this.id = id;
         this.nom = nom;
@@ -71,6 +88,7 @@ public class User {
         this.actif = actif;
 
         this.plannings = new ArrayList<>();
+        this.fichesPaye = new ArrayList<>();
     }
 
     /** --- Getters & Setters classiques --- */
@@ -138,7 +156,20 @@ public class User {
     public List<Planning> getPlannings() {
         return plannings;
     }
-    public void setPlannings(List<Planning> plannings) {
-        this.plannings = plannings;
+    public void addPlanning(Planning planning) {
+        this.plannings.add(planning);
     }
+    public void removePlanning(Planning planning) {
+        this.plannings.remove(planning);
+    }
+    public List<FichePaye> getFichesPaye() {
+        return fichesPaye;
+    }
+    public void addFichePaye(FichePaye fichePaye) {
+        this.fichesPaye.add(fichePaye);
+    }
+    public void removeFichePaye(FichePaye fichePaye) {
+        this.fichesPaye.remove(fichePaye);
+    }
+
 }

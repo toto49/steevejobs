@@ -1,4 +1,4 @@
-package com.eseo.steevejobs.util;
+package com.eseo.steevejobs.config;
 
 import com.eseo.steevejobs.model.Permission;
 import com.eseo.steevejobs.model.User;

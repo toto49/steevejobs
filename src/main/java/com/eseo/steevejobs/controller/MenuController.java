@@ -126,9 +126,9 @@ public class MenuController {
      */
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("adminpermission");
+        chargerPage("ticket");
         updateButtonStyles(btnTicket);
-        changerTitre("Gestion Adhérent");
+        changerTitre("ticket");
     }
 
     /**
@@ -138,9 +138,9 @@ public class MenuController {
      */
     @FXML
     void afficherFiles(ActionEvent event) {
-        chargerPage("ajouter-produit");
+        chargerPage("document");
         updateButtonStyles(btnFiles);
-        changerTitre("Ajouter Produit");
+        changerTitre("Document  ");
     }
 
     /**
