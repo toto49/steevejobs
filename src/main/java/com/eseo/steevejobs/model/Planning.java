@@ -17,18 +17,15 @@ public class Planning {
 
     /** Identifiant unique du planning. */
     private int id;
-
     /** Date et heure de début du créneau de travail. */
     private LocalDateTime jourDebut;
-
     /** Date et heure de fin du créneau de travail. */
     private LocalDateTime jourFin;
-
     /** Type de planning (ex : "présence", "télétravail", "absence"). */
     private String type;
-
     /** Utilisateur auquel ce planning est associé. */
     private User user;
+
 
     /**
      * Constructeur permettant d'initialiser un planning complet.
