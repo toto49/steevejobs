@@ -126,9 +126,9 @@ public class MenuController {
      */
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("adminpermission");
+        chargerPage("ticket");
         updateButtonStyles(btnTicket);
-        changerTitre("Gestion Adhérent");
+        changerTitre("ticket");
     }
 
     /**
