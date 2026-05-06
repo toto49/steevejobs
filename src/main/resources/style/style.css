@@ -1,0 +1,60 @@
+/* Fond principal bleu clair */
+.root-pane {
+    -fx-background-color: #92B4F2;
+    -fx-text-fill: black;
+}
+
+/* Titre principal */
+.header-title {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-font-family: 'Comic Sans MS'; /* À remplacer par votre police manuscrite */
+}
+
+/* Barre latérale plus foncée */
+.sidebar {
+    -fx-background-color: #5585E5;
+}
+
+/* Boutons de la barre latérale */
+.nav-btn {
+    -fx-background-color: transparent;
+    -fx-font-size: 24px;
+    -fx-text-fill: black;
+    -fx-cursor: hand;
+}
+
+.nav-btn:hover {
+    -fx-opacity: 0.6;
+}
+
+/* Le grand cadre blanc qui contient la grille */
+.apps-container {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    /* Optionnel : petite ombre portée */
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.1), 10, 0, 0, 5);
+}
+
+/* Enlever la bordure par défaut du ScrollPane */
+.transparent-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.transparent-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.champform {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-highlight-fill: #5584D5;
+    -fx-highlight-text-fill: white;
+    -fx-text-fill: black;
+    -fx-border-color: #000000;
+    -fx-background-color: transparent;
+    -fx-pref-height: 45;
+    -fx-font-family: 'Arial';
+}

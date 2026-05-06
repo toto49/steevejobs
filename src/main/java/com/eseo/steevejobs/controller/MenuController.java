@@ -55,7 +55,7 @@ public class MenuController {
     @FXML
     public void initialize() {
         instance = this;
-        chargerPage("bienvenue");
+        chargerPage("home");
         if (btnAccueil != null) updateButtonStyles(btnAccueil);
     }
 
@@ -102,7 +102,7 @@ public class MenuController {
      */
     @FXML
     void afficherAccueil(ActionEvent event) {
-        chargerPage("bienvenue");
+        chargerPage("home");
         updateButtonStyles(btnAccueil);
         changerTitre("Accueil");
     }
@@ -114,9 +114,9 @@ public class MenuController {
      */
     @FXML
     void afficherPlanning(ActionEvent event) {
-        chargerPage("bienvenue");
+        chargerPage("calendrier");
         updateButtonStyles(btnPlanning);
-        changerTitre("Emprunter");
+        changerTitre("Calendrier");
     }
 
     /**
@@ -126,9 +126,9 @@ public class MenuController {
      */
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("adherent");
+        chargerPage("ticket");
         updateButtonStyles(btnTicket);
-        changerTitre("Gestion Adhérent");
+        changerTitre("ticket");
     }
 
     /**
@@ -138,9 +138,9 @@ public class MenuController {
      */
     @FXML
     void afficherFiles(ActionEvent event) {
-        chargerPage("ajouter-produit");
+        chargerPage("document");
         updateButtonStyles(btnFiles);
-        changerTitre("Ajouter Produit");
+        changerTitre("Document  ");
     }
 
     /**
@@ -150,14 +150,14 @@ public class MenuController {
      */
     @FXML
     void afficherParametres(ActionEvent event) {
-        chargerPage("parametre");
+        chargerPage("parametres");
         updateButtonStyles(btnParametres);
         changerTitre("Paramètres");
     }
 
 
     private void updateButtonStyles(Button boutonActif) {
-        // On définit les styles (transparents pour ne voir que l'icône)
+
         String STYLE_INACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
         String STYLE_ACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
 
@@ -186,13 +186,11 @@ public class MenuController {
     private SVGPath extraireIcone(Button btn) {
         Object graphic = btn.getGraphic();
 
-        // Cas 1 : C'est un Group (votre structure actuelle)
         if (graphic instanceof javafx.scene.Group group) {
             if (!group.getChildren().isEmpty() && group.getChildren().get(0) instanceof SVGPath) {
                 return (SVGPath) group.getChildren().get(0);
             }
         }
-        // Cas 2 : C'est directement le SVGPath
         else if (graphic instanceof SVGPath) {
             return (SVGPath) graphic;
         }

@@ -17,10 +17,10 @@ public class Produit {
     private String nom;
 
     /** Prix hors taxe du produit */
-    private BigDecimal prix;
+    private BigDecimal prixUnitaire;
 
     /** Taux de TVA appliqué au produit */
-    private BigDecimal taux_tva;
+    private BigDecimal tauxTva;
 
     /** Quantité disponible en stock */
     private int quantite;
@@ -34,20 +34,20 @@ public class Produit {
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés du produit.
      *
-     * @param id        identifiant unique
-     * @param nom       nom du produit
-     * @param prix      prix hors taxe
-     * @param taux_tva  taux de TVA
-     * @param quantite  quantité en stock
-     * @param poids     poids du produit
-     * @param actif     statut actif/inactif
+     * @param id            identifiant unique
+     * @param nom           nom du produit
+     * @param prixUnitaire prix hors taxe
+     * @param tauxTva      taux de TVA
+     * @param quantite      quantité en stock
+     * @param poids         poids du produit
+     * @param actif         statut actif/inactif
      */
 
-    public Produit(int id, String nom, BigDecimal prix, BigDecimal taux_tva, int quantite, BigDecimal poids, boolean actif) {
+    public Produit(int id, String nom, BigDecimal prixUnitaire, BigDecimal tauxTva, int quantite, BigDecimal poids, boolean actif) {
         this.id = id;
         this.nom = nom;
-        this.prix = prix;
-        this.taux_tva = taux_tva;
+        this.prixUnitaire = prixUnitaire;
+        this.tauxTva = tauxTva;
         this.quantite = quantite;
         this.poids = poids;
         this.actif = actif;
@@ -68,16 +68,16 @@ public class Produit {
         this.nom = nom;
     }
     public BigDecimal getPrix() {
-        return prix;
+        return prixUnitaire;
     }
     public void setPrix(BigDecimal prix) {
-        this.prix = prix;
+        this.prixUnitaire = prix;
     }
-    public BigDecimal getTaux_tva() {
-        return taux_tva;
+    public BigDecimal getTauxTva() {
+        return tauxTva;
     }
-    public void setTaux_tva(BigDecimal taux_tva) {
-        this.taux_tva = taux_tva;
+    public void setTauxTva(BigDecimal tauxTva) {
+        this.tauxTva = tauxTva;
     }
     public int getQuantite() {
         return quantite;

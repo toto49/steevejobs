@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" spacing="15.0" style="-fx-background-color: white; -fx-padding: 30;"
+      xmlns="http://javafx.com/javafx/17" fx:controller="com.eseo.steevejobs.controller.AdminPermissionController">
+
+    <Label style="-fx-font-size: 24px; -fx-font-weight: bold;" text="⚙️ Administration des Permissions"/>
+
+    <Label style="-fx-text-fill: gray;" text="Sélectionnez un rôle pour modifier ses accès en temps réel."/>
+
+    <ComboBox fx:id="roleComboBox" prefWidth="250.0" promptText="Choisir un rôle..."/>
+
+    <Separator prefWidth="200.0"/>
+
+    <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #5585E5;" text="Permissions Actives"/>
+    <VBox fx:id="permissionsContainer" spacing="10.0"/>
+
+</VBox>
