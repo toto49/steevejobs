@@ -184,7 +184,7 @@ target/site/apidocs/
 Si vous utilisez **IntelliJ IDEA**, vous pouvez générer la Javadoc directement depuis l’interface :
 
 1. Ouvrez l’onglet **Maven** situé dans la barre latérale droite d’IntelliJ IDEA.
-2. Déroulez votre projet **MediaStock**.
+2. Déroulez votre projet **SteeveJobs**.
 3. Ouvrez la section **Plugins**.
 4. Déroulez **javadoc**.
 5. Double-cliquez sur **javadoc:javadoc**.
