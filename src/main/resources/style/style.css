@@ -46,3 +46,15 @@
 .transparent-scroll .viewport {
     -fx-background-color: transparent;
 }
+
+.champform {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-highlight-fill: #5584D5;
+    -fx-highlight-text-fill: white;
+    -fx-text-fill: black;
+    -fx-border-color: #000000;
+    -fx-background-color: transparent;
+    -fx-pref-height: 45;
+    -fx-font-family: 'Arial';
+}
