@@ -113,21 +113,24 @@
                                                                        text="ANCIEN MOT DE PASSE :"/>
                                                                 <PasswordField fx:id="ancienMdpField"
                                                                                GridPane.columnIndex="1"
-                                                                               GridPane.hgrow="ALWAYS"/>
+                                                                               GridPane.hgrow="ALWAYS"
+                                                                               styleClass="champform"/>
                                                                 <Label style="-fx-text-fill: black;"
                                                                        text="NOUVEAU MOT DE PASSE :"
                                                                        GridPane.rowIndex="1"/>
                                                                 <PasswordField fx:id="nouveauMdpField"
                                                                                GridPane.columnIndex="1"
                                                                                GridPane.rowIndex="1"
-                                                                               GridPane.hgrow="ALWAYS"/>
+                                                                               GridPane.hgrow="ALWAYS"
+                                                                               styleClass="champform"/>
                                                                 <Label style="-fx-text-fill: black;"
                                                                        text="CONFIRMER NOUVEAU MDP :"
                                                                        GridPane.rowIndex="2"/>
                                                                 <PasswordField fx:id="confirmerMdpField"
                                                                                GridPane.columnIndex="1"
                                                                                GridPane.rowIndex="2"
-                                                                               GridPane.hgrow="ALWAYS"/>
+                                                                               GridPane.hgrow="ALWAYS"
+                                                                               styleClass="champform"/>
                                                             </children>
                                                         </GridPane>
                                                         <HBox alignment="CENTER" style="-fx-padding: 20 0 0 0;">
@@ -181,22 +184,26 @@
                                                     <children>
                                                         <Label style="-fx-text-fill: black;" text="MAIL :"/>
                                                         <TextField fx:id="mailField" GridPane.columnIndex="1"
-                                                                   GridPane.hgrow="ALWAYS"/>
+                                                                   GridPane.hgrow="ALWAYS"
+                                                                   styleClass="champform"/>
 
                                                         <Label style="-fx-text-fill: black;" text="TEL :"
                                                                GridPane.rowIndex="1"/>
                                                         <TextField fx:id="telField" GridPane.columnIndex="1"
-                                                                   GridPane.rowIndex="1" GridPane.hgrow="ALWAYS"/>
+                                                                   GridPane.rowIndex="1" GridPane.hgrow="ALWAYS"
+                                                                   styleClass="champform"/>
 
                                                         <Label style="-fx-text-fill: black;" text="NOM :"
                                                                GridPane.rowIndex="2"/>
                                                         <TextField fx:id="nomField" GridPane.columnIndex="1"
-                                                                   GridPane.rowIndex="2" GridPane.hgrow="ALWAYS"/>
+                                                                   GridPane.rowIndex="2" GridPane.hgrow="ALWAYS"
+                                                                   styleClass="champform"/>
 
                                                         <Label style="-fx-text-fill: black; " text="PRÉNOM :"
                                                                GridPane.rowIndex="3"/>
                                                         <TextField fx:id="prenomField" GridPane.columnIndex="1"
-                                                                   GridPane.rowIndex="3" GridPane.hgrow="ALWAYS"/>
+                                                                   GridPane.rowIndex="3" GridPane.hgrow="ALWAYS"
+                                                                   styleClass="champform"/>
                                                     </children>
                                                 </GridPane>
 
