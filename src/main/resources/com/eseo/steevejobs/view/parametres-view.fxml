@@ -42,7 +42,8 @@
                                 <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #CCCCCC; -fx-border-radius: 10;"
                                       styleClass="card">
                                     <children>
-                                        <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="PRÉFÉRENCES">
+                                        <Label style="-fx-font-size: 20px; -fx-text-fill: black; -fx-font-weight: bold;"
+                                               text="PRÉFÉRENCES">
                                             <padding>
                                                 <Insets bottom="15.0"/>
                                             </padding>
@@ -53,7 +54,7 @@
                                                 <!-- Ligne 1 -->
                                                 <HBox alignment="CENTER_LEFT" spacing="20">
                                                     <children>
-                                                        <Label text="SAUVEGARDER MAIL :"/>
+                                                        <Label style="-fx-text-fill: black;" text="SAUVEGARDER MAIL :"/>
                                                         <CheckBox fx:id="ConnexionCheck" onAction="#toggleConnexionSave"
                                                                   mnemonicParsing="false"/>
                                                     </children>
@@ -62,7 +63,8 @@
                                                 <!-- Ligne 2 -->
                                                 <HBox alignment="CENTER_LEFT" spacing="20">
                                                     <children>
-                                                        <Label text="NOTIFICATIONS PUSH :"/>
+                                                        <Label style="-fx-text-fill: black;"
+                                                               text="NOTIFICATIONS PUSH :"/>
                                                         <CheckBox fx:id="pushNotificationsToggle"
                                                                   mnemonicParsing="false"/>
                                                     </children>
@@ -87,7 +89,8 @@
                                 <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #CCCCCC; -fx-border-radius: 10;"
                                       styleClass="card">
                                     <children>
-                                        <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="SÉCURITÉ">
+                                        <Label style="-fx-font-size: 20px; -fx-text-fill: black; -fx-font-weight: bold;"
+                                               text="SÉCURITÉ">
                                             <padding>
                                                 <Insets bottom="15.0"/>
                                             </padding>
@@ -104,12 +107,14 @@
                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
                                             </rowConstraints>
                                             <children>
-                                                <Label text="ANCIEN MOT DE PASSE :"/>
+                                                <Label style="-fx-text-fill: black;" text="ANCIEN MOT DE PASSE :"/>
                                                 <PasswordField fx:id="ancienMdpField" GridPane.columnIndex="1"/>
-                                                <Label text="NOUVEAU MOT DE PASSE :" GridPane.rowIndex="1"/>
+                                                <Label style="-fx-text-fill: black;" text="NOUVEAU MOT DE PASSE :"
+                                                       GridPane.rowIndex="1"/>
                                                 <PasswordField fx:id="nouveauMdpField" GridPane.columnIndex="1"
                                                                GridPane.rowIndex="1"/>
-                                                <Label text="CONFIRMER NOUVEAU MDP :" GridPane.rowIndex="2"/>
+                                                <Label style="-fx-text-fill: black;" text="CONFIRMER NOUVEAU MDP :"
+                                                       GridPane.rowIndex="2"/>
                                                 <PasswordField fx:id="confirmerMdpField" GridPane.columnIndex="1"
                                                                GridPane.rowIndex="2"/>
                                             </children>
@@ -133,7 +138,8 @@
                         <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #CCCCCC; -fx-border-radius: 10;"
                               styleClass="card" GridPane.columnIndex="1">
                             <children>
-                                <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="MES INFORMATIONS">
+                                <Label style="-fx-font-size: 20px; -fx-text-fill: black; -fx-font-weight: bold;"
+                                       text="MES INFORMATIONS">
                                     <padding>
                                         <Insets bottom="20.0"/>
                                     </padding>
@@ -152,16 +158,16 @@
                                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
                                     </rowConstraints>
                                     <children>
-                                        <Label text="MAIL :"/>
+                                        <Label style="-fx-text-fill: black;" text="MAIL :"/>
                                         <TextField fx:id="mailField" GridPane.columnIndex="1"/>
 
-                                        <Label text="TEL :" GridPane.rowIndex="1"/>
+                                        <Label style="-fx-text-fill: black;" text="TEL :" GridPane.rowIndex="1"/>
                                         <TextField fx:id="telField" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
-                                        <Label text="NOM :" GridPane.rowIndex="2"/>
+                                        <Label style="-fx-text-fill: black;" text="NOM :" GridPane.rowIndex="2"/>
                                         <TextField fx:id="nomField" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
 
-                                        <Label text="PRÉNOM :" GridPane.rowIndex="3"/>
+                                        <Label style="-fx-text-fill: black; " text="PRÉNOM :" GridPane.rowIndex="3"/>
                                         <TextField fx:id="prenomField" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
                                     </children>
                                 </GridPane>
