@@ -1,11 +1,10 @@
 package com.eseo.steevejobs.dao;
 
+import com.eseo.steevejobs.model.Enum.StatutTicket;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.model.Enum.StatutTicket;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,15 +23,18 @@ public class TicketDAO {
      * @throws SQLException exception SQL
      */
     public void createTicket(Ticket ticket) throws SQLException {
-        String sql = "INSERT INTO TICKETS (service, statut, date_ouverture, id_auteur) VALUES (?, ?, ?, ?)";
+        // Ajout de 'sujet' et 'description'
+        String sql = "INSERT INTO TICKETS (sujet, description, service, statut, date_ouverture, id_auteur) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setString(1, ticket.getService());
-            stmt.setString(2, ticket.getStatut().name());
-            stmt.setTimestamp(3, Timestamp.valueOf(ticket.getDateOuverture()));
-            stmt.setInt(4, ticket.getAuteur().getId());
+            stmt.setString(1, ticket.getSujet());
+            stmt.setString(2, ticket.getDescription());
+            stmt.setString(3, ticket.getService());
+            stmt.setString(4, ticket.getStatut().name());
+            stmt.setTimestamp(5, Timestamp.valueOf(ticket.getDateOuverture()));
+            stmt.setInt(6, ticket.getAuteur().getId());
 
             stmt.executeUpdate();
 
@@ -50,16 +52,19 @@ public class TicketDAO {
      * @throws SQLException exception SQL
      */
     public void updateTicket(Ticket ticket) throws SQLException {
-        String sql = "UPDATE TICKETS SET service = ?, statut = ?, date_ouverture = ?, id_auteur = ? WHERE id_tickets = ?";
+        // Ajout de 'sujet' et 'description'
+        String sql = "UPDATE TICKETS SET sujet = ?, description = ?, service = ?, statut = ?, date_ouverture = ?, id_auteur = ? WHERE id_tickets = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, ticket.getService());
-            stmt.setString(2, ticket.getStatut().name());
-            stmt.setTimestamp(3, Timestamp.valueOf(ticket.getDateOuverture()));
-            stmt.setInt(4, ticket.getAuteur().getId());
-            stmt.setInt(5, ticket.getId());
+            stmt.setString(1, ticket.getSujet());
+            stmt.setString(2, ticket.getDescription());
+            stmt.setString(3, ticket.getService());
+            stmt.setString(4, ticket.getStatut().name());
+            stmt.setTimestamp(5, Timestamp.valueOf(ticket.getDateOuverture()));
+            stmt.setInt(6, ticket.getAuteur().getId());
+            stmt.setInt(7, ticket.getId());
 
             stmt.executeUpdate();
         }
@@ -116,6 +121,8 @@ public class TicketDAO {
                     );
                     return new Ticket(
                             rs.getInt("id_tickets"),
+                            rs.getString("sujet"),
+                            rs.getString("description"),
                             rs.getString("service"),
                             StatutTicket.valueOf(rs.getString("statut")),
                             rs.getTimestamp("date_ouverture").toLocalDateTime(),
@@ -161,6 +168,8 @@ public class TicketDAO {
                     );
                     tickets.add(new Ticket(
                             rs.getInt("id_tickets"),
+                            rs.getString("sujet"),
+                            rs.getString("description"),
                             rs.getString("service"),
                             StatutTicket.valueOf(rs.getString("statut")),
                             rs.getTimestamp("date_ouverture").toLocalDateTime(),
@@ -206,6 +215,8 @@ public class TicketDAO {
                     );
                     tickets.add(new Ticket(
                             rs.getInt("id_tickets"),
+                            rs.getString("sujet"),
+                            rs.getString("description"),
                             rs.getString("service"),
                             StatutTicket.valueOf(rs.getString("statut")),
                             rs.getTimestamp("date_ouverture").toLocalDateTime(),
@@ -248,6 +259,8 @@ public class TicketDAO {
                 );
                 tickets.add(new Ticket(
                         rs.getInt("id_tickets"),
+                        rs.getString("sujet"),
+                        rs.getString("description"),
                         rs.getString("service"),
                         StatutTicket.valueOf(rs.getString("statut")),
                         rs.getTimestamp("date_ouverture").toLocalDateTime(),
