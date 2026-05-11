@@ -190,8 +190,8 @@ public class PlanningDAO {
                 "ORDER BY p.jour_debut";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 User user = new User(
@@ -227,8 +227,8 @@ public class PlanningDAO {
         String sql = "SELECT COUNT(*) FROM PLANNING";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);

@@ -241,8 +241,8 @@ public class TicketDAO {
                 "ORDER BY t.date_ouverture DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 User auteur = new User(
@@ -301,8 +301,8 @@ public class TicketDAO {
         String sql = "SELECT COUNT(*) FROM TICKETS";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);

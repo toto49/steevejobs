@@ -227,8 +227,8 @@ public class FichePayeDAO {
                 "ORDER BY f.mois DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 User employe = new User(
@@ -328,8 +328,8 @@ public class FichePayeDAO {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);
