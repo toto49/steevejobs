@@ -8,14 +8,12 @@ import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.TicketService;
 import com.eseo.steevejobs.service.TicketServiceImpl;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -42,13 +40,25 @@ public class TicketController {
     private Label dateLabel;
     @FXML
     private Button actionButton;
+    @FXML
+    private ScrollPane messageScrollPane;
+
+
     private Ticket currentTicket;
     private User currentUser;
 
 
     @FXML
     public void initialize() {
+
         this.currentUser = SessionService.getUtilisateurConnecte();
+        chatMessagesContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
+            Platform.runLater(() -> {
+                messageScrollPane.layout();
+                messageScrollPane.setVvalue(1.0);
+            });
+        });
+
     }
 
     public void initData(int ticketId) {
@@ -106,9 +116,14 @@ public class TicketController {
         messageLabel.setPadding(new Insets(10, 15, 10, 15));
 
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
-        String auteurNom = message.getAuteur().getPrenom() + " " + message.getAuteur().getNom();
-        Label infoLabel = new Label(auteurNom + " - " + message.getDateEnvoi().format(timeFormatter));
+
+        String auteurNom = message.getAuteur().getPrenom() + " " + message.getAuteur().getNom() + " - ";
+        if (message.getAuteur().getId() == currentUser.getId()) {
+            auteurNom = "";
+        }
+        Label infoLabel = new Label(auteurNom + message.getDateEnvoi().format(timeFormatter));
         infoLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #666666;");
+
 
         boolean isMyMessage = (message.getAuteur().getId() == currentUser.getId());
 
@@ -135,6 +150,7 @@ public class TicketController {
         if (texte.isEmpty() || currentTicket == null) {
             return;
         }
+
 
         try {
             Message nouveauMessage = new Message();

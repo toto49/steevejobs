@@ -25,7 +25,6 @@
                     <columnConstraints>
                         <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="10.0"
                                            prefWidth="700.0"/>
-                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="300.0" minWidth="10.0" prefWidth="250.0"/>
                     </columnConstraints>
                     <rowConstraints>
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS"/>
@@ -48,9 +47,9 @@
                                         <VBox spacing="5.0" BorderPane.alignment="CENTER">
                                             <children>
                                                 <Label fx:id="ticketTitleLabel" text="TICKET N°--"
-                                                       style="-fx-font-size: 24px;"/>
+                                                       style="-fx-font-size: 24px; -fx-text-fill: black"/>
                                                 <Label fx:id="ticketObjectLabel" text="OBJECT : --"
-                                                       style="-fx-font-size: 22px;"/>
+                                                       style="-fx-font-size: 22px; -fx-text-fill: black"/>
                                                 <Region style="-fx-background-color: black; -fx-pref-height: 1; -fx-min-height: 1; -fx-max-height: 1;">
                                                     <VBox.margin>
                                                         <Insets top="5.0" bottom="10.0"/>
@@ -61,8 +60,9 @@
                                     </top>
 
                                     <center>
-                                        <ScrollPane fitToWidth="true"
-                                                    style="-fx-background-color: transparent; -fx-background: white; -fx-border-color: white;"
+                                        <ScrollPane fx:id="messageScrollPane"
+                                                    fitToWidth="true"
+                                                    styleClass="rounded-scroll-pane"
                                                     BorderPane.alignment="CENTER">
                                             <content>
                                                 <VBox fx:id="chatMessagesContainer" spacing="15.0">
@@ -86,7 +86,7 @@
                                                            style="-fx-background-color: transparent; -fx-text-fill: black; -fx-font-size: 16px;"
                                                            HBox.hgrow="ALWAYS" onAction="#handleSendMessage"/>
                                                 <Label text="➤" onMouseClicked="#handleSendMessage"
-                                                       style="-fx-font-size: 20px; -fx-cursor: hand;"/>
+                                                       style="-fx-font-size: 20px; -fx-cursor: hand;-fx-text-fill: black "/>
                                             </children>
                                         </HBox>
                                     </bottom>
@@ -100,10 +100,11 @@
                                     </padding>
                                     <children>
                                         <Label fx:id="serviceLabel" text="SERVICE&#10;--"
-                                               style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-                                        <Label fx:id="statusLabel" text="STATUS :&#10;--" style="-fx-font-size: 14px;"/>
+                                               style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: black"/>
+                                        <Label fx:id="statusLabel" text="STATUS :&#10;--"
+                                               style="-fx-font-size: 14px;-fx-text-fill: black"/>
                                         <Label fx:id="dateLabel" text="DATE DE&#10;CREATION :&#10;--"
-                                               style="-fx-font-size: 14px;"/>
+                                               style="-fx-font-size: 14px; -fx-text-fill: black"/>
 
                                         <Region VBox.vgrow="ALWAYS"/>
 
@@ -117,23 +118,7 @@
                             </children>
                         </HBox>
 
-                        <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: black; -fx-border-radius: 10; -fx-border-width: 1;"
-                              GridPane.columnIndex="1">
-                            <children>
-                                <Label text="HISTORIQUE" style="-fx-font-size: 28px;">
-                                    <VBox.margin>
-                                        <Insets bottom="10.0" left="15.0" right="15.0" top="15.0"/>
-                                    </VBox.margin>
-                                </Label>
-                                <Region style="-fx-background-color: black; -fx-pref-height: 1; -fx-min-height: 1; -fx-max-height: 1;"/>
 
-                                <VBox fx:id="historyContainer" VBox.vgrow="ALWAYS">
-                                    <padding>
-                                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
-                                    </padding>
-                                </VBox>
-                            </children>
-                        </VBox>
 
                     </children>
                 </GridPane>

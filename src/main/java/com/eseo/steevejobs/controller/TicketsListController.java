@@ -24,50 +24,83 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class TicketsListController {
+public class TicketsListController implements ParametrizedController {
+
     private final TicketService ticketService = new TicketServiceImpl();
     private UserService userService;
     private SessionService sessionService;
     private User currentUser;
+
     @FXML
     private VBox ticketsContainer;
+
+    private List<Ticket> tousLesTicketsBDD;
 
     @FXML
     public void initialize() {
         try {
             this.userService = new UserService();
             this.sessionService = new SessionService();
-
             this.currentUser = SessionService.getUtilisateurConnecte();
-            int currentUserId = currentUser.getId();
 
-            List<Ticket> mesTickets = ticketService.getTicketsByAuteur(currentUserId);
+            // On charge TOUS les tickets de la BDD une seule fois
+            this.tousLesTicketsBDD = ticketService.getAllTickets();
 
-            ticketsContainer.getChildren().clear();
-            for (Ticket ticket : mesTickets) {
-                addTicketCard(
-                        String.valueOf(ticket.getId()),
-                        ticket.getSujet() != null ? ticket.getSujet() : "Sans sujet",
-                        ticket.getStatut().name(),
-                        ticket.getDateOuverture().toString()
-                );
-            }
+            // Par défaut (si on n'est pas passé par initData), on affiche "Mes Tickets"
+            afficherMesTickets();
+
         } catch (RuntimeException e) {
-            System.err.println("Erreur lors du chargement des tickets : " + e.getMessage());
+            System.err.println("Erreur lors du chargement : " + e.getMessage());
         }
     }
 
+    private void afficherMesTickets() {
+        if (tousLesTicketsBDD == null) return;
+
+        List<Ticket> mesTickets = tousLesTicketsBDD.stream()
+                .filter(t -> t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId())
+                .collect(Collectors.toList());
+
+        remplirLeContainer(mesTickets);
+    }
+
+    @Override
+    public void initData(String parametreService) {
+        if (tousLesTicketsBDD == null) return;
+
+        List<Ticket> ticketsFiltres = tousLesTicketsBDD.stream()
+                .filter(t -> (t.getService() != null && t.getService().equalsIgnoreCase(parametreService))
+                        || (t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId()))
+                .collect(Collectors.toList());
+
+        remplirLeContainer(ticketsFiltres);
+    }
+
+    private void remplirLeContainer(List<Ticket> liste) {
+        ticketsContainer.getChildren().clear();
+        for (Ticket ticket : liste) {
+            String dateAffichee = ticketService.formatTicketDate(ticket.getDateOuverture());
+            addTicketCard(
+                    String.valueOf(ticket.getId()),
+                    ticket.getSujet() != null ? ticket.getSujet() : "Sans sujet",
+                    ticket.getStatut().name(),
+                    dateAffichee
+            );
+        }
+    }
 
     private void addTicketCard(String id, String subject, String status, String date) {
         HBox card = new HBox();
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: black; -fx-border-radius: 10; -fx-border-width: 1; -fx-padding: 15;");
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand; -fx-border-color: black; -fx-border-radius: 10; -fx-border-width: 1; -fx-padding: 15;");
         card.setAlignment(Pos.CENTER_LEFT);
         card.setSpacing(20);
+        card.setOnMouseClicked(event -> handleOpenTicket(id));
 
         VBox infoBox = new VBox(5);
         Label idLabel = new Label("TICKET N°" + id);
-        idLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        idLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: black; -fx-font-weight: bold;");
         Label subjectLabel = new Label(subject);
         subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
         infoBox.getChildren().addAll(idLabel, subjectLabel);
@@ -78,25 +111,14 @@ public class TicketsListController {
         VBox metaBox = new VBox(5);
         metaBox.setAlignment(Pos.CENTER_RIGHT);
         Label statusLabel = new Label("Statut: " + status);
-
-        if (status.equals("EN_ATTENTE") || status.equals("EN_COURS") || status.equals("OPEN") || status.equals("IN PROGRESS")) {
-            statusLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: green; -fx-font-weight: bold;");
-        } else {
-            statusLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: red; -fx-font-weight: bold;");
-        }
+        statusLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " +
+                (status.matches("EN_ATTENTE|EN_COURS|OPEN|IN PROGRESS") ? "green;" : "red;"));
 
         Label dateLabel = new Label(date);
         dateLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666666;");
         metaBox.getChildren().addAll(statusLabel, dateLabel);
 
-        Button openBtn = new Button("VOIR");
-        openBtn.setStyle("-fx-background-color: #BBD2FA; -fx-border-color: black; -fx-border-radius: 5; -fx-background-radius: 5; -fx-cursor: hand;");
-
-
-        openBtn.setOnAction(event -> handleOpenTicket(id));
-
-        card.getChildren().addAll(infoBox, spacer, metaBox, openBtn);
-
+        card.getChildren().addAll(infoBox, spacer, metaBox);
         ticketsContainer.getChildren().add(card);
     }
 
@@ -200,30 +222,19 @@ public class TicketsListController {
         popupStage.showAndWait();
     }
 
-
     private void handleOpenTicket(String ticketId) {
-
-
         try {
-
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticket-view.fxml"));
             Parent view = loader.load();
-
-
             TicketController controller = loader.getController();
-
-
             controller.initData(Integer.parseInt(ticketId));
+
             if (MenuController.getInstance() != null) {
                 MenuController.getInstance().setCenterView(view);
                 MenuController.getInstance().changerTitre("Ticket N°" + ticketId);
-            } else {
-                System.err.println("Erreur : L'instance de MenuController est null.");
             }
-
         } catch (Exception e) {
             e.printStackTrace();
-            System.err.println("Erreur lors de l'ouverture de la page du ticket.");
         }
     }
 }

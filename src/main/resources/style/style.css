@@ -37,12 +37,50 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.1), 10, 0, 0, 5);
 }
 
-/* Enlever la bordure par défaut du ScrollPane */
-.transparent-scroll {
+/* 1. On rend TOUT le conteneur transparent */
+.rounded-scroll-pane {
     -fx-background-color: transparent;
-    -fx-background: transparent;
+    -fx-background: transparent; /* Ligne magique souvent requise pour le ScrollPane */
+    -fx-padding: 0;
+    -fx-border-color: transparent;
 }
 
-.transparent-scroll .viewport {
+/* 2. On arrondit uniquement la zone blanche où il y a les messages */
+.rounded-scroll-pane .viewport {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+}
+
+/* 3. On affine la barre verticale entière */
+.rounded-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 10; /* Rend la barre plus fine et élégante */
+}
+
+/* 4. On CACHE totalement le rail noir/gris (le problème sur votre image) */
+.rounded-scroll-pane .scroll-bar:vertical .track,
+.rounded-scroll-pane .scroll-bar:vertical .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* 5. On style la poignée qu'on attrape (le thumb) */
+.rounded-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #BBD2FA; /* La même couleur bleue que vos bulles */
+    -fx-background-radius: 10;
+}
+
+/* 6. On cache les petites flèches moches en haut et en bas */
+.rounded-scroll-pane .scroll-bar:vertical .increment-button,
+.rounded-scroll-pane .scroll-bar:vertical .decrement-button,
+.rounded-scroll-pane .scroll-bar:vertical .increment-arrow,
+.rounded-scroll-pane .scroll-bar:vertical .decrement-arrow {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-shape: " "; /* Supprime la forme de la flèche */
+}
+
+/* 7. On cache le petit carré gris d'intersection en bas à droite */
+.rounded-scroll-pane .corner {
     -fx-background-color: transparent;
 }
