@@ -8,11 +8,17 @@ import com.eseo.steevejobs.model.Ticket;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class TicketServiceImpl implements TicketService{
+public class TicketServiceImpl implements TicketService {
+
     private final TicketDAO ticketDAO = new TicketDAO();
     private final MessageDAO messageDAO = new MessageDAO();
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @Override
     public Ticket creerTicket(Ticket ticket) {
@@ -30,15 +36,20 @@ public class TicketServiceImpl implements TicketService{
     public Ticket getTicketById(int id) {
         try {
             return ticketDAO.getById(id);
-        }catch (SQLException e) {
-            throw new RuntimeException("Erreur lors de la récupération du ticket", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la récupération du ticket : " + id, e);
         }
     }
 
     @Override
     public List<Ticket> getAllTickets() {
-        try {return ticketDAO.findAll();
-        }catch (SQLException e) {
+        try {
+            List<Ticket> tickets = ticketDAO.findAll();
+
+            return tickets.stream()
+                    .sorted(Comparator.comparing(Ticket::getDateOuverture).reversed())
+                    .collect(Collectors.toList());
+        } catch (SQLException e) {
             throw new RuntimeException("Erreur lors de la récupération des tickets", e);
         }
     }
@@ -46,12 +57,13 @@ public class TicketServiceImpl implements TicketService{
     @Override
     public List<Ticket> getTicketsByAuteur(int userId) {
         try {
-            return ticketDAO.findByAuteurId(userId);
+            return ticketDAO.findByAuteurId(userId).stream()
+                    .sorted(Comparator.comparing(Ticket::getDateOuverture).reversed())
+                    .collect(Collectors.toList());
         } catch (SQLException e) {
-            throw new RuntimeException("Erreur lors de la récupération des tickets par auteur", e);
+            throw new RuntimeException("Erreur lors de la récupération des tickets de l'utilisateur : " + userId, e);
         }
     }
-
 
     @Override
     public Message ajouterMessage(int ticketId, Message message) {
@@ -64,7 +76,6 @@ public class TicketServiceImpl implements TicketService{
             message.setTicket(ticket);
             message.setDateEnvoi(LocalDateTime.now());
             messageDAO.createMessage(message);
-
 
             if (ticket.getStatut() == StatutTicket.EN_ATTENTE) {
                 ticketDAO.updateStatut(ticketId, StatutTicket.EN_COURS);
@@ -81,7 +92,7 @@ public class TicketServiceImpl implements TicketService{
         try {
             boolean update = ticketDAO.updateStatut(ticketId, nouveauStatut);
             if (!update) {
-                throw new IllegalArgumentException("Ticket introuvable");
+                throw new IllegalArgumentException("Impossible de modifier le statut : Ticket introuvable");
             }
             return ticketDAO.getById(ticketId);
         } catch (SQLException e) {
@@ -92,9 +103,29 @@ public class TicketServiceImpl implements TicketService{
     @Override
     public List<Message> getMessagesDuTicket(int ticketId) {
         try {
-            return messageDAO.findByTicketId(ticketId);
+            return messageDAO.findByTicketId(ticketId).stream()
+                    .sorted(Comparator.comparing(Message::getDateEnvoi))
+                    .collect(Collectors.toList());
         } catch (SQLException e) {
             throw new RuntimeException("Erreur lors de la récupération des messages", e);
         }
+    }
+
+
+    public String formatTicketDate(LocalDateTime date) {
+        if (date == null) return "N/A";
+        return date.format(DATE_FORMATTER);
+    }
+
+    public String getDureeOuverture(Ticket ticket) {
+        if (ticket.getDateOuverture() == null) return "";
+
+        long jours = ChronoUnit.DAYS.between(ticket.getDateOuverture(), LocalDateTime.now());
+        if (jours > 0) {
+            return "Ouvert il y a " + jours + " jour(s)";
+        }
+
+        long heures = ChronoUnit.HOURS.between(ticket.getDateOuverture(), LocalDateTime.now());
+        return "Ouvert il y a " + heures + " heure(s)";
     }
 }

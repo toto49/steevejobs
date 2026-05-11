@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.util.List;
 
 public class HomeController {
+    private UserService userService;
+    private SessionService sessionService;
+    private User currentUser;
 
     private final PermissionService permissionService;
     @FXML
@@ -69,7 +72,8 @@ public class HomeController {
                         null,
                         app.getBgColor(),
                         app.getChemin(),
-                        app.getImage()
+                        app.getImage(),
+                        currentUser.getRole()
                 );
 
                 card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
@@ -80,8 +84,7 @@ public class HomeController {
         }
     }
 
-
-    private HBox createAppCard(String title, String subtitle, String badgeText, String bgColor, String chemin, String image) {
+    private HBox createAppCard(String title, String subtitle, String badgeText, String bgColor, String chemin, String image, String parametreFacultatif) {
         HBox card = new HBox();
         card.setMinSize(250, 220);
         card.setStyle("-fx-background-color: " + bgColor + "; -fx-background-radius: 15;");
@@ -131,14 +134,37 @@ public class HomeController {
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
             if (MenuController.getInstance() != null) {
-                MenuController.getInstance().chargerPage(chemin);
-                MenuController.getInstance().changerTitre(title);
+
+                if (parametreFacultatif != null) {
+                    chargerPageAvecParametre(chemin, parametreFacultatif, title);
+                } else {
+                    MenuController.getInstance().chargerPage(chemin);
+                    MenuController.getInstance().changerTitre(title);
+                }
+
             } else {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
             }
         });
 
         return card;
+    }
+
+    private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/" + chemin + "-view.fxml"));
+            Parent view = loader.load();
+            Object controller = loader.getController();
+            if (controller instanceof ParametrizedController) {
+                ((ParametrizedController) controller).initData(parametre);
+            }
+            MenuController.getInstance().setCenterView(view);
+            MenuController.getInstance().changerTitre(titreCard);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            System.err.println("Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
+        }
     }
 
     private boolean hasPermission(String requiredPermission) {

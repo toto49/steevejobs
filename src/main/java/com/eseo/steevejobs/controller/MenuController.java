@@ -126,7 +126,7 @@ public class MenuController {
      */
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("ticket");
+        chargerPage("ticketsList");
         updateButtonStyles(btnTicket);
         changerTitre("ticket");
     }
@@ -198,12 +198,14 @@ public class MenuController {
         return null;
     }
 
-    /**
-     * Changer titre.
-     *
-     * @param nouveauTitre the nouveau titre
-     */
+
     public void changerTitre(String nouveauTitre) {
         HelloApplication.changerTitreGlobal(nouveauTitre);
+    }
+
+    public void setCenterView(Parent vue) {
+        if (mainPane != null) {
+            mainPane.setCenter(vue);
+        }
     }
 }
