@@ -149,7 +149,7 @@ public class TicketsListController implements ParametrizedController {
         serviceTitre.setStyle("-fx-font-weight: bold;");
         ComboBox<String> serviceComboBox = new ComboBox<>();
         serviceComboBox.setItems(FXCollections.observableArrayList(
-                "Service Informatique", "Ressources Humaines", "Maintenance", "Comptabilité", "Autre"
+                "ADMIN", "RH"
         ));
         serviceComboBox.setPromptText("Sélectionnez un service...");
         serviceComboBox.setPrefHeight(35);
