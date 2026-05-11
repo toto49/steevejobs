@@ -138,9 +138,9 @@ public class MenuController {
      */
     @FXML
     void afficherFiles(ActionEvent event) {
-        chargerPage("ajouter-produit");
+        chargerPage("document");
         updateButtonStyles(btnFiles);
-        changerTitre("Ajouter Produit");
+        changerTitre("Document  ");
     }
 
     /**

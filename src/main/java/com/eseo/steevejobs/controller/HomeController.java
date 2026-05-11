@@ -1,5 +1,6 @@
 package com.eseo.steevejobs.controller;
 
+import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.PermissionService;
@@ -18,7 +19,7 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-
+import java.io.IOException;
 import java.util.List;
 
 public class HomeController {
@@ -30,14 +31,28 @@ public class HomeController {
     @FXML
     private FlowPane appsGrid;
     private List<String> currentUserPermissions;
-
+    private UserService userService;
+    private SessionService sessionService;
+    private User currentUser;
     public HomeController() {
         this.permissionService = new PermissionService();
     }
 
     @FXML
-    public void initialize() {
-        onUserLogin(1);
+    public void initialize() throws IOException {
+
+        this.currentUser = SessionService.getUtilisateurConnecte();
+
+        if (this.currentUser != null) {
+            onUserLogin(currentUser.getId());
+        } else {
+            SessionService.setUtilisateurConnecte(null);
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/bienvenue-view.fxml"));
+            Parent loginRoot = loader.load();
+
+            HelloApplication.changerPageGlobale(loginRoot, "Connexion");
+        }
     }
 
     public void onUserLogin(int idUserConnecte) {

@@ -1,5 +1,6 @@
 package com.eseo.steevejobs.controller;
 
+import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.MailService;
 import com.eseo.steevejobs.service.SessionService;
@@ -7,11 +8,14 @@ import com.eseo.steevejobs.service.SystemNotificationService;
 import com.eseo.steevejobs.service.UserService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.prefs.Preferences;
 
@@ -178,5 +182,22 @@ public class ParametresController {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    @FXML
+    public void resetsession(ActionEvent actionEvent) {
+        try {
+            SessionService.setUtilisateurConnecte(null);
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/bienvenue-view.fxml"));
+            Parent loginRoot = loader.load();
+
+            // 2. On utilise VOTRE méthode pour remplacer la vue tout en gardant le header !
+            HelloApplication.changerPageGlobale(loginRoot, "Connexion");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Erreur lors du chargement de la page de connexion.");
+        }
     }
 }
