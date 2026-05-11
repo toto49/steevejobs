@@ -31,9 +31,7 @@ public class HomeController {
     @FXML
     private FlowPane appsGrid;
     private List<String> currentUserPermissions;
-    private UserService userService;
-    private SessionService sessionService;
-    private User currentUser;
+
     public HomeController() {
         this.permissionService = new PermissionService();
     }
