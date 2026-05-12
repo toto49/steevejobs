@@ -183,7 +183,28 @@ public class ProduitDAO {
         }
         return produits;
     }
+    public List<Produit> findAllActive() throws SQLException {
+        List<Produit> produits = new ArrayList<>();
+        String sql = "SELECT * FROM PRODUITS WHERE actif = 1 ORDER BY nom";
 
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                produits.add(new Produit(
+                        rs.getInt("id_produits"),
+                        rs.getString("nom"),
+                        rs.getBigDecimal("prix_unitaire"),
+                        rs.getBigDecimal("taux_tva"),
+                        rs.getInt("quantite"),
+                        rs.getBigDecimal("poids"),
+                        rs.getBoolean("actif")
+                ));
+            }
+        }
+        return produits;
+    }
     /**
      * Récupérer les produits avec un stock inférieur au seuil
      * @param threshold le seuil de stock
