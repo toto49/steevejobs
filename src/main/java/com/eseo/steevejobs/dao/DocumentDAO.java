@@ -35,7 +35,7 @@ public class DocumentDAO {
             stmt.setDate(2, java.sql.Date.valueOf(document.getDate().toLocalDate()));
             stmt.setBigDecimal(3, document.getPrixHt());
             stmt.setBigDecimal(4, document.getPrixTtc());
-            stmt.setString(5, document.getStatut().getValeur());  // ← MODIFIÉ
+            stmt.setString(5, document.getStatut().getValeur());
             stmt.setString(6, document.getUrl());
             stmt.setInt(7, document.getTiers().getId());
 
@@ -74,7 +74,7 @@ public class DocumentDAO {
             stmt.setDate(2, java.sql.Date.valueOf(document.getDate().toLocalDate()));
             stmt.setBigDecimal(3, document.getPrixHt());
             stmt.setBigDecimal(4, document.getPrixTtc());
-            stmt.setString(5, document.getStatut().getValeur());  // ← MODIFIÉ
+            stmt.setString(5, document.getStatut().getValeur());
             stmt.setString(6, document.getUrl());
             stmt.setInt(7, document.getTiers().getId());
 
@@ -180,7 +180,7 @@ public class DocumentDAO {
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
+                            DocumentStatut.fromValeur(rs.getString("statut")),
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -252,7 +252,7 @@ public class DocumentDAO {
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
+                            DocumentStatut.fromValeur(rs.getString("statut")),
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -282,7 +282,7 @@ public class DocumentDAO {
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, statut.getValeur());  // ← MODIFIÉ
+            stmt.setString(1, statut.getValeur());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -324,7 +324,7 @@ public class DocumentDAO {
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
+                            DocumentStatut.fromValeur(rs.getString("statut")),
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -396,7 +396,7 @@ public class DocumentDAO {
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
+                            DocumentStatut.fromValeur(rs.getString("statut")),
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -468,7 +468,7 @@ public class DocumentDAO {
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
+                            DocumentStatut.fromValeur(rs.getString("statut")),
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -537,7 +537,7 @@ public class DocumentDAO {
                         rs.getDate("date").toLocalDate().atStartOfDay(),
                         rs.getBigDecimal("total_ht"),
                         rs.getBigDecimal("total_ttc"),
-                        DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
+                        DocumentStatut.fromValeur(rs.getString("statut")),
                         rs.getString("url"),
                         tiers,
                         editeur
@@ -560,7 +560,7 @@ public class DocumentDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, statut.getValeur());  // ← MODIFIÉ
+            stmt.setString(1, statut.getValeur());
             stmt.setInt(2, id);
 
             int rowsAffected = stmt.executeUpdate();
@@ -599,7 +599,7 @@ public class DocumentDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, statut.getValeur());  // ← MODIFIÉ
+            stmt.setString(1, statut.getValeur()); 
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {

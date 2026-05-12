@@ -4,8 +4,11 @@ import com.eseo.steevejobs.dao.DocumentDAO;
 import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.Document;
+import com.eseo.steevejobs.model.Produit;
+import com.eseo.steevejobs.model.Tiers;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
+import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.DocumentService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -25,6 +28,7 @@ import javafx.util.StringConverter;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
@@ -41,7 +45,10 @@ public class DocumentController implements Initializable {
     @FXML private TableColumn<Document, String> colType, colClient, colDate, colHT, colTTC, colStatut;
     @FXML private TableColumn<Document, Void> colActions;
     @FXML private Label lblNbDocs;
+
+    // Labels du panneau détail
     @FXML private Label detailType, detailClient, detailDate, detailHT, detailTTC, detailStatut;
+    @FXML private Label detailEmail, detailTel, detailAdresse;  // ← NOUVEAUX LABELS
     @FXML private VBox lignesContainer;
     @FXML private Button btnExporterPdf, btnOuvrirPdf, btnModifier, btnChanger, btnSupprimer;
 
@@ -52,9 +59,17 @@ public class DocumentController implements Initializable {
 
     private static final DateTimeFormatter FMT_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    private User utilisateurConnecte;
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerColonnes();
+        //supprime les colonnes fantomes
+        tableDocuments.getColumns().removeIf(col -> col.getText() == null || col.getText().isEmpty());
+        tableDocuments.getColumns().removeIf(col -> {
+            String text = col.getText();
+            return (text == null || text.isEmpty()) && col != colActions;
+        });
         configurerFiltres();
         chargerTousDocuments();
         configurerSelectionTableau();
@@ -65,11 +80,17 @@ public class DocumentController implements Initializable {
         btnSupprimer.setDisable(true);
     }
 
+    public void setUtilisateurConnecte(User user) {
+        this.utilisateurConnecte = user;
+    }
+
     @FXML
     private void ouvrirFormulaireCreation() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/nouveau-document-view.fxml"));
             Parent root = loader.load();
+            NouveauDocumentController controller = loader.getController();
+            controller.setUtilisateurConnecte(utilisateurConnecte);
             Stage stage = new Stage();
             stage.setTitle("Nouveau document");
             stage.setScene(new Scene(root));
@@ -106,10 +127,8 @@ public class DocumentController implements Initializable {
         try {
             String url = documentService.exporterPdf(documentSelectionne.getId());
             documentSelectionne.setUrl(url);
-            // Activer le bouton Ouvrir PDF après génération
             btnOuvrirPdf.setDisable(false);
             afficherSucces("PDF généré : " + url);
-            btnOuvrirPdf.setDisable(false);
             chargerTousDocuments();
         } catch (Exception e) {
             afficherErreur("Erreur génération PDF : " + e.getMessage());
@@ -138,6 +157,7 @@ public class DocumentController implements Initializable {
                 documentSelectionne.setStatut(nouveauStatut);
                 documentService.modifierDocument(documentSelectionne);
                 chargerTousDocuments();
+                afficherDetail(documentSelectionne);
             } catch (SQLException e) {
                 afficherErreur("Erreur mise à jour statut");
             }
@@ -184,6 +204,9 @@ public class DocumentController implements Initializable {
         colHT.setCellValueFactory(data -> new SimpleStringProperty(String.format("%.2f €", data.getValue().getPrixHt())));
         colTTC.setCellValueFactory(data -> new SimpleStringProperty(String.format("%.2f €", data.getValue().getPrixTtc())));
         colStatut.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatut().name()));
+    //evite les colonne fantome
+        tableDocuments.getColumns().setAll(colType, colClient, colDate, colHT, colTTC, colStatut, colActions);
+
     }
 
     private void configurerFiltres() {
@@ -228,29 +251,72 @@ public class DocumentController implements Initializable {
     }
 
     private void afficherDetail(Document doc) {
+        // Type de document
         detailType.setText(doc.getType().name());
-        detailClient.setText(doc.getTiers().getNom());
+
+        // Informations client
+        if (doc.getTiers() != null) {
+            Tiers client = doc.getTiers();
+            detailClient.setText((client.getNom() != null ? client.getNom() : "") + " " + (client.getPrenom() != null ? client.getPrenom() : ""));
+            detailEmail.setText(client.getEmail() != null && !client.getEmail().isEmpty() ? client.getEmail() : "Non renseigné");
+            detailTel.setText(client.getTel() != null && !client.getTel().isEmpty() ? client.getTel() : "Non renseigné");
+            detailAdresse.setText(client.getAdresse() != null && !client.getAdresse().isEmpty() ? client.getAdresse() : "Non renseigné");
+        } else {
+            detailClient.setText("Client non renseigné");
+            detailEmail.setText("Non renseigné");
+            detailTel.setText("Non renseigné");
+            detailAdresse.setText("Non renseigné");
+        }
+
+        // Informations document
         detailDate.setText(doc.getDate().format(FMT_DATE));
         detailHT.setText(String.format("%.2f €", doc.getPrixHt()));
         detailTTC.setText(String.format("%.2f €", doc.getPrixTtc()));
         detailStatut.setText(doc.getStatut().name());
+        detailStatut.setStyle("-fx-text-fill: black; -fx-font-weight: bold;");
+
+        // Lignes produits
         lignesContainer.getChildren().clear();
+
         try {
             for (Composer ligne : documentService.getLignes(doc.getId())) {
-                Label lbl = new Label(ligne.getProduit().getNom() + " ×" + ligne.getQuantite() + " → " +
-                        String.format("%.2f €", ligne.getPrixVente().multiply(ligne.getQuantite())));
-                lbl.setStyle("-fx-text-fill: #4b5563;");
+                Produit produit = ligne.getProduit();
+                BigDecimal quantite = ligne.getQuantite();
+
+                // Détermine l'unité (kg ou unité(s))
+                String unite = (produit.getPoid() != null && produit.getPoid().compareTo(BigDecimal.ZERO) > 0) ? "kg" : "unité(s)";
+
+                // Affiche avec l'unité
+                Label lbl = new Label(
+                        "• " + produit.getNom() + " : " + quantite.stripTrailingZeros().toPlainString() + " " + unite +
+                                " → " + String.format("%.2f €", ligne.getPrixVente().multiply(quantite))
+                );
+                lbl.setStyle("-fx-text-fill: #4b5563; -fx-font-size: 12px;");
+                lignesContainer.getChildren().add(lbl);
+            }
+            if (lignesContainer.getChildren().isEmpty()) {
+                Label lbl = new Label("Aucune ligne produit");
+                lbl.setStyle("-fx-text-fill: #9ca3af;");
                 lignesContainer.getChildren().add(lbl);
             }
         } catch (SQLException e) {
-            lignesContainer.getChildren().add(new Label("Erreur chargement lignes"));
+            Label lbl = new Label("Erreur chargement lignes");
+            lbl.setStyle("-fx-text-fill: #E81123;");
+            lignesContainer.getChildren().add(lbl);
         }
     }
 
     private void viderDetail() {
         documentSelectionne = null;
-        detailType.setText(""); detailClient.setText(""); detailDate.setText("");
-        detailHT.setText(""); detailTTC.setText(""); detailStatut.setText("");
+        detailType.setText("");
+        detailClient.setText("");
+        detailEmail.setText("");
+        detailTel.setText("");
+        detailAdresse.setText("");
+        detailDate.setText("");
+        detailHT.setText("");
+        detailTTC.setText("");
+        detailStatut.setText("");
         lignesContainer.getChildren().clear();
         btnExporterPdf.setDisable(true);
         btnOuvrirPdf.setDisable(true);
