@@ -18,10 +18,12 @@ public class TiersDAO {
 
     /**
      * Créer un nouveau tiers
+     *
      * @param tiers le tiers à créer
+     * @return
      * @throws SQLException exception SQL
      */
-    public void createTiers(Tiers tiers) throws SQLException {
+    public boolean createTiers(Tiers tiers) throws SQLException {
         String sql = "INSERT INTO TIERS (nom, prenom, type, email, adresse, tel, siret, num_tva, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -37,22 +39,28 @@ public class TiersDAO {
             stmt.setString(8, tiers.getNum_tva());
             stmt.setBoolean(9, tiers.isActif());
 
-            stmt.executeUpdate();
+            int lignesModifiees = stmt.executeUpdate();
 
-            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    tiers.setId(generatedKeys.getInt(1));
+            if (lignesModifiees > 0) {
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        tiers.setId(generatedKeys.getInt(1));
+                    }
                 }
+                return true;
             }
         }
+        return false;
     }
 
     /**
      * Mettre à jour un tiers existant
+     *
      * @param tiers le tiers à mettre à jour
+     * @return
      * @throws SQLException exception SQL
      */
-    public void updateTiers(Tiers tiers) throws SQLException {
+    public boolean updateTiers(Tiers tiers) throws SQLException {
         String sql = "UPDATE TIERS SET nom = ?, prenom = ?, type = ?, email = ?, adresse = ?, tel = ?, siret = ?, num_tva = ?, actif = ? WHERE id_tiers = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -69,7 +77,8 @@ public class TiersDAO {
             stmt.setBoolean(9, tiers.isActif());
             stmt.setInt(10, tiers.getId());
 
-            stmt.executeUpdate();
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
         }
     }
 
@@ -198,8 +207,8 @@ public class TiersDAO {
         String sql = "SELECT * FROM TIERS ORDER BY nom, prenom";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 tiers.add(new Tiers(
@@ -333,8 +342,8 @@ public class TiersDAO {
         String sql = "SELECT COUNT(*) FROM TIERS";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);
@@ -353,8 +362,8 @@ public class TiersDAO {
         String sql = "SELECT COUNT(*) FROM TIERS WHERE actif = 1";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);

@@ -1,11 +1,17 @@
 package com.eseo.steevejobs.controller;
 
+import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
+import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.PermissionService;
+import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.service.UserService;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -13,23 +19,37 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.io.IOException;
 import java.util.List;
 
 public class HomeController {
+    private UserService userService;
+    private SessionService sessionService;
+    private User currentUser;
 
     private final PermissionService permissionService;
     @FXML
     private FlowPane appsGrid;
     private List<String> currentUserPermissions;
-
     public HomeController() {
         this.permissionService = new PermissionService();
     }
 
     @FXML
-    public void initialize() {
+    public void initialize() throws IOException {
 
-        onUserLogin(1);
+        this.currentUser = SessionService.getUtilisateurConnecte();
+
+        if (this.currentUser != null) {
+            onUserLogin(currentUser.getId());
+        } else {
+            SessionService.setUtilisateurConnecte(null);
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/bienvenue-view.fxml"));
+            Parent loginRoot = loader.load();
+
+            HelloApplication.changerPageGlobale(loginRoot, "Connexion");
+        }
     }
 
     public void onUserLogin(int idUserConnecte) {
@@ -49,7 +69,8 @@ public class HomeController {
                         null,
                         app.getBgColor(),
                         app.getChemin(),
-                        app.getImage()
+                        app.getImage(),
+                        currentUser.getRole()
                 );
 
                 card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
@@ -60,8 +81,7 @@ public class HomeController {
         }
     }
 
-
-    private HBox createAppCard(String title, String subtitle, String badgeText, String bgColor, String chemin, String image) {
+    private HBox createAppCard(String title, String subtitle, String badgeText, String bgColor, String chemin, String image, String parametreFacultatif) {
         HBox card = new HBox();
         card.setMinSize(250, 220);
         card.setStyle("-fx-background-color: " + bgColor + "; -fx-background-radius: 15;");
@@ -111,14 +131,37 @@ public class HomeController {
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
             if (MenuController.getInstance() != null) {
-                MenuController.getInstance().chargerPage(chemin);
-                MenuController.getInstance().changerTitre(title);
+
+                if (parametreFacultatif != null) {
+                    chargerPageAvecParametre(chemin, parametreFacultatif, title);
+                } else {
+                    MenuController.getInstance().chargerPage(chemin);
+                    MenuController.getInstance().changerTitre(title);
+                }
+
             } else {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
             }
         });
 
         return card;
+    }
+
+    private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/" + chemin + "-view.fxml"));
+            Parent view = loader.load();
+            Object controller = loader.getController();
+            if (controller instanceof ParametrizedController) {
+                ((ParametrizedController) controller).initData(parametre);
+            }
+            MenuController.getInstance().setCenterView(view);
+            MenuController.getInstance().changerTitre(titreCard);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            System.err.println("Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
+        }
     }
 
     private boolean hasPermission(String requiredPermission) {

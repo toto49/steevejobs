@@ -126,9 +126,9 @@ public class MenuController {
      */
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("adminpermission");
+        chargerPage("ticketsList");
         updateButtonStyles(btnTicket);
-        changerTitre("Gestion Adhérent");
+        changerTitre("ticket");
     }
 
     /**
@@ -138,9 +138,9 @@ public class MenuController {
      */
     @FXML
     void afficherFiles(ActionEvent event) {
-        chargerPage("ajouter-produit");
+        chargerPage("document");
         updateButtonStyles(btnFiles);
-        changerTitre("Ajouter Produit");
+        changerTitre("Document  ");
     }
 
     /**
@@ -150,7 +150,7 @@ public class MenuController {
      */
     @FXML
     void afficherParametres(ActionEvent event) {
-        chargerPage("parametre");
+        chargerPage("parametres");
         updateButtonStyles(btnParametres);
         changerTitre("Paramètres");
     }
@@ -198,12 +198,14 @@ public class MenuController {
         return null;
     }
 
-    /**
-     * Changer titre.
-     *
-     * @param nouveauTitre the nouveau titre
-     */
+
     public void changerTitre(String nouveauTitre) {
         HelloApplication.changerTitreGlobal(nouveauTitre);
+    }
+
+    public void setCenterView(Parent vue) {
+        if (mainPane != null) {
+            mainPane.setCenter(vue);
+        }
     }
 }
