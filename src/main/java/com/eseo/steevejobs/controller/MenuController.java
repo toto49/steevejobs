@@ -110,7 +110,7 @@ public class MenuController {
         if (bouton == null || bouton.getGraphic() == null) return null;
 
         Label badge = new Label("1");
-        badge.setStyle("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-background-radius: 10; -fx-padding: 1 5 1 5; -fx-font-size: 10px; -fx-font-weight: bold;");
+        badge.setStyle("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-background-radius: 10; -fx-padding: 1; -fx-font-size: 10px; -fx-font-weight: bold;");
         badge.setVisible(false);
         badge.setMouseTransparent(true);
 
