@@ -49,6 +49,8 @@ public class CalendrierController {
 
     @FXML
     public void initialize() throws SQLException {
+        // Récupération des rdv
+        events = initEvent();
         // Initialisation de base (Aujourd'hui)
         dateDebutSemaineAffichee = LocalDate.now().with(DayOfWeek.MONDAY);
         rafraichirCalendrier();
@@ -69,8 +71,6 @@ public class CalendrierController {
 
     @FXML
     public void rafraichirCalendrier() throws SQLException {
-        // Récupération des rdv
-        events = initEvent();
 
         DateTimeFormatter formatter_jour = DateTimeFormatter.ofPattern("EEEE dd MMMM", Locale.FRENCH);
         DateTimeFormatter formatter_semaine = DateTimeFormatter.ofPattern("dd MMMM", Locale.FRENCH);
