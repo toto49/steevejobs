@@ -17,9 +17,8 @@ public class Ticket {
      * Sujet ou titre résumé de la demande
      */
     private String sujet;
-    /**
-     * Description détaillée du problème
-     */
+
+    /** Description détaillée du problème */
     private String description;
 
     /** Service concerné par le ticket (ex : IT, RH, Support) */
@@ -31,12 +30,13 @@ public class Ticket {
     /** Date et heure d’ouverture du ticket */
     private LocalDateTime dateOuverture;
 
+    private LocalDateTime dateDerniereActivite;
+
     /** Utilisateur ayant créé le ticket */
     private User auteur;
 
     /** Liste des messages associés à ce ticket */
     private List<Message> messages;
-
 
     public Ticket() {
         this.messages = new ArrayList<>();
@@ -56,11 +56,11 @@ public class Ticket {
         this.messages = new ArrayList<>();
     }
 
-    // --- GETTERS ET SETTERS ---
 
     public int getId() {
         return id;
     }
+
     public void setId(int id) {
         this.id = id;
     }
@@ -80,30 +80,52 @@ public class Ticket {
     public void setDescription(String description) {
         this.description = description;
     }
+
     public String getService() {
         return service;
     }
+
     public void setService(String service) {
         this.service = service;
     }
+
     public StatutTicket getStatut() {
         return statut;
     }
+
     public void setStatut(StatutTicket statut) {
         this.statut = statut;
     }
+
     public LocalDateTime getDateOuverture() {
         return dateOuverture;
     }
+
     public void setDateOuverture(LocalDateTime dateOuverture) {
         this.dateOuverture = dateOuverture;
     }
+
+
+    public LocalDateTime getDateDerniereActivite() {
+        if (this.dateDerniereActivite == null) {
+            return this.dateOuverture;
+        }
+        return this.dateDerniereActivite;
+    }
+
+    public void setDateDerniereActivite(LocalDateTime dateDerniereActivite) {
+        this.dateDerniereActivite = dateDerniereActivite;
+    }
+
+
     public User getAuteur() {
         return auteur;
     }
+
     public void setAuteur(User auteur) {
         this.auteur = auteur;
     }
+
     public List<Message> getMessages() {
         return messages;
     }
@@ -111,10 +133,11 @@ public class Ticket {
     public void setMessages(List<Message> messages) {
         this.messages = messages;
     }
+
     public void addMessage(Message message) {
         this.messages.add(message);
     }
+
     public void removeMessage(Message message) {
-        this.messages.remove(message);
-    }
+        this.messages.remove(message); }
 }

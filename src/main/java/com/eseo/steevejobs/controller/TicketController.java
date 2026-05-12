@@ -71,60 +71,8 @@ public class TicketController {
         });
     }
 
-    public void initData(int ticketId) {
-        activeInstance = this;
-        chatMessagesContainer.getChildren().clear();
-
-        ProgressIndicator loader = new ProgressIndicator();
-        loader.setMaxSize(50, 50);
-
-        VBox loaderContainer = new VBox(loader);
-        loaderContainer.setAlignment(Pos.CENTER);
-        loaderContainer.prefHeightProperty().bind(messageScrollPane.heightProperty());
-
-        chatMessagesContainer.getChildren().add(loaderContainer);
-
-        Task<List<Message>> loadMessagesTask = new Task<List<Message>>() {
-            @Override
-            protected List<Message> call() throws Exception {
-                currentTicket = ticketService.getTicketById(ticketId);
-                return ticketService.getMessagesDuTicket(ticketId);
-            }
-        };
-
-        loadMessagesTask.setOnSucceeded(event -> {
-            List<Message> messages = loadMessagesTask.getValue();
-
-            if (currentTicket == null) {
-                showAlert("Erreur", "Le ticket demandé est introuvable.");
-                return;
-            }
-            ticketTitleLabel.setText("TICKET N°" + currentTicket.getId());
-            ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
-            serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());
-            dateLabel.setText("DATE DE\nCRÉATION :\n" + currentTicket.getDateOuverture().format(DATE_FORMATTER));
-
-            updateStatusUI();
-            chatMessagesContainer.getChildren().clear();
-
-            for (Message msg : messages) {
-                addMessageBubble(msg);
-            }
-
-            Platform.runLater(() -> messageScrollPane.setVvalue(1.0));
-        });
-
-        loadMessagesTask.setOnFailed(event -> {
-            chatMessagesContainer.getChildren().clear();
-            Label errorLabel = new Label("Erreur de connexion au serveur.");
-            errorLabel.setStyle("-fx-text-fill: red;");
-            chatMessagesContainer.getChildren().add(errorLabel);
-            event.getSource().getException().printStackTrace();
-        });
-
-        Thread thread = new Thread(loadMessagesTask);
-        thread.setDaemon(true);
-        thread.start();
+    public static void fermerChat() {
+        activeInstance = null;
     }
 
     public void refreshChatSilently() {
@@ -341,5 +289,64 @@ public class TicketController {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    public void initData(int ticketId) {
+        activeInstance = this;
+        if (WebSocketService.getInstance() != null) {
+            WebSocketService.getInstance().marquerCommeLu(ticketId);
+        }
+        chatMessagesContainer.getChildren().clear();
+
+        ProgressIndicator loader = new ProgressIndicator();
+        loader.setMaxSize(50, 50);
+
+        VBox loaderContainer = new VBox(loader);
+        loaderContainer.setAlignment(Pos.CENTER);
+        loaderContainer.prefHeightProperty().bind(messageScrollPane.heightProperty());
+
+        chatMessagesContainer.getChildren().add(loaderContainer);
+
+        Task<List<Message>> loadMessagesTask = new Task<List<Message>>() {
+            @Override
+            protected List<Message> call() throws Exception {
+                currentTicket = ticketService.getTicketById(ticketId);
+                return ticketService.getMessagesDuTicket(ticketId);
+            }
+        };
+
+        loadMessagesTask.setOnSucceeded(event -> {
+            List<Message> messages = loadMessagesTask.getValue();
+
+            if (currentTicket == null) {
+                showAlert("Erreur", "Le ticket demandé est introuvable.");
+                return;
+            }
+            ticketTitleLabel.setText("TICKET N°" + currentTicket.getId());
+            ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
+            serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());
+            dateLabel.setText("DATE DE\nCRÉATION :\n" + currentTicket.getDateOuverture().format(DATE_FORMATTER));
+
+            updateStatusUI();
+            chatMessagesContainer.getChildren().clear();
+
+            for (Message msg : messages) {
+                addMessageBubble(msg);
+            }
+
+            Platform.runLater(() -> messageScrollPane.setVvalue(1.0));
+        });
+
+        loadMessagesTask.setOnFailed(event -> {
+            chatMessagesContainer.getChildren().clear();
+            Label errorLabel = new Label("Erreur de connexion au serveur.");
+            errorLabel.setStyle("-fx-text-fill: red;");
+            chatMessagesContainer.getChildren().add(errorLabel);
+            event.getSource().getException().printStackTrace();
+        });
+
+        Thread thread = new Thread(loadMessagesTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 }
