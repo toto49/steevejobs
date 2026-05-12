@@ -9,6 +9,7 @@ import com.eseo.steevejobs.service.TicketService;
 import com.eseo.steevejobs.service.TicketServiceImpl;
 
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -17,6 +18,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -43,14 +45,13 @@ public class TicketController {
     @FXML
     private ScrollPane messageScrollPane;
 
-
     private Ticket currentTicket;
     private User currentUser;
-
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
 
     @FXML
     public void initialize() {
-
         this.currentUser = SessionService.getUtilisateurConnecte();
         chatMessagesContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
             Platform.runLater(() -> {
@@ -58,50 +59,93 @@ public class TicketController {
                 messageScrollPane.setVvalue(1.0);
             });
         });
-
     }
 
     public void initData(int ticketId) {
-        try {
+        chatMessagesContainer.getChildren().clear();
 
-            this.currentTicket = ticketService.getTicketById(ticketId);
+        ProgressIndicator loader = new ProgressIndicator();
+        loader.setMaxSize(50, 50);
+
+        VBox loaderContainer = new VBox(loader);
+        loaderContainer.setAlignment(Pos.CENTER);
+        loaderContainer.prefHeightProperty().bind(messageScrollPane.heightProperty());
+
+        chatMessagesContainer.getChildren().add(loaderContainer);
+        Task<List<Message>> loadMessagesTask = new Task<List<Message>>() {
+            @Override
+            protected List<Message> call() throws Exception {
+                currentTicket = ticketService.getTicketById(ticketId);
+                return ticketService.getMessagesDuTicket(ticketId);
+            }
+        };
+        loadMessagesTask.setOnSucceeded(event -> {
+            List<Message> messages = loadMessagesTask.getValue();
 
             if (currentTicket == null) {
                 showAlert("Erreur", "Le ticket demandé est introuvable.");
                 return;
             }
-
             ticketTitleLabel.setText("TICKET N°" + currentTicket.getId());
             ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
-
             serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
-            dateLabel.setText("DATE DE\nCRÉATION :\n" + currentTicket.getDateOuverture().format(formatter));
-
+            dateLabel.setText("DATE DE\nCRÉATION :\n" + currentTicket.getDateOuverture().format(DATE_FORMATTER));
             updateStatusUI();
-
-
-            chargerMessages();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger les données du ticket.");
-        }
-    }
-
-    private void chargerMessages() {
-        chatMessagesContainer.getChildren().clear();
-
-        try {
-            List<Message> messages = ticketService.getMessagesDuTicket(currentTicket.getId());
-
+            chatMessagesContainer.getChildren().clear();
             for (Message msg : messages) {
                 addMessageBubble(msg);
             }
-        } catch (Exception e) {
-            System.err.println("Erreur lors du chargement des messages : " + e.getMessage());
+
+            Platform.runLater(() -> messageScrollPane.setVvalue(1.0));
+        });
+
+        loadMessagesTask.setOnFailed(event -> {
+            chatMessagesContainer.getChildren().clear();
+            Label errorLabel = new Label("Erreur de connexion au serveur.");
+            errorLabel.setStyle("-fx-text-fill: red;");
+            chatMessagesContainer.getChildren().add(errorLabel);
+            event.getSource().getException().printStackTrace();
+        });
+        Thread thread = new Thread(loadMessagesTask);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    @FXML
+    public void handleSendMessage() {
+        String texte = messageInput.getText().trim();
+
+        if (texte.isEmpty() || currentTicket == null) {
+            return;
         }
+        Message nouveauMessage = new Message();
+        nouveauMessage.setContenu(texte);
+        nouveauMessage.setAuteur(currentUser);
+        nouveauMessage.setTicket(currentTicket);
+        nouveauMessage.setDateEnvoi(LocalDateTime.now());
+        addMessageBubble(nouveauMessage);
+        messageInput.clear();
+        Task<Void> sendTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
+                currentTicket = ticketService.getTicketById(currentTicket.getId());
+                return null;
+            }
+        };
+
+        sendTask.setOnSucceeded(e -> {
+            Platform.runLater(this::updateStatusUI);
+        });
+
+        sendTask.setOnFailed(e -> {
+            e.getSource().getException().printStackTrace();
+            Platform.runLater(() -> showAlert("Erreur réseau", "Le message n'a pas pu être envoyé."));
+        });
+
+        Thread thread = new Thread(sendTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void addMessageBubble(Message message) {
@@ -115,17 +159,14 @@ public class TicketController {
         messageLabel.setWrapText(true);
         messageLabel.setPadding(new Insets(10, 15, 10, 15));
 
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
-
-        String auteurNom = message.getAuteur().getPrenom() + " " + message.getAuteur().getNom() + " - ";
-        if (message.getAuteur().getId() == currentUser.getId()) {
-            auteurNom = "";
-        }
-        Label infoLabel = new Label(auteurNom + message.getDateEnvoi().format(timeFormatter));
-        infoLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #666666;");
-
-
+        String auteurNom = "";
         boolean isMyMessage = (message.getAuteur().getId() == currentUser.getId());
+
+        if (!isMyMessage) {
+            auteurNom = message.getAuteur().getPrenom() + " " + message.getAuteur().getNom() + " - ";
+        }
+        Label infoLabel = new Label(auteurNom + message.getDateEnvoi().format(TIME_FORMATTER));
+        infoLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #666666;");
 
         if (isMyMessage) {
             messageWrapper.setAlignment(Pos.CENTER_RIGHT);
@@ -139,63 +180,31 @@ public class TicketController {
 
         contentBox.getChildren().addAll(messageLabel, infoLabel);
         messageWrapper.getChildren().add(contentBox);
-
         chatMessagesContainer.getChildren().add(messageWrapper);
-    }
-
-    @FXML
-    public void handleSendMessage() {
-        String texte = messageInput.getText().trim();
-
-        if (texte.isEmpty() || currentTicket == null) {
-            return;
-        }
-
-
-        try {
-            Message nouveauMessage = new Message();
-            nouveauMessage.setContenu(texte);
-            nouveauMessage.setAuteur(currentUser);
-            nouveauMessage.setTicket(currentTicket);
-
-            ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
-
-            messageInput.clear();
-
-            chargerMessages();
-
-            this.currentTicket = ticketService.getTicketById(currentTicket.getId());
-            updateStatusUI();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Erreur", "Impossible d'envoyer le message.");
-        }
     }
 
     @FXML
     public void handleToggleTicketStatus(ActionEvent actionEvent) {
         if (currentTicket == null) return;
-
-        try {
-            StatutTicket nouveauStatut;
-
-            if (currentTicket.getStatut() == StatutTicket.EN_ATTENTE || currentTicket.getStatut() == StatutTicket.EN_COURS) {
-                nouveauStatut = StatutTicket.valueOf("FERME");
-            } else {
-                nouveauStatut = StatutTicket.EN_ATTENTE;
+        StatutTicket nouveauStatut = (currentTicket.getStatut() == StatutTicket.EN_ATTENTE || currentTicket.getStatut() == StatutTicket.EN_COURS)
+                ? StatutTicket.valueOf("FERME")
+                : StatutTicket.EN_ATTENTE;
+        Task<Void> updateStatusTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                currentTicket = ticketService.changerStatut(currentTicket.getId(), nouveauStatut);
+                return null;
             }
+        };
 
+        updateStatusTask.setOnSucceeded(e -> Platform.runLater(this::updateStatusUI));
 
-            this.currentTicket = ticketService.changerStatut(currentTicket.getId(), nouveauStatut);
+        updateStatusTask.setOnFailed(e -> {
+            e.getSource().getException().printStackTrace();
+            Platform.runLater(() -> showAlert("Erreur", "Impossible de changer le statut du ticket."));
+        });
 
-
-            updateStatusUI();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Erreur", "Impossible de changer le statut du ticket.");
-        }
+        new Thread(updateStatusTask).start();
     }
 
     private void updateStatusUI() {
@@ -209,7 +218,7 @@ public class TicketController {
             actionButton.setText("RÉOUVRIR\nLE TICKET");
             actionButton.setStyle("-fx-background-color: #5882D6; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand;");
 
-            messageInput.setDisable(true); // Bloque l'envoi de message si le ticket est fermé
+            messageInput.setDisable(true);
             messageInput.setPromptText("Ce ticket est fermé.");
         } else {
             statusLabel.setText("STATUS :\n" + statutActuel.replace("_", " "));
@@ -222,17 +231,15 @@ public class TicketController {
         }
     }
 
-
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
         if (MenuController.getInstance() != null) {
             MenuController.getInstance().chargerPage("ticketsList");
             MenuController.getInstance().changerTitre("Tickets");
         } else {
-            System.err.println("Impossible de retourner en arrière : MenuController non initialisé.");
+            System.err.println("Impossible de retourner en arrière.");
         }
     }
-
 
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
