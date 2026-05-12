@@ -23,20 +23,19 @@ public class DocumentDAO {
      * Créer un nouveau document
      *
      * @param document le document à créer
-     * @return
      * @throws SQLException exception SQL
      */
-    public boolean createDocument(Document document) throws SQLException {
+    public void createDocument(Document document) throws SQLException {
         String sql = "INSERT INTO DOCUMENTS (type, date, total_ht, total_ttc, statut, url, id_tiers, id_vendeur) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setString(1, document.getType().name());
+            stmt.setString(1, document.getType().getValeur());
             stmt.setDate(2, java.sql.Date.valueOf(document.getDate().toLocalDate()));
             stmt.setBigDecimal(3, document.getPrixHt());
             stmt.setBigDecimal(4, document.getPrixTtc());
-            stmt.setString(5, document.getStatut().name());
+            stmt.setString(5, document.getStatut().getValeur());  // ← MODIFIÉ
             stmt.setString(6, document.getUrl());
             stmt.setInt(7, document.getTiers().getId());
 
@@ -52,10 +51,7 @@ public class DocumentDAO {
                 if (generatedKeys.next()) {
                     document.setId(generatedKeys.getInt(1));
                 }
-            } return true;
-
-        } catch (SQLException e) {
-            return false;
+            }
         }
     }
 
@@ -63,7 +59,7 @@ public class DocumentDAO {
      * Mettre à jour un document existant
      *
      * @param document le document à mettre à jour
-     * @return
+     * @return true si mis à jour, false sinon
      * @throws SQLException exception SQL
      */
     public boolean updateDocument(Document document) throws SQLException {
@@ -74,11 +70,11 @@ public class DocumentDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, document.getType().name());
+            stmt.setString(1, document.getType().getValeur());
             stmt.setDate(2, java.sql.Date.valueOf(document.getDate().toLocalDate()));
             stmt.setBigDecimal(3, document.getPrixHt());
             stmt.setBigDecimal(4, document.getPrixTtc());
-            stmt.setString(5, document.getStatut().name());
+            stmt.setString(5, document.getStatut().getValeur());  // ← MODIFIÉ
             stmt.setString(6, document.getUrl());
             stmt.setInt(7, document.getTiers().getId());
 
@@ -93,6 +89,17 @@ public class DocumentDAO {
             rowsAffected = stmt.executeUpdate();
         }
         return rowsAffected > 0;
+    }
+
+    public boolean updateUrl(int id, String url) throws SQLException {
+        String sql = "UPDATE DOCUMENTS SET url = ? WHERE id_documents = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, url);
+            stmt.setInt(2, id);
+            return stmt.executeUpdate() > 0;
+        }
     }
 
     /**
@@ -169,11 +176,11 @@ public class DocumentDAO {
 
                     return new Document(
                             rs.getInt("id_documents"),
-                            DocumentType.valueOf(rs.getString("type")),
+                            DocumentType.fromValeur(rs.getString("type")),
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.valueOf(rs.getString("statut")),
+                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -241,11 +248,11 @@ public class DocumentDAO {
 
                     documents.add(new Document(
                             rs.getInt("id_documents"),
-                            DocumentType.valueOf(rs.getString("type")),
+                            DocumentType.fromValeur(rs.getString("type")),
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.valueOf(rs.getString("statut")),
+                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -275,7 +282,7 @@ public class DocumentDAO {
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, statut.name());
+            stmt.setString(1, statut.getValeur());  // ← MODIFIÉ
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -313,11 +320,11 @@ public class DocumentDAO {
 
                     documents.add(new Document(
                             rs.getInt("id_documents"),
-                            DocumentType.valueOf(rs.getString("type")),
+                            DocumentType.fromValeur(rs.getString("type")),
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.valueOf(rs.getString("statut")),
+                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -347,7 +354,7 @@ public class DocumentDAO {
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, type.name());
+            stmt.setString(1, type.getValeur());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -385,11 +392,11 @@ public class DocumentDAO {
 
                     documents.add(new Document(
                             rs.getInt("id_documents"),
-                            DocumentType.valueOf(rs.getString("type")),
+                            DocumentType.fromValeur(rs.getString("type")),
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.valueOf(rs.getString("statut")),
+                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -457,11 +464,11 @@ public class DocumentDAO {
 
                     documents.add(new Document(
                             rs.getInt("id_documents"),
-                            DocumentType.valueOf(rs.getString("type")),
+                            DocumentType.fromValeur(rs.getString("type")),
                             rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getBigDecimal("total_ht"),
                             rs.getBigDecimal("total_ttc"),
-                            DocumentStatut.valueOf(rs.getString("statut")),
+                            DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
                             rs.getString("url"),
                             tiers,
                             editeur
@@ -526,11 +533,11 @@ public class DocumentDAO {
 
                 documents.add(new Document(
                         rs.getInt("id_documents"),
-                        DocumentType.valueOf(rs.getString("type")),
+                        DocumentType.fromValeur(rs.getString("type")),
                         rs.getDate("date").toLocalDate().atStartOfDay(),
                         rs.getBigDecimal("total_ht"),
                         rs.getBigDecimal("total_ttc"),
-                        DocumentStatut.valueOf(rs.getString("statut")),
+                        DocumentStatut.fromValeur(rs.getString("statut")),  // ← MODIFIÉ
                         rs.getString("url"),
                         tiers,
                         editeur
@@ -553,7 +560,7 @@ public class DocumentDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, statut.name());
+            stmt.setString(1, statut.getValeur());  // ← MODIFIÉ
             stmt.setInt(2, id);
 
             int rowsAffected = stmt.executeUpdate();
@@ -592,7 +599,7 @@ public class DocumentDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, statut.name());
+            stmt.setString(1, statut.getValeur());  // ← MODIFIÉ
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -615,7 +622,7 @@ public class DocumentDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, type.name());
+            stmt.setString(1, type.getValeur());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
