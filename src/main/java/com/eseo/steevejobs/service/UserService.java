@@ -310,4 +310,11 @@ public class UserService {
             throw new RuntimeException("Erreur lors du hachage du mot de passe", e);
         }
     }
+
+    public List<Integer> getIdsByRole(String role) throws SQLException {
+        List<User> users = getUsersByRole(role);
+        return users.stream()
+                .map(User::getId)
+                .toList();
+    }
 }

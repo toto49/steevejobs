@@ -7,6 +7,7 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
+import java.util.List;
 
 public class WebSocketService {
 
@@ -48,10 +49,25 @@ public class WebSocketService {
                 @Override
                 public void onMessage(String message) {
                     if (message.startsWith("UPDATE_TICKET:")) {
+                        // payload contient "104_AUTEUR" ou "104_TECH"
+                        String payload = message.split(":")[1];
+
+                        String idTicket = payload.split("_")[0];
+                        String typeCible = payload.contains("_") ? payload.split("_")[1] : "AUTEUR";
 
                         Platform.runLater(() -> {
+                            // 1. On allume le badge dans tous les cas (TECH ou AUTEUR)
                             if (MenuController.getInstance() != null) {
-                                MenuController.getInstance().allumerBadge();
+                                MenuController.getInstance().allumerBadge(typeCible);
+                            }
+
+                            // 2. LA NOTIFICATION OS (Uniquement si c'est destiné à l'auteur !)
+                            if ("AUTEUR".equals(typeCible)) {
+                                // N'oublie pas de faire l'import de SystemNotificationService en haut du fichier
+                                SystemNotificationService.send(
+                                        "SteeveJobs - Support",
+                                        "Vous avez une nouvelle réponse sur le ticket #" + idTicket
+                                );
                             }
                         });
                     }
@@ -75,15 +91,26 @@ public class WebSocketService {
         }
     }
 
-    public void envoyerNotification(int idAuteurCible, int idTicket) {
+    public void envoyerNotification(int idAuteurCible, int idTicket, String typeCible) {
         if (wsClient != null && wsClient.isOpen()) {
-            wsClient.send("NOTIFY:" + idAuteurCible + ":" + idTicket);
+            wsClient.send("NOTIFY:" + idAuteurCible + ":" + idTicket + "_" + typeCible);
         }
     }
 
     public void deconnecter() {
         if (wsClient != null) {
             wsClient.close();
+        }
+    }
+
+    public void envoyerNotificationGroupée(List<Integer> idsCibles, int idTicket, String typeCible) {
+        if (wsClient != null && wsClient.isOpen() && !idsCibles.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < idsCibles.size(); i++) {
+                sb.append(idsCibles.get(i));
+                if (i < idsCibles.size() - 1) sb.append(",");
+            }
+            wsClient.send("NOTIFY:" + sb + ":" + idTicket + "_" + typeCible);
         }
     }
 }

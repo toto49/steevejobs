@@ -1,8 +1,6 @@
 package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.HelloApplication;
-import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.WebSocketService;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -20,6 +18,7 @@ import javafx.scene.shape.SVGPath;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+
 public class MenuController {
 
     private static MenuController instance;
@@ -85,13 +84,9 @@ public class MenuController {
     }
 
 
-    public void allumerBadge() {
+    public void allumerBadge(String typeCible) {
         Platform.runLater(() -> {
-            User moi = SessionService.getUtilisateurConnecte();
-            if (moi == null) return;
-
-            String role = moi.getRole().toUpperCase();
-            if (role.equals("RH") || role.equals("ADMIN")) {
+            if ("TECH".equals(typeCible)) {
                 incrementerBadge(badgeAccueil);
             } else {
                 incrementerBadge(badgeTicket);

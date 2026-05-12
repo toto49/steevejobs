@@ -4,11 +4,8 @@ import com.eseo.steevejobs.model.Enum.StatutTicket;
 import com.eseo.steevejobs.model.Message;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.SessionService;
-import com.eseo.steevejobs.service.TicketService;
-import com.eseo.steevejobs.service.TicketServiceImpl;
+import com.eseo.steevejobs.service.*;
 
-import com.eseo.steevejobs.service.WebSocketService;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -45,7 +42,7 @@ public class TicketController {
     private Button actionButton;
     @FXML
     private ScrollPane messageScrollPane;
-
+    private final UserService userService = new UserService();
     private Ticket currentTicket;
     private User currentUser;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
@@ -120,7 +117,6 @@ public class TicketController {
             return;
         }
 
-        // 1. Création du message et UI Optimiste (Immédiat)
         Message nouveauMessage = new Message();
         nouveauMessage.setContenu(texte);
         nouveauMessage.setAuteur(currentUser);
@@ -129,30 +125,45 @@ public class TicketController {
 
         addMessageBubble(nouveauMessage);
         messageInput.clear();
-
-        // 2. Envoi en arrière-plan (BDD + WebSocket)
         Task<Void> sendTask = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                // A. On sauvegarde dans MariaDB
                 ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
-                currentTicket = ticketService.getTicketById(currentTicket.getId());
 
-                // B. NOUVEAU : On notifie la cible via notre NAS !
                 try {
-                    // Ici on cible l'auteur du ticket.
-                    // (Tu pourras ajuster la logique si c'est l'auteur qui parle au technicien)
-                    int idCible = currentTicket.getAuteur().getId();
-
                     if (WebSocketService.getInstance() != null) {
-                        WebSocketService.getInstance().envoyerNotification(idCible, currentTicket.getId());
+                        String roleMoi = currentUser.getRole().toUpperCase();
+                        int monId = currentUser.getId();
+                        int idAuteurTicket = currentTicket.getAuteur().getId();
+                        if (roleMoi.equals("ADMIN") || roleMoi.equals("RH")) {
+                            if (monId != idAuteurTicket) {
+                                WebSocketService.getInstance().envoyerNotification(
+                                        idAuteurTicket,
+                                        currentTicket.getId(),
+                                        "AUTEUR"
+                                );
+                            }
+                        } else {
+                            List<Integer> rhIds = userService.getIdsByRole("RH");
+                            List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+
+                            java.util.Set<Integer> staffIds = new java.util.HashSet<>();
+                            if (rhIds != null) staffIds.addAll(rhIds);
+                            if (adminIds != null) staffIds.addAll(adminIds);
+
+                            // Sécurité : on ne s'envoie pas de notif à soi-même
+                            staffIds.remove(monId);
+
+                            WebSocketService.getInstance().envoyerNotificationGroupée(
+                                    new java.util.ArrayList<>(staffIds),
+                                    currentTicket.getId(),
+                                    "TECH"
+                            );
+                        }
                     }
                 } catch (Exception wsException) {
-                    // On catch l'erreur silencieusement pour ne pas bloquer le thread
-                    // si le NAS redémarre au même moment.
-                    System.err.println("Erreur d'envoi WebSocket : " + wsException.getMessage());
+                    wsException.printStackTrace();
                 }
-
                 return null;
             }
         };
