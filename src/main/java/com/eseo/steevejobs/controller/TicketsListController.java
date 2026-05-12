@@ -141,6 +141,7 @@ public class TicketsListController implements ParametrizedController {
         TextField sujetField = new TextField();
         sujetField.setPromptText("Ex: Mon écran ne s'allume plus");
         sujetField.setPrefHeight(35);
+        sujetField.getStyleClass().add("champform");
         sujetBox.getChildren().addAll(sujetTitre, sujetField);
 
 
@@ -154,6 +155,7 @@ public class TicketsListController implements ParametrizedController {
         serviceComboBox.setPromptText("Sélectionnez un service...");
         serviceComboBox.setPrefHeight(35);
         serviceComboBox.setMaxWidth(Double.MAX_VALUE);
+        serviceComboBox.getStyleClass().add("champform");
         serviceBox.getChildren().addAll(serviceTitre, serviceComboBox);
 
 
@@ -164,6 +166,7 @@ public class TicketsListController implements ParametrizedController {
         descriptionArea.setPromptText("Détaillez votre problème...");
         descriptionArea.setWrapText(true);
         descriptionArea.setPrefHeight(150);
+        descriptionArea.getStyleClass().add("champform");
         VBox.setVgrow(descBox, Priority.ALWAYS);
         descBox.getChildren().addAll(descTitre, descriptionArea);
 

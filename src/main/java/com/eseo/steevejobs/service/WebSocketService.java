@@ -1,6 +1,7 @@
 package com.eseo.steevejobs.service;
 
 import com.eseo.steevejobs.controller.MenuController;
+import com.eseo.steevejobs.controller.TicketController;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Platform;
 import org.java_websocket.client.WebSocketClient;
@@ -49,25 +50,32 @@ public class WebSocketService {
                 @Override
                 public void onMessage(String message) {
                     if (message.startsWith("UPDATE_TICKET:")) {
-                        // payload contient "104_AUTEUR" ou "104_TECH"
                         String payload = message.split(":")[1];
-
-                        String idTicket = payload.split("_")[0];
+                        String idTicketStr = payload.split("_")[0];
                         String typeCible = payload.contains("_") ? payload.split("_")[1] : "AUTEUR";
+                        int idTicket = Integer.parseInt(idTicketStr);
 
                         Platform.runLater(() -> {
-                            // 1. On allume le badge dans tous les cas (TECH ou AUTEUR)
-                            if (MenuController.getInstance() != null) {
-                                MenuController.getInstance().allumerBadge(typeCible);
-                            }
 
-                            // 2. LA NOTIFICATION OS (Uniquement si c'est destiné à l'auteur !)
-                            if ("AUTEUR".equals(typeCible)) {
-                                // N'oublie pas de faire l'import de SystemNotificationService en haut du fichier
-                                SystemNotificationService.send(
-                                        "SteeveJobs - Support",
-                                        "Vous avez une nouvelle réponse sur le ticket #" + idTicket
-                                );
+                            TicketController chatActif = TicketController.getActiveInstance();
+
+                            if (chatActif != null && chatActif.getCurrentTicketId() == idTicket) {
+
+                                chatActif.refreshChatSilently();
+
+
+                            } else {
+
+                                if (MenuController.getInstance() != null) {
+                                    MenuController.getInstance().allumerBadge(typeCible);
+                                }
+
+                                if ("AUTEUR".equals(typeCible)) {
+                                    SystemNotificationService.send(
+                                            "SteeveJobs - Support",
+                                            "Vous avez une nouvelle réponse sur le ticket #" + idTicket
+                                    );
+                                }
                             }
                         });
                     }

@@ -68,6 +68,7 @@ public class MenuController {
         try {
             String chemin = "/com/eseo/steevejobs/view/" + nomFichier + "-view.fxml";
             FXMLLoader loader = new FXMLLoader(getClass().getResource(chemin));
+
             Parent vue = loader.load();
 
             if (mainPane != null) {

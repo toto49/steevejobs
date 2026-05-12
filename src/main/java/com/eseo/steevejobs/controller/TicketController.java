@@ -23,6 +23,9 @@ import java.util.List;
 public class TicketController {
 
     private final TicketService ticketService = new TicketServiceImpl();
+    private final UserService userService = new UserService();
+
+    private static TicketController activeInstance;
 
     @FXML
     private Label ticketTitleLabel;
@@ -42,15 +45,24 @@ public class TicketController {
     private Button actionButton;
     @FXML
     private ScrollPane messageScrollPane;
-    private final UserService userService = new UserService();
+
     private Ticket currentTicket;
     private User currentUser;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
 
+    public static TicketController getActiveInstance() {
+        return activeInstance;
+    }
+
+    public int getCurrentTicketId() {
+        return currentTicket != null ? currentTicket.getId() : -1;
+    }
+
     @FXML
     public void initialize() {
         this.currentUser = SessionService.getUtilisateurConnecte();
+
         chatMessagesContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
             Platform.runLater(() -> {
                 messageScrollPane.layout();
@@ -60,6 +72,7 @@ public class TicketController {
     }
 
     public void initData(int ticketId) {
+        activeInstance = this;
         chatMessagesContainer.getChildren().clear();
 
         ProgressIndicator loader = new ProgressIndicator();
@@ -70,6 +83,7 @@ public class TicketController {
         loaderContainer.prefHeightProperty().bind(messageScrollPane.heightProperty());
 
         chatMessagesContainer.getChildren().add(loaderContainer);
+
         Task<List<Message>> loadMessagesTask = new Task<List<Message>>() {
             @Override
             protected List<Message> call() throws Exception {
@@ -77,6 +91,7 @@ public class TicketController {
                 return ticketService.getMessagesDuTicket(ticketId);
             }
         };
+
         loadMessagesTask.setOnSucceeded(event -> {
             List<Message> messages = loadMessagesTask.getValue();
 
@@ -88,8 +103,10 @@ public class TicketController {
             ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
             serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());
             dateLabel.setText("DATE DE\nCRÉATION :\n" + currentTicket.getDateOuverture().format(DATE_FORMATTER));
+
             updateStatusUI();
             chatMessagesContainer.getChildren().clear();
+
             for (Message msg : messages) {
                 addMessageBubble(msg);
             }
@@ -104,9 +121,78 @@ public class TicketController {
             chatMessagesContainer.getChildren().add(errorLabel);
             event.getSource().getException().printStackTrace();
         });
+
         Thread thread = new Thread(loadMessagesTask);
         thread.setDaemon(true);
         thread.start();
+    }
+
+    public void refreshChatSilently() {
+        if (currentTicket == null) return;
+
+        int ticketId = currentTicket.getId();
+
+        Task<List<Message>> loadTask = new Task<List<Message>>() {
+            @Override
+            protected List<Message> call() throws Exception {
+                currentTicket = ticketService.getTicketById(ticketId);
+                return ticketService.getMessagesDuTicket(ticketId);
+            }
+        };
+
+        loadTask.setOnSucceeded(e -> {
+            List<Message> messages = loadTask.getValue();
+            chatMessagesContainer.getChildren().clear();
+
+            for (Message msg : messages) {
+                addMessageBubble(msg);
+            }
+            Platform.runLater(() -> {
+                messageScrollPane.setVvalue(1.0);
+                updateStatusUI();
+            });
+        });
+
+        Thread thread = new Thread(loadTask);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void notifierMiseAJourTicket() {
+        try {
+            if (WebSocketService.getInstance() != null) {
+                String roleMoi = currentUser.getRole().toUpperCase();
+                int monId = currentUser.getId();
+                int idAuteurTicket = currentTicket.getAuteur().getId();
+
+                if (roleMoi.equals("ADMIN") || roleMoi.equals("RH")) {
+                    if (monId != idAuteurTicket) {
+                        WebSocketService.getInstance().envoyerNotification(
+                                idAuteurTicket,
+                                currentTicket.getId(),
+                                "AUTEUR"
+                        );
+                    }
+                } else {
+                    List<Integer> rhIds = userService.getIdsByRole("RH");
+                    List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+
+                    java.util.Set<Integer> staffIds = new java.util.HashSet<>();
+                    if (rhIds != null) staffIds.addAll(rhIds);
+                    if (adminIds != null) staffIds.addAll(adminIds);
+
+                    staffIds.remove(monId);
+
+                    WebSocketService.getInstance().envoyerNotificationGroupée(
+                            new java.util.ArrayList<>(staffIds),
+                            currentTicket.getId(),
+                            "TECH"
+                    );
+                }
+            }
+        } catch (Exception wsException) {
+            wsException.printStackTrace();
+        }
     }
 
     @FXML
@@ -125,52 +211,20 @@ public class TicketController {
 
         addMessageBubble(nouveauMessage);
         messageInput.clear();
+
         Task<Void> sendTask = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
                 ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
 
-                try {
-                    if (WebSocketService.getInstance() != null) {
-                        String roleMoi = currentUser.getRole().toUpperCase();
-                        int monId = currentUser.getId();
-                        int idAuteurTicket = currentTicket.getAuteur().getId();
-                        if (roleMoi.equals("ADMIN") || roleMoi.equals("RH")) {
-                            if (monId != idAuteurTicket) {
-                                WebSocketService.getInstance().envoyerNotification(
-                                        idAuteurTicket,
-                                        currentTicket.getId(),
-                                        "AUTEUR"
-                                );
-                            }
-                        } else {
-                            List<Integer> rhIds = userService.getIdsByRole("RH");
-                            List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+                currentTicket = ticketService.getTicketById(currentTicket.getId());
+                notifierMiseAJourTicket();
 
-                            java.util.Set<Integer> staffIds = new java.util.HashSet<>();
-                            if (rhIds != null) staffIds.addAll(rhIds);
-                            if (adminIds != null) staffIds.addAll(adminIds);
-
-                            // Sécurité : on ne s'envoie pas de notif à soi-même
-                            staffIds.remove(monId);
-
-                            WebSocketService.getInstance().envoyerNotificationGroupée(
-                                    new java.util.ArrayList<>(staffIds),
-                                    currentTicket.getId(),
-                                    "TECH"
-                            );
-                        }
-                    }
-                } catch (Exception wsException) {
-                    wsException.printStackTrace();
-                }
                 return null;
             }
         };
 
-        sendTask.setOnSucceeded(e -> {
-            Platform.runLater(this::updateStatusUI);
-        });
+        sendTask.setOnSucceeded(e -> Platform.runLater(this::updateStatusUI));
 
         sendTask.setOnFailed(e -> {
             e.getSource().getException().printStackTrace();
@@ -220,13 +274,17 @@ public class TicketController {
     @FXML
     public void handleToggleTicketStatus(ActionEvent actionEvent) {
         if (currentTicket == null) return;
+
         StatutTicket nouveauStatut = (currentTicket.getStatut() == StatutTicket.EN_ATTENTE || currentTicket.getStatut() == StatutTicket.EN_COURS)
                 ? StatutTicket.valueOf("FERME")
                 : StatutTicket.EN_ATTENTE;
+
         Task<Void> updateStatusTask = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
                 currentTicket = ticketService.changerStatut(currentTicket.getId(), nouveauStatut);
+                notifierMiseAJourTicket();
+
                 return null;
             }
         };
@@ -267,6 +325,8 @@ public class TicketController {
 
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
+        activeInstance = null;
+
         if (MenuController.getInstance() != null) {
             MenuController.getInstance().chargerPage("ticketsList");
             MenuController.getInstance().changerTitre("Tickets");
