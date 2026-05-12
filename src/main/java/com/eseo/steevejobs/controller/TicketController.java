@@ -8,6 +8,7 @@ import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.TicketService;
 import com.eseo.steevejobs.service.TicketServiceImpl;
 
+import com.eseo.steevejobs.service.WebSocketService;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -118,18 +119,40 @@ public class TicketController {
         if (texte.isEmpty() || currentTicket == null) {
             return;
         }
+
+        // 1. Création du message et UI Optimiste (Immédiat)
         Message nouveauMessage = new Message();
         nouveauMessage.setContenu(texte);
         nouveauMessage.setAuteur(currentUser);
         nouveauMessage.setTicket(currentTicket);
         nouveauMessage.setDateEnvoi(LocalDateTime.now());
+
         addMessageBubble(nouveauMessage);
         messageInput.clear();
+
+        // 2. Envoi en arrière-plan (BDD + WebSocket)
         Task<Void> sendTask = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
+                // A. On sauvegarde dans MariaDB
                 ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
                 currentTicket = ticketService.getTicketById(currentTicket.getId());
+
+                // B. NOUVEAU : On notifie la cible via notre NAS !
+                try {
+                    // Ici on cible l'auteur du ticket.
+                    // (Tu pourras ajuster la logique si c'est l'auteur qui parle au technicien)
+                    int idCible = currentTicket.getAuteur().getId();
+
+                    if (WebSocketService.getInstance() != null) {
+                        WebSocketService.getInstance().envoyerNotification(idCible, currentTicket.getId());
+                    }
+                } catch (Exception wsException) {
+                    // On catch l'erreur silencieusement pour ne pas bloquer le thread
+                    // si le NAS redémarre au même moment.
+                    System.err.println("Erreur d'envoi WebSocket : " + wsException.getMessage());
+                }
+
                 return null;
             }
         };
