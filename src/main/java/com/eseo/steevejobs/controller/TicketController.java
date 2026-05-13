@@ -105,23 +105,13 @@ public class TicketController {
         thread.setDaemon(true);
         thread.start();
     }
-
     private void notifierMiseAJourTicket() {
         try {
             if (WebSocketService.getInstance() != null) {
-                String roleMoi = currentUser.getRole().toUpperCase();
                 int monId = currentUser.getId();
                 int idAuteurTicket = currentTicket.getAuteur().getId();
 
-                if (roleMoi.equals("ADMIN") || roleMoi.equals("RH")) {
-                    if (monId != idAuteurTicket) {
-                        WebSocketService.getInstance().envoyerNotification(
-                                idAuteurTicket,
-                                currentTicket.getId(),
-                                "AUTEUR"
-                        );
-                    }
-                } else {
+                if (monId == idAuteurTicket) {
                     List<Integer> rhIds = userService.getIdsByRole("RH");
                     List<Integer> adminIds = userService.getIdsByRole("ADMIN");
 
@@ -135,6 +125,12 @@ public class TicketController {
                             new java.util.ArrayList<>(staffIds),
                             currentTicket.getId(),
                             "TECH"
+                    );
+                } else {
+                    WebSocketService.getInstance().envoyerNotification(
+                            idAuteurTicket,
+                            currentTicket.getId(),
+                            "AUTEUR"
                     );
                 }
             }
@@ -164,7 +160,6 @@ public class TicketController {
             @Override
             protected Void call() throws Exception {
                 ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
-
                 currentTicket = ticketService.getTicketById(currentTicket.getId());
                 notifierMiseAJourTicket();
 
