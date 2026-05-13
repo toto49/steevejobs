@@ -9,13 +9,14 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 
 import javafx.geometry.Insets;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 
 import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -44,11 +45,16 @@ public class CalendrierController {
     private GridPane gridPlanning;
 
     private LocalDate dateDebutSemaineAffichee;
-
     private List<Planning> events;
+    private User utilisateur;
+    private PlanningService planningService;
 
     @FXML
     public void initialize() throws SQLException {
+        // Initialisation des services
+        PlanningDAO planningDAO = new PlanningDAO();
+        planningService = new PlanningService(planningDAO);
+        utilisateur = SessionService.getUtilisateurConnecte();
         // Récupération des rdv
         events = initEvent();
         // Initialisation de base (Aujourd'hui)
@@ -91,9 +97,6 @@ public class CalendrierController {
     }
 
     public List<Planning> initEvent() throws SQLException {
-        PlanningService planningService = new PlanningService(new PlanningDAO());
-        User utilisateur = SessionService.getUtilisateurConnecte();
-
         return planningService.findByUserId(utilisateur.getId());
     }
 
@@ -122,7 +125,7 @@ public class CalendrierController {
                     if (dateCourante.isEqual(dateDebutEvent)) {
                         heureDebut = event.getJourDebut().getHour(); // C'est le 1er jour : on prend la vraie heure
                     } else {
-                        heureDebut = 6; // Jour intermédiaire/fin : on force à 6h
+                        heureDebut = 7; // Jour intermédiaire/fin : on force à 7h
                     }
 
                     // --- Gestion de l'heure de fin ---
@@ -130,7 +133,7 @@ public class CalendrierController {
                     if (dateCourante.isEqual(dateFinEvent)) {
                         heureFin = event.getJourFin().getHour(); // C'est le dernier jour : on prend la vraie heure
                     } else {
-                        heureFin = 20; // Jour intermédiaire/début : on force à 20h
+                        heureFin = 19; // Jour intermédiaire/début : on force à 19h
                     }
 
                     // --- Calcul des lignes (6h00 = ligne 1) ---
@@ -164,10 +167,6 @@ public class CalendrierController {
         }
     }
 
-    public void addEvent(ActionEvent event){
-
-    }
-
     public void addWeek(ActionEvent event) throws SQLException {
         dateDebutSemaineAffichee = dateDebutSemaineAffichee.plusWeeks(1);
         rafraichirCalendrier();
@@ -179,5 +178,66 @@ public class CalendrierController {
         rafraichirCalendrier();
     }
 
+    @FXML
+    public void ouvrirPopupAjout(ActionEvent event) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Ajouter un événement");
+        dialog.setHeaderText("Détails du nouvel événement");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 20, 20, 20));
+
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("Cours", "Réunion", "Vacances", "Autre");
+        typeBox.setValue("Cours");
+
+        // CORRECTION : DatePicker utilise LocalDate.now()
+        DatePicker dateDebutPicker = new DatePicker(LocalDate.now());
+        TextField heureDebutField = new TextField("08:00"); // Ajout du champ d'heure
+
+        DatePicker dateFinPicker = new DatePicker(LocalDate.now());
+        TextField heureFinField = new TextField("10:00"); // Ajout du champ d'heure
+
+        grid.add(new Label("Type :"), 0, 0);
+        grid.add(typeBox, 1, 0);
+
+        grid.add(new Label("Début :"), 0, 1);
+        grid.add(dateDebutPicker, 1, 1);
+        grid.add(heureDebutField, 2, 1);
+
+        grid.add(new Label("Fin :"), 0, 2);
+        grid.add(dateFinPicker, 1, 2);
+        grid.add(heureFinField, 2, 2);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    String type = typeBox.getValue();
+
+                    // Combinaison de la date (DatePicker) et de l'heure (TextField)
+                    LocalTime timeDebut = LocalTime.parse(heureDebutField.getText());
+                    LocalDateTime dateDebut = LocalDateTime.of(dateDebutPicker.getValue(), timeDebut);
+
+                    LocalTime timeFin = LocalTime.parse(heureFinField.getText());
+                    LocalDateTime dateFin = LocalDateTime.of(dateFinPicker.getValue(), timeFin);
+
+                    Planning evenement = new Planning(0, dateDebut, dateFin, type, utilisateur);
+                    planningService.ajouterPlanning(evenement);
+
+                    // On rafraîchit le calendrier avec les nouvelles données
+                    events = planningService.findByUserId(utilisateur.getId());
+                    rafraichirCalendrier();
+
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        });
+    }
 
 }
