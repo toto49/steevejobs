@@ -4,10 +4,12 @@ import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.FichePaye;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
+import com.lowagie.text.Image;
 
 import java.awt.Color;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -74,7 +76,24 @@ public class PdfGeneratorService {
         }
         return chemin;
     }
+    private Image chargerLogo() {
+        try {
+            // Charger l'image depuis les ressources
+            InputStream is = getClass().getResourceAsStream("/images/logo.png");
+            if (is == null) {
+                System.err.println("Logo non trouvé : /images/logo.png");
+                return null;
+            }
+            Image logo = Image.getInstance(is.readAllBytes());
 
+            // Redimensionner le logo (largeur 80px, hauteur automatique)
+            logo.scaleToFit(80, 80);
+            return logo;
+        } catch (Exception e) {
+            System.err.println("Erreur chargement logo : " + e.getMessage());
+            return null;
+        }
+    }
     // -------------------------------------------------------
     // CONTENU — DOCUMENT : devis, facture, bon de commande
     // -------------------------------------------------------
@@ -82,7 +101,14 @@ public class PdfGeneratorService {
     private void ajouterContenuDocument(com.lowagie.text.Document doc,
                                         com.eseo.steevejobs.model.Document document,
                                         List<Composer> lignes) throws DocumentException {
-
+        // ajoute le logo steeve costume en haut a droite
+        Image logo = chargerLogo();
+        if (logo != null) {
+            logo.setAlignment(Element.ALIGN_RIGHT);
+            logo.setSpacingAfter(10);
+            doc.add(logo);
+        }
+        //style
         Font fontTitre   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COULEUR_PRINCIPALE);
         Font fontSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COULEUR_PRINCIPALE);
         Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
@@ -189,7 +215,13 @@ public class PdfGeneratorService {
     private void ajouterContenuFichePaye(com.lowagie.text.Document doc, FichePaye fiche,
                                          double salaireBase, double tauxCotisations,
                                          long joursConge) throws DocumentException {
-
+        //ajoute le steeve coustume en haut a droite
+        Image logo = chargerLogo();
+        if (logo != null) {
+            logo.setAlignment(Element.ALIGN_RIGHT);
+            logo.setSpacingAfter(10);
+            doc.add(logo);
+        }
         Font fontTitre   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COULEUR_PRINCIPALE);
         Font fontSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COULEUR_PRINCIPALE);
         Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
