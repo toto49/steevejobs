@@ -295,6 +295,7 @@ public class TicketController {
         activeInstance = this;
         if (WebSocketService.getInstance() != null) {
             WebSocketService.getInstance().marquerCommeLu(ticketId);
+            MenuController.getInstance().effacerBadgeticket();
         }
         chatMessagesContainer.getChildren().clear();
 

@@ -6,6 +6,7 @@ import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.PermissionService;
 import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.UserService;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -31,14 +32,51 @@ public class HomeController {
     @FXML
     private FlowPane appsGrid;
     private List<String> currentUserPermissions;
+    public static int notificationsTech = 0;
+    public static int notificationsAuteur = 0;
+
+    private static HomeController activeInstance;
+
+    private Label badgeCarteTech;
+    private Label badgeCarteAuteur;
+
+    public static HomeController getActiveInstance() {
+        return activeInstance;
+    }
 
     public HomeController() {
         this.permissionService = new PermissionService();
     }
 
+    public static void ajouterNotification(String typeCible) {
+        System.out.println("🔔 [HOME] Signal reçu pour le type : " + typeCible);
+
+        Platform.runLater(() -> {
+            if ("TECH".equals(typeCible)) {
+                notificationsTech++;
+                System.out.println("🔔 [HOME] Nombre de notifs TECH en mémoire : " + notificationsTech);
+
+                if (activeInstance == null) {
+                    System.out.println("⚠️ [HOME] La page d'accueil n'est pas ouverte (activeInstance est null). La mémoire est bien stockée pour plus tard.");
+                } else if (activeInstance.badgeCarteTech == null) {
+                    System.err.println("❌ [HOME] ERREUR : La page est ouverte mais badgeCarteTech est NULL ! Le codeAction 'APP_TICKETS_VIEW' n'existe sûrement pas dans ton Enum AppModule.");
+                } else {
+                    activeInstance.badgeCarteTech.setText(String.valueOf(notificationsTech));
+                    activeInstance.badgeCarteTech.setVisible(true);
+                    System.out.println("✅ [HOME] Le badge de la carte s'est allumé avec succès !");
+                }
+            }
+        });
+    }
+
+    public void onUserLogin(int idUserConnecte) {
+        this.currentUserPermissions = permissionService.getUserPermissions(idUserConnecte);
+        renderAppCenter();
+    }
+
     @FXML
     public void initialize() throws IOException {
-
+        activeInstance = this;
         this.currentUser = SessionService.getUtilisateurConnecte();
 
         if (this.currentUser != null) {
@@ -53,25 +91,46 @@ public class HomeController {
         }
     }
 
-    public void onUserLogin(int idUserConnecte) {
-        this.currentUserPermissions = permissionService.getUserPermissions(idUserConnecte);
-        renderAppCenter();
-    }
-
     private void renderAppCenter() {
         appsGrid.getChildren().clear();
 
         for (AppModule app : AppModule.values()) {
             if (hasPermission(app.getCodeAction())) {
 
+                String parametre = null;
+                String codeAction = app.getCodeAction();
+                if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                    parametre = currentUser.getRole();
+                }
+
+
+                Label badgeDynamique = new Label();
+                badgeDynamique.setVisible(false);
+
+
+                if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                    badgeCarteTech = badgeDynamique;
+                    if (notificationsTech > 0) {
+                        badgeDynamique.setText(String.valueOf(notificationsTech));
+                        badgeDynamique.setVisible(true);
+                    }
+                } else if ("MES_TICKETS".equals(codeAction)) {
+                    badgeCarteAuteur = badgeDynamique;
+                    if (notificationsAuteur > 0) {
+                        badgeDynamique.setText(String.valueOf(notificationsAuteur));
+                        badgeDynamique.setVisible(true);
+                    }
+                }
+
                 HBox card = createAppCard(
                         app.getTitle(),
                         app.getSubtitle(),
-                        null,
+                        badgeDynamique,
                         app.getBgColor(),
                         app.getChemin(),
                         app.getImage(),
-                        currentUser.getRole()
+                        parametre,
+                        codeAction
                 );
 
                 card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
@@ -82,7 +141,24 @@ public class HomeController {
         }
     }
 
-    private HBox createAppCard(String title, String subtitle, String badgeText, String bgColor, String chemin, String image, String parametreFacultatif) {
+    private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/" + chemin + "-view.fxml"));
+            Parent view = loader.load();
+            Object controller = loader.getController();
+            if (controller instanceof ParametrizedController) {
+                ((ParametrizedController) controller).initData(parametre);
+            }
+            MenuController.getInstance().setCenterView(view);
+            MenuController.getInstance().changerTitre(titreCard);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            System.err.println("Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
+        }
+    }
+
+    private HBox createAppCard(String title, String subtitle, Label badge, String bgColor, String chemin, String image, String parametreFacultatif, String codeAction) {
         HBox card = new HBox();
         card.setMinSize(250, 220);
         card.setStyle("-fx-background-color: " + bgColor + "; -fx-background-radius: 15;");
@@ -118,10 +194,9 @@ public class HomeController {
 
         textZone.getChildren().addAll(lblTitle, lblSubtitle);
 
-        if (badgeText != null) {
-            Label badge = new Label(badgeText);
+        if (badge != null) {
             badge.styleProperty().bind(
-                    Bindings.concat("-fx-background-color: white; -fx-background-radius: 20; -fx-padding: 5 15 5 15; -fx-font-size: ", card.widthProperty().divide(26), "px;")
+                    Bindings.concat("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-padding: 5 15 5 15; -fx-font-size: ", card.widthProperty().divide(26), "px;")
             );
             VBox.setMargin(badge, new Insets(10, 0, 0, 0));
             textZone.getChildren().add(badge);
@@ -131,38 +206,29 @@ public class HomeController {
         card.setOnMouseEntered(e -> card.setOpacity(0.8));
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
-            if (MenuController.getInstance() != null) {
+            if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                notificationsTech = 0;
+                if (badge != null) badge.setVisible(false);
+                if (MenuController.getInstance() != null) MenuController.getInstance().effacerBadgeAccueil();
 
+            } else if ("MES_TICKETS".equals(codeAction)) {
+                notificationsAuteur = 0;
+                if (badge != null) badge.setVisible(false);
+            }
+
+            if (MenuController.getInstance() != null) {
                 if (parametreFacultatif != null) {
                     chargerPageAvecParametre(chemin, parametreFacultatif, title);
                 } else {
                     MenuController.getInstance().chargerPage(chemin);
                     MenuController.getInstance().changerTitre(title);
                 }
-
             } else {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
             }
         });
 
         return card;
-    }
-
-    private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/" + chemin + "-view.fxml"));
-            Parent view = loader.load();
-            Object controller = loader.getController();
-            if (controller instanceof ParametrizedController) {
-                ((ParametrizedController) controller).initData(parametre);
-            }
-            MenuController.getInstance().setCenterView(view);
-            MenuController.getInstance().changerTitre(titreCard);
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.err.println("Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
-        }
     }
 
     private boolean hasPermission(String requiredPermission) {

@@ -131,10 +131,17 @@ public class MenuController {
 
     @FXML
     void afficherAccueil(ActionEvent event) {
-        if (badgeAccueil != null) badgeAccueil.setVisible(false); // Efface la notif
         chargerPage("home");
         updateButtonStyles(btnAccueil);
         changerTitre("Accueil");
+    }
+
+
+    public void effacerBadgeAccueil() {
+        if (badgeAccueil != null) {
+            badgeAccueil.setVisible(false);
+            badgeAccueil.setText("0");
+        }
     }
 
     @FXML
@@ -146,10 +153,16 @@ public class MenuController {
 
     @FXML
     void afficherTicket(ActionEvent event) {
-        if (badgeTicket != null) badgeTicket.setVisible(false); // Efface la notif
         chargerPage("ticketsList");
         updateButtonStyles(btnTicket);
         changerTitre("Tickets");
+    }
+
+    public void effacerBadgeticket() {
+        if (badgeTicket != null) {
+            badgeTicket.setVisible(false);
+            badgeTicket.setText("0");
+        }
     }
 
     @FXML

@@ -1,8 +1,10 @@
 package com.eseo.steevejobs.service;
 
+import com.eseo.steevejobs.controller.HomeController;
 import com.eseo.steevejobs.controller.MenuController;
 import com.eseo.steevejobs.controller.TicketController;
 import com.eseo.steevejobs.controller.TicketsListController;
+import com.eseo.steevejobs.model.User;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Platform;
 import org.java_websocket.client.WebSocketClient;
@@ -50,6 +52,7 @@ public class WebSocketService {
                 public void onOpen(ServerHandshake handshakedata) {
                     isConnected = true;
                     System.out.println("✅ WebSocketService connecté au NAS (" + ip + ":" + port + ")");
+
                     if (SessionService.getUtilisateurConnecte() != null) {
                         send("REGISTER:" + SessionService.getUtilisateurConnecte().getId());
                     }
@@ -66,7 +69,7 @@ public class WebSocketService {
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
                     isConnected = false;
-                    System.out.println("❌ WebSocketService déconnecté. Tentative de reconnexion prévue... (" + reason + ")");
+                    System.out.println("❌ WebSocketService déconnecté. (" + reason + ")");
                 }
 
                 @Override
@@ -85,45 +88,59 @@ public class WebSocketService {
     private void checkConnection() {
         if (!isConnected || wsClient == null || !wsClient.isOpen()) {
             if (lastUri != null) {
-                System.out.println("🔄 Tentative de reconnexion automatique...");
                 connecter();
             }
         }
     }
 
     private void traiterMessageUpdate(String message) {
-        String payload = message.split(":")[1];
-        String idTicketStr = payload.split("_")[0];
-        String typeCible = payload.contains("_") ? payload.split("_")[1] : "AUTEUR";
-        int idTicket = Integer.parseInt(idTicketStr);
+        try {
+            String payload = message.split(":")[1];
+            String[] parts = payload.split("_");
 
-        Platform.runLater(() -> {
-            TicketController chatActif = TicketController.getActiveInstance();
-            if (chatActif != null && chatActif.getCurrentTicketId() == idTicket) {
-                chatActif.refreshChatSilently();
-            } else {
-                ajouterTicketNonLu(idTicket);
+            int idTicket = Integer.parseInt(parts[0]);
+            String typeCible = parts.length > 1 ? parts[1] : "AUTEUR";
+            int idSender = parts.length > 2 ? Integer.parseInt(parts[2]) : -1;
 
-                TicketsListController listeActive = TicketsListController.getActiveInstance();
-                if (listeActive != null) {
-                    listeActive.rafraichirAffichage();
-                }
-
-                if (MenuController.getInstance() != null) {
-                    MenuController.getInstance().allumerBadge(typeCible);
-                }
-
-                if ("AUTEUR".equals(typeCible)) {
-                    SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse sur le ticket #" + idTicket);
-                }
+            User currentUser = SessionService.getUtilisateurConnecte();
+            if (currentUser != null && currentUser.getId() == idSender) {
+                System.out.println("🤫 Auto-notification bloquée : C'est moi qui ai déclenché cette action.");
+                return;
             }
-        });
+
+            Platform.runLater(() -> {
+                TicketController chatActif = TicketController.getActiveInstance();
+
+                if (chatActif != null && chatActif.getCurrentTicketId() == idTicket) {
+                    chatActif.refreshChatSilently();
+                } else {
+                    ajouterTicketNonLu(idTicket);
+
+                    TicketsListController listeActive = TicketsListController.getActiveInstance();
+                    if (listeActive != null) {
+                        listeActive.rafraichirAffichage();
+                    }
+
+                    if (MenuController.getInstance() != null) {
+                        MenuController.getInstance().allumerBadge(typeCible);
+                    }
+
+                    HomeController.ajouterNotification(typeCible);
+
+                    if ("AUTEUR".equals(typeCible)) {
+                        SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse sur le ticket #" + idTicket);
+                    } else if ("TECH".equals(typeCible)) {
+                        SystemNotificationService.send("SteeveJobs - Admin", "Nouveau message à traiter ! (#" + idTicket + ")");
+                    }
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Erreur lors du traitement du message WS : " + e.getMessage());
+        }
     }
 
     public void deconnecter(Runnable onClosed) {
-
         scheduler.shutdown();
-
         if (wsClient != null && wsClient.isOpen()) {
             wsClient.close();
         }
@@ -131,20 +148,37 @@ public class WebSocketService {
     }
 
     public void envoyerNotification(int idAuteurCible, int idTicket, String typeCible) {
+        System.out.println("🚀 [DEBUG WS] Tentative d'envoi simple -> Cible ID: " + idAuteurCible + " | Type: " + typeCible);
         if (wsClient != null && wsClient.isOpen()) {
-            wsClient.send("NOTIFY:" + idAuteurCible + ":" + idTicket + "_" + typeCible);
+            int myId = SessionService.getUtilisateurConnecte() != null ? SessionService.getUtilisateurConnecte().getId() : -1;
+            String msg = "NOTIFY:" + idAuteurCible + ":" + idTicket + "_" + typeCible + "_" + myId;
+            System.out.println("📤 ENVOI AU NAS : " + msg);
+            wsClient.send(msg);
         } else {
-            System.err.println("📤 Échec envoi : WebSocket déconnecté");
+            System.err.println("❌ [DEBUG WS] Envoi annulé : WebSocket déconnecté !");
         }
     }
 
     public void envoyerNotificationGroupée(List<Integer> idsCibles, int idTicket, String typeCible) {
-        if (wsClient != null && wsClient.isOpen() && !idsCibles.isEmpty()) {
-            String ids = String.join(",", idsCibles.stream().map(String::valueOf).toArray(String[]::new));
-            wsClient.send("NOTIFY:" + ids + ":" + idTicket + "_" + typeCible);
+        System.out.println("🚀 [DEBUG WS] Tentative d'envoi groupé -> Type: " + typeCible);
+        System.out.println("🚀 [DEBUG WS] Liste des destinataires trouvés : " + idsCibles);
+
+        if (wsClient != null && wsClient.isOpen()) {
+            if (!idsCibles.isEmpty()) {
+                int myId = SessionService.getUtilisateurConnecte() != null ? SessionService.getUtilisateurConnecte().getId() : -1;
+                String ids = String.join(",", idsCibles.stream().map(String::valueOf).toArray(String[]::new));
+                String msg = "NOTIFY:" + ids + ":" + idTicket + "_" + typeCible + "_" + myId;
+                System.out.println("📤 ENVOI GROUPÉ AU NAS : " + msg);
+                wsClient.send(msg);
+            } else {
+                System.err.println("❌ [DEBUG WS] Envoi annulé : La liste des destinataires est VIDE ! (Ta requête BDD n'a trouvé aucun Admin/RH)");
+            }
+        } else {
+            System.err.println("❌ [DEBUG WS] Envoi annulé : WebSocket déconnecté !");
         }
     }
 
+    // --- Gestion des tickets non lus ---
     public void ajouterTicketNonLu(int idTicket) {
         ticketsNonLus.add(idTicket);
     }

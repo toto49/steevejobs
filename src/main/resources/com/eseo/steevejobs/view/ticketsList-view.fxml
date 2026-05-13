@@ -14,7 +14,8 @@
             <Insets left="40.0" right="40.0"/>
         </padding>
         <children>
-            <Label text="VOS TICKETS" style="-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold;"/>
+            <Label fx:id="titlepageticket" text="VOS TICKETS"
+                   style="-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold;"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 

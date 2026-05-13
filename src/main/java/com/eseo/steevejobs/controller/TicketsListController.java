@@ -33,7 +33,8 @@ public class TicketsListController implements ParametrizedController {
 
     @FXML
     private VBox ticketsContainer;
-
+    @FXML
+    private Label titlepageticket;
     private List<Ticket> tousLesTicketsBDD;
     private static TicketsListController activeInstance;
     private String filtreActuel = null;
@@ -61,6 +62,7 @@ public class TicketsListController implements ParametrizedController {
     }
 
     private void afficherMesTickets() {
+        System.out.println("🟢 DEBUG : La méthode afficherMesTickets() a été déclenchée !");
         if (tousLesTicketsBDD == null) return;
         this.filtreActuel = null;
 
@@ -68,17 +70,20 @@ public class TicketsListController implements ParametrizedController {
                 .filter(t -> t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId())
                 .collect(Collectors.toList());
 
+        System.out.println("🟢 DEBUG : Nombre de tickets trouvés pour l'auteur : " + mesTickets.size());
         remplirLeContainer(mesTickets);
     }
 
     @Override
     public void initData(String parametreService) {
+        titlepageticket.setText("ticket " + parametreService);
         if (tousLesTicketsBDD == null) return;
         this.filtreActuel = parametreService;
 
         List<Ticket> ticketsFiltres = tousLesTicketsBDD.stream()
-                .filter(t -> (t.getService() != null && t.getService().equalsIgnoreCase(parametreService))
-                        || (t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId()))
+                .filter(t -> t.getService() != null
+                        && t.getService().equalsIgnoreCase(parametreService)
+                        && t.getAuteur().getId() != currentUser.getId())
                 .collect(Collectors.toList());
 
         remplirLeContainer(ticketsFiltres);
