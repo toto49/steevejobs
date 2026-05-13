@@ -66,6 +66,17 @@ public class CalendrierController {
         });
     }
 
+    public List<Planning> initEvent() throws SQLException {
+        return planningService.findByUserId(utilisateur.getId());
+    }
+
+    public void nextWeek(ActionEvent e) throws SQLException {
+        dateDebutSemaineAffichee = dateDebutSemaineAffichee.plusWeeks(1); rafraichirCalendrier();
+    }
+    public void lastWeek(ActionEvent e) throws SQLException {
+        dateDebutSemaineAffichee = dateDebutSemaineAffichee.minusWeeks(1); rafraichirCalendrier();
+    }
+
     @FXML
     public void rafraichirCalendrier() throws SQLException {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("EEEE dd MMMM", Locale.FRENCH);
@@ -81,10 +92,6 @@ public class CalendrierController {
         showEvent();
     }
 
-    public List<Planning> initEvent() throws SQLException {
-        return planningService.findByUserId(utilisateur.getId());
-    }
-
     // ==========================================
     // GESTION DE L'AFFICHAGE DES BLOCS
     // ==========================================
@@ -97,16 +104,21 @@ public class CalendrierController {
             LocalDate dateCourante = event.getJourDebut().toLocalDate();
             LocalDate dateFinEvent = event.getJourFin().toLocalDate();
 
+            LocalDate derniereDateVisible = dateFinEvent.isAfter(dateFinSemaine) ? dateFinSemaine : dateFinEvent;
+
             while (!dateCourante.isAfter(dateFinEvent)) {
                 if (!dateCourante.isBefore(dateDebutSemaineAffichee) && !dateCourante.isAfter(dateFinSemaine)) {
-                    placerEvenementDansGrille(event, dateCourante);
+
+                    boolean estDerniereCaseVisible = dateCourante.isEqual(derniereDateVisible);
+
+                    placerEvenementDansGrille(event, dateCourante, estDerniereCaseVisible);
                 }
                 dateCourante = dateCourante.plusDays(1);
             }
         }
     }
 
-    private void placerEvenementDansGrille(Planning event, LocalDate date) {
+    private void placerEvenementDansGrille(Planning event, LocalDate date, boolean afficherBoutons) {
         int col = date.getDayOfWeek().getValue();
         int hDebut = date.isEqual(event.getJourDebut().toLocalDate()) ? event.getJourDebut().getHour() : 8;
         int hFin = date.isEqual(event.getJourFin().toLocalDate()) ? event.getJourFin().getHour() : 18;
@@ -114,12 +126,12 @@ public class CalendrierController {
         int rowDebut = hDebut - 5;
         int rowSpan = Math.max(1, hFin - hDebut + 1);
 
-        Node eventBlock = creerBlocEvenement(event);
+        Node eventBlock = creerBlocEvenement(event, afficherBoutons);
         gridPlanning.add(eventBlock, col, rowDebut, 1, rowSpan);
         GridPane.setMargin(eventBlock, new Insets(2));
     }
 
-    private Node creerBlocEvenement(Planning event) {
+    private Node creerBlocEvenement(Planning event, boolean afficherBoutons) {
         VBox box = new VBox(2);
         box.getStyleClass().add("event-block");
         box.setPadding(new Insets(4));
@@ -130,24 +142,31 @@ public class CalendrierController {
             case "Réunion" -> "#7298E0";
             default -> "#ffcc00";
         };
+
         box.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 5;");
 
-        // Header : Type + Boutons (Pencil for Edit, X for Delete)
+        // Header de base
         Label lblType = new Label(event.getType());
         lblType.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 11px;");
 
-        Button btnEdit = new Button("✎");
-        btnEdit.setStyle("-fx-background-color: #4a90e2; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
-        btnEdit.setOnAction(e -> modifierEvenement(event));
-
-        Button btnSuppr = new Button("X");
-        btnSuppr.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
-        btnSuppr.setOnAction(e -> supprimerEvenement(event));
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox header = new HBox(lblType, spacer, new HBox(4, btnEdit, btnSuppr));
+        HBox header = new HBox(lblType, spacer);
         header.setAlignment(Pos.CENTER_LEFT);
+
+        // Ajout conditionnel des boutons d'action
+        if (afficherBoutons) {
+            Button btnEdit = new Button("✎");
+            btnEdit.setStyle("-fx-background-color: #4a90e2; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnEdit.setOnAction(e -> modifierEvenement(event));
+
+            Button btnSuppr = new Button("X");
+            btnSuppr.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnSuppr.setOnAction(e -> supprimerEvenement(event));
+
+            HBox actionsBox = new HBox(4, btnEdit, btnSuppr);
+            header.getChildren().add(actionsBox);
+        }
 
         DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
         Label lblTime = new Label(event.getJourDebut().format(tf) + " - " + event.getJourFin().format(tf));
@@ -210,7 +229,7 @@ public class CalendrierController {
             dFP.setValue(eventToEdit.getJourFin().toLocalDate());
             hFF.setText(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
         } else {
-            typeBox.setValue("Cours");
+            typeBox.setValue("Réunion");
             dDP.setValue(LocalDate.now());
             hDF.setText("08:00");
             dFP.setValue(LocalDate.now());
@@ -268,11 +287,8 @@ public class CalendrierController {
             appliquerStyleAlert(a);
 
             if (a.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
-                // Si l'utilisateur annule une modification, il faudrait idéalement restaurer l'ancien
-                // mais pour rester simple : on rafraîchit juste.
                 events = initEvent();
                 rafraichirCalendrier();
-                return;
             }
 
             for (Planning p : conflits) {
@@ -316,14 +332,17 @@ public class CalendrierController {
     private void appliquerStyleAlert(Alert alert) {
         DialogPane dp = alert.getDialogPane();
         dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
-        Button btnOk = (Button) dp.lookupButton(ButtonType.YES);
-        if (btnOk == null) btnOk = (Button) dp.lookupButton(ButtonType.OK);
-        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
-        Button btnNo = (Button) dp.lookupButton(ButtonType.NO);
-        if (btnNo == null) btnNo = (Button) dp.lookupButton(ButtonType.CANCEL);
-        if (btnNo != null) btnNo.getStyleClass().add("button-cancel");
-    }
 
-    public void addWeek(ActionEvent e) throws SQLException { dateDebutSemaineAffichee = dateDebutSemaineAffichee.plusWeeks(1); rafraichirCalendrier(); }
-    public void removeWeek(ActionEvent e) throws SQLException { dateDebutSemaineAffichee = dateDebutSemaineAffichee.minusWeeks(1); rafraichirCalendrier(); }
+        Button btnOk = (Button) dp.lookupButton(ButtonType.YES);
+        if (btnOk == null) {
+            btnOk = (Button) dp.lookupButton(ButtonType.OK);
+            btnOk.getStyleClass().add("button-ok");
+        }
+
+        Button btnNo = (Button) dp.lookupButton(ButtonType.NO);
+        if (btnNo == null) {
+            btnNo = (Button) dp.lookupButton(ButtonType.CANCEL);
+            btnNo.getStyleClass().add("button-cancel");
+        }
+    }
 }
