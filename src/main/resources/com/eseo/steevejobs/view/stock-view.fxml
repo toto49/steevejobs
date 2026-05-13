@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.eseo.steevejobs.controller.StockController">
+
+    <!-- Padding global -->
+    <padding>
+        <Insets top="12" right="12" bottom="12" left="12"/>
+    </padding>
+
+    <!-- ===================== -->
+    <!-- BARRE D'OUTILS HAUT   -->
+    <!-- ===================== -->
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+
+        <TextField fx:id="searchField"
+                   promptText="Rechercher par nom..."
+                   HBox.hgrow="ALWAYS"/>
+
+        <Button text="Rechercher" onAction="#onSearch"/>
+        <Button text="Rafraîchir" onAction="#onRefresh"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <Label text="Seuil stock bas:"
+               style="-fx-padding: 2 0 0 0;"/>
+
+        <Spinner fx:id="lowStockSpinner"
+                 prefWidth="90"
+                 prefHeight="26"/>
+
+        <Button text="Stock bas" onAction="#onLowStock"/>
+    </HBox>
+
+    <!-- ===================== -->
+    <!-- TABLEAU PRODUITS     -->
+    <!-- ===================== -->
+    <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId" text="ID" prefWidth="60"/>
+            <TableColumn fx:id="colNom" text="Nom" prefWidth="240"/>
+            <TableColumn fx:id="colQuantite" text="Quantité" prefWidth="100"/>
+            <TableColumn fx:id="colPoids" text="Poids" prefWidth="110"/>
+            <TableColumn fx:id="colPrix" text="Prix HT" prefWidth="120"/>
+            <TableColumn fx:id="colTva" text="TVA" prefWidth="90"/>
+            <TableColumn fx:id="colActif" text="Actif" prefWidth="70"/>
+            <TableColumn fx:id="colActions" text="Actions" prefWidth="320"/>
+        </columns>
+    </TableView>
+
+</VBox>
