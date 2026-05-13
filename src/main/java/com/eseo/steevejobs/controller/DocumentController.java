@@ -48,7 +48,7 @@ public class DocumentController implements Initializable {
 
     // Labels du panneau détail
     @FXML private Label detailType, detailClient, detailDate, detailHT, detailTTC, detailStatut;
-    @FXML private Label detailEmail, detailTel, detailAdresse;  // ← NOUVEAUX LABELS
+    @FXML private Label detailEmail, detailTel, detailAdresse;
     @FXML private VBox lignesContainer;
     @FXML private Button btnExporterPdf, btnOuvrirPdf, btnModifier, btnChanger, btnSupprimer;
 
@@ -150,8 +150,12 @@ public class DocumentController implements Initializable {
     @FXML
     private void changerStatut() {
         if (documentSelectionne == null) return;
+
         ChoiceDialog<DocumentStatut> choix = new ChoiceDialog<>(documentSelectionne.getStatut(), DocumentStatut.values());
         choix.setTitle("Changer le statut");
+        choix.setHeaderText("Nouveau statut pour ce document");
+        // Charge le CSS
+        choix.getDialogPane().getStylesheets().add(getClass().getResource("/style/style.css").toExternalForm());
         choix.showAndWait().ifPresent(nouveauStatut -> {
             try {
                 documentSelectionne.setStatut(nouveauStatut);
@@ -170,6 +174,10 @@ public class DocumentController implements Initializable {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Supprimer");
         confirm.setHeaderText("Supprimer ce document ?");
+
+        // Charge le CSS
+        confirm.getDialogPane().getStylesheets().add(getClass().getResource("/style/style.css").toExternalForm());
+
         confirm.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.OK) {
                 try {

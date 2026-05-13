@@ -108,8 +108,8 @@
 .combo-box {
     -fx-background-color: white;
     -fx-border-color: #d1d5db;
-    -fx-border-radius: 20;
-    -fx-background-radius: 20;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
     -fx-padding: 5 10;
 }
 
@@ -136,8 +136,8 @@
 .text-field {
     -fx-background-color: white;
     -fx-border-color: #d1d5db;
-    -fx-border-radius: 20;
-    -fx-background-radius: 20;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
     -fx-padding: 8 12;
     -fx-text-fill: #333333;
 }
@@ -146,3 +146,59 @@
     -fx-border-color: #4B78CC;
 }
 
+/* ============================================
+   STYLE POUR LES DIALOG (POPUP)
+   ============================================ */
+
+.dialog-pane {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #f4f5f7;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: #333333;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .content {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+.dialog-pane .combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 5;
+}
+
+.dialog-pane .combo-box .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+.dialog-pane .combo-box-popup .list-view {
+    -fx-background-color: white;
+}
+
+.dialog-pane .button {
+    -fx-background-color: #4B78CC;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+}
+
+.dialog-pane .button:hover {
+    -fx-opacity: 0.9;
+}
+
+.dialog-pane .button:cancel {
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: #333333;
+}
