@@ -10,52 +10,78 @@ public class ServeurRelais extends WebSocketServer {
 
     public ServeurRelais(int port) {
         super(new InetSocketAddress(port));
+        this.setConnectionLostTimeout(30);
     }
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
     }
 
+    public static void main(String[] args) {
+        ServeurRelais server = new ServeurRelais(8887);
+        server.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Extinction du serveur...");
+            try {
+                server.stop(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }));
+    }
+
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        connectedUsers.values().remove(conn);
+        String userId = conn.getAttachment();
+        if (userId != null) {
+            connectedUsers.remove(userId);
+        }
     }
 
     @Override
     public void onMessage(WebSocket conn, String message) {
+        try {
+            if (message.startsWith("REGISTER:")) {
+                String[] parts = message.split(":", 2);
+                if (parts.length < 2) return;
 
-        if (message.startsWith("REGISTER:")) {
-            String userId = message.split(":")[1];
-            connectedUsers.put(userId, conn);
-            System.out.println("✅ Utilisateur " + userId + " est en ligne.");
-        }
+                String userId = parts[1].trim();
+                conn.setAttachment(userId);
+                connectedUsers.put(userId, conn);
 
-        else if (message.startsWith("NOTIFY:")) {
-            String[] parts = message.split(":");
-            String[] targetUsers = parts[1].split(",");
-            String ticketId = parts[2];
+                System.out.println("✅ [ONLINE] Utilisateur ID: " + userId);
+            } else if (message.startsWith("NOTIFY:")) {
+                String[] parts = message.split(":");
+                if (parts.length < 3) return;
 
-            for (String userId : targetUsers) {
-                WebSocket targetConn = connectedUsers.get(userId);
+                String[] targetUsers = parts[1].split(",");
+                String payload = parts[2];
 
-                if (targetConn != null && targetConn.isOpen()) {
-                    targetConn.send("UPDATE_TICKET:" + ticketId);
+
+                String updateMessage = "UPDATE_TICKET:" + payload;
+
+                for (String userId : targetUsers) {
+                    WebSocket targetConn = connectedUsers.get(userId.trim());
+
+                    if (targetConn != null && targetConn.isOpen()) {
+                        targetConn.send(updateMessage);
+                    }
                 }
             }
+        } catch (Exception e) {
+            System.err.println("⚠️ Erreur de parsing du message entrant.");
         }
     }
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-        ex.printStackTrace();
+        if (ex.getMessage() != null && !ex.getMessage().contains("Connection reset by peer")) {
+            System.err.println("🛑 Erreur serveur : " + ex.getMessage());
+        }
     }
 
     @Override
     public void onStart() {
-        System.out.println(" Serveur de routage prêt sur le port " + getPort());
-    }
-
-    public static void main(String[] args) {
-        new ServeurRelais(8887).start();
+        System.out.println("🚀 Serveur de routage ultra-rapide démarré sur le port " + getPort());
     }
 }
