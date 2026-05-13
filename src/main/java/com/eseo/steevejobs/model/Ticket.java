@@ -37,7 +37,8 @@ public class Ticket {
 
     /** Liste des messages associés à ce ticket */
     private List<Message> messages;
-
+    private boolean nonLuAdmin;
+    private boolean nonLuAuteur;
     public Ticket() {
         this.messages = new ArrayList<>();
         this.statut = StatutTicket.EN_ATTENTE;
@@ -140,4 +141,20 @@ public class Ticket {
 
     public void removeMessage(Message message) {
         this.messages.remove(message); }
+
+    public boolean isNonLuAdmin() {
+        return nonLuAdmin;
+    }
+
+    public void setNonLuAdmin(boolean nonLuAdmin) {
+        this.nonLuAdmin = nonLuAdmin;
+    }
+
+    public boolean isNonLuAuteur() {
+        return nonLuAuteur;
+    }
+
+    public void setNonLuAuteur(boolean nonLuAuteur) {
+        this.nonLuAuteur = nonLuAuteur;
+    }
 }

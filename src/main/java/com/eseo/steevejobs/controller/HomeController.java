@@ -45,43 +45,53 @@ public class HomeController {
     public HomeController() {
         this.permissionService = new PermissionService();
     }
-
     public static void ajouterNotification(String typeCible) {
-        System.out.println("🔔 [HOME] Signal reçu pour le type : " + typeCible);
-
         Platform.runLater(() -> {
-            if ("TECH".equals(typeCible)) {
-                notificationsTech++;
-                System.out.println("🔔 [HOME] Nombre de notifs TECH en mémoire : " + notificationsTech);
+            TicketService ts = new TicketServiceImpl();
+            User user = SessionService.getUtilisateurConnecte();
+            if (user == null) return;
 
-                if (activeInstance == null) {
-                    System.out.println("⚠️ [HOME] La page d'accueil n'est pas ouverte (activeInstance est null). La mémoire est bien stockée pour plus tard.");
-                } else if (activeInstance.badgeCarteTech == null) {
-                    System.err.println("❌ [HOME] ERREUR : La page est ouverte mais badgeCarteTech est NULL ! Le codeAction 'APP_TICKETS_VIEW' n'existe sûrement pas dans ton Enum AppModule.");
-                } else {
+            if ("TECH".equals(typeCible)) {
+                notificationsTech = ts.getNombreTicketsNonLusAdmin(user.getRole(), user.getId());
+
+                if (activeInstance != null && activeInstance.badgeCarteTech != null) {
                     activeInstance.badgeCarteTech.setText(String.valueOf(notificationsTech));
-                    activeInstance.badgeCarteTech.setVisible(true);
-                    System.out.println("✅ [HOME] Le badge de la carte s'est allumé avec succès !");
+                    activeInstance.badgeCarteTech.setVisible(notificationsTech > 0);
+                }
+                if (MenuController.getInstance() != null) {
+                    MenuController.getInstance().allumerBadge("TECH", notificationsTech);
+                }
+
+            } else if ("AUTEUR".equals(typeCible)) {
+                notificationsAuteur = ts.getNombreTicketsNonLusAuteur(user.getId());
+
+                if (activeInstance != null && activeInstance.badgeCarteAuteur != null) {
+                    activeInstance.badgeCarteAuteur.setText(String.valueOf(notificationsAuteur));
+                    activeInstance.badgeCarteAuteur.setVisible(notificationsAuteur > 0);
+                }
+
+                if (MenuController.getInstance() != null) {
+                    MenuController.getInstance().allumerBadge("AUTEUR", notificationsAuteur);
                 }
             }
         });
     }
-
     public void onUserLogin(int idUserConnecte) {
         this.currentUserPermissions = permissionService.getUserPermissions(idUserConnecte);
-
         TicketService ticketService = new TicketServiceImpl();
-
+        notificationsTech = 0;
+        notificationsAuteur = 0;
         if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
-            notificationsTech = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole());
-            if (MenuController.getInstance() != null && notificationsTech > 0) {
-                MenuController.getInstance().allumerBadge("TECH");
+            notificationsTech = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId());
+
+            if (MenuController.getInstance() != null) {
+                MenuController.getInstance().allumerBadge("TECH", notificationsTech);
             }
-        } else {
-            notificationsAuteur = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
-            if (MenuController.getInstance() != null && notificationsAuteur > 0) {
-                MenuController.getInstance().allumerBadge("AUTEUR");
-            }
+        }
+        notificationsAuteur = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
+
+        if (MenuController.getInstance() != null) {
+            MenuController.getInstance().allumerBadge("AUTEUR", notificationsAuteur);
         }
 
         renderAppCenter();

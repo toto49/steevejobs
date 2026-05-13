@@ -108,6 +108,11 @@
                                                style="-fx-font-size: 14px;-fx-text-fill: black"/>
                                         <Label fx:id="dateLabel" text="DATE DE&#10;CREATION :&#10;--"
                                                style="-fx-font-size: 14px; -fx-text-fill: black"/>
+                                        <Label fx:id="descriptionLabel"
+                                               text="description :&#10;--"
+                                               wrapText="true"
+                                               maxWidth="Infinity"
+                                               style="-fx-font-size: 14px; -fx-text-fill: black"/>
 
                                         <Region VBox.vgrow="ALWAYS"/>
 

@@ -10,8 +10,10 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -45,6 +47,8 @@ public class TicketController {
     private Button actionButton;
     @FXML
     private ScrollPane messageScrollPane;
+    @FXML
+    private Label descriptionLabel;
 
     private Ticket currentTicket;
     private User currentUser;
@@ -283,12 +287,25 @@ public class TicketController {
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
         activeInstance = null;
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticketsList-view.fxml"));
+            Parent view = loader.load();
+            TicketsListController controller = loader.getController();
 
-        if (MenuController.getInstance() != null) {
-            MenuController.getInstance().chargerPage("ticketsList");
-            MenuController.getInstance().changerTitre("Tickets");
-        } else {
-            System.err.println("Impossible de retourner en arrière.");
+            boolean jeSuisAuteur = (currentTicket.getAuteur().getId() == currentUser.getId());
+
+            if (jeSuisAuteur) {
+                controller.afficherMesTickets();
+            } else {
+                controller.initData(currentTicket.getService());
+            }
+
+            if (MenuController.getInstance() != null) {
+                MenuController.getInstance().setCenterView(view);
+                MenuController.getInstance().changerTitre("Tickets");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -328,20 +345,26 @@ public class TicketController {
                 showAlert("Erreur", "Le ticket demandé est introuvable.");
                 return;
             }
+
             if (WebSocketService.getInstance() != null) {
                 WebSocketService.getInstance().marquerCommeLu(ticketId);
                 boolean jeSuisAdmin = (currentUser.getId() != currentTicket.getAuteur().getId());
                 ticketService.marquerTicketLu(ticketId, jeSuisAdmin);
 
-                if (currentUser.getId() == currentTicket.getAuteur().getId()) {
+                if (jeSuisAdmin) {
+                    int restants = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId());
+                    HomeController.notificationsTech = restants;
+
                     if (MenuController.getInstance() != null) {
-                        MenuController.getInstance().effacerBadgeticket();
+                        MenuController.getInstance().allumerBadge("TECH", restants);
                     }
                 } else {
+                    int restants = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
+                    HomeController.notificationsAuteur = restants;
+
                     if (MenuController.getInstance() != null) {
-                        MenuController.getInstance().effacerBadgeAccueil();
+                        MenuController.getInstance().allumerBadge("AUTEUR", restants);
                     }
-                    HomeController.notificationsTech = 0;
                 }
             }
 
@@ -349,6 +372,7 @@ public class TicketController {
             ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
             serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());
             dateLabel.setText("DATE DE\nCRÉATION :\n" + currentTicket.getDateOuverture().format(DATE_FORMATTER));
+            descriptionLabel.setText("DESCRIPTION : \n\n" + (currentTicket.getDescription() != null ? currentTicket.getDescription().toUpperCase() : "SANS DESCRIPTION"));
 
             updateStatusUI();
             chatMessagesContainer.getChildren().clear();

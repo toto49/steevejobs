@@ -39,6 +39,12 @@ public class TicketsListController implements ParametrizedController {
     private static TicketsListController activeInstance;
     private String filtreActuel = null;
 
+    @FXML
+    private Button btnFiltreEnCours;
+    @FXML
+    private Button btnFiltreArchives;
+    private boolean modeArchivesActif = false;
+
     public static TicketsListController getActiveInstance() {
         return activeInstance;
     }
@@ -50,9 +56,7 @@ public class TicketsListController implements ParametrizedController {
             this.userService = new UserService();
             this.sessionService = new SessionService();
             this.currentUser = SessionService.getUtilisateurConnecte();
-
             this.tousLesTicketsBDD = ticketService.getAllTickets();
-
             afficherMesTickets();
 
         } catch (RuntimeException e) {
@@ -61,34 +65,35 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
-    private void afficherMesTickets() {
-        System.out.println("🟢 DEBUG : La méthode afficherMesTickets() a été déclenchée !");
+    public void afficherMesTickets() {
         if (tousLesTicketsBDD == null) return;
         this.filtreActuel = null;
+        titlepageticket.setText("MES TICKETS");
 
         List<Ticket> mesTickets = tousLesTicketsBDD.stream()
                 .filter(t -> t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId())
+                .filter(this::correspondAuModeActuel)
                 .collect(Collectors.toList());
 
-        System.out.println("🟢 DEBUG : Nombre de tickets trouvés pour l'auteur : " + mesTickets.size());
         remplirLeContainer(mesTickets);
     }
 
     @Override
     public void initData(String parametreService) {
-        titlepageticket.setText("ticket " + parametreService);
+        titlepageticket.setText("TICKETS " + parametreService.toUpperCase());
         if (tousLesTicketsBDD == null) return;
         this.filtreActuel = parametreService;
 
         List<Ticket> ticketsFiltres = tousLesTicketsBDD.stream()
                 .filter(t -> t.getService() != null
                         && t.getService().equalsIgnoreCase(parametreService)
+                        && t.getAuteur() != null
                         && t.getAuteur().getId() != currentUser.getId())
+                .filter(this::correspondAuModeActuel)
                 .collect(Collectors.toList());
 
         remplirLeContainer(ticketsFiltres);
     }
-
 
     public void rafraichirAffichage() {
         Platform.runLater(() -> {
@@ -108,56 +113,40 @@ public class TicketsListController implements ParametrizedController {
 
     private void remplirLeContainer(List<Ticket> liste) {
         liste.sort((t1, t2) -> {
-            boolean nonLu1 = false;
-            boolean nonLu2 = false;
+            boolean jeSuisAuteur1 = (t1.getAuteur() != null && t1.getAuteur().getId() == currentUser.getId());
+            boolean nonLu1 = jeSuisAuteur1 ? t1.isNonLuAuteur() : t1.isNonLuAdmin();
 
-            if (WebSocketService.getInstance() != null) {
-                nonLu1 = WebSocketService.getInstance().isTicketNonLu(t1.getId());
-                nonLu2 = WebSocketService.getInstance().isTicketNonLu(t2.getId());
-            }
+            boolean jeSuisAuteur2 = (t2.getAuteur() != null && t2.getAuteur().getId() == currentUser.getId());
+            boolean nonLu2 = jeSuisAuteur2 ? t2.isNonLuAuteur() : t2.isNonLuAdmin();
 
             if (nonLu1 && !nonLu2) return -1;
             if (!nonLu1 && nonLu2) return 1;
-
-
-            LocalDateTime date1 = t1.getDateOuverture();
-            LocalDateTime date2 = t2.getDateOuverture();
-
-
-            if (t1.getDateDerniereActivite() != null) date1 = t1.getDateDerniereActivite();
-            if (t2.getDateDerniereActivite() != null) date2 = t2.getDateDerniereActivite();
+            LocalDateTime date1 = (t1.getDateDerniereActivite() != null) ? t1.getDateDerniereActivite() : t1.getDateOuverture();
+            LocalDateTime date2 = (t2.getDateDerniereActivite() != null) ? t2.getDateDerniereActivite() : t2.getDateOuverture();
 
             return date2.compareTo(date1);
         });
 
-
         ticketsContainer.getChildren().clear();
         for (Ticket ticket : liste) {
-            String dateAffichee = ticketService.formatTicketDate(ticket.getDateOuverture());
-            addTicketCard(
-                    String.valueOf(ticket.getId()),
-                    ticket.getSujet() != null ? ticket.getSujet() : "Sans sujet",
-                    ticket.getStatut().name(),
-                    dateAffichee
-            );
+            addTicketCard(ticket);
         }
     }
 
-    private void addTicketCard(String id, String subject, String status, String date) {
+    private void addTicketCard(Ticket ticket) {
+        String id = String.valueOf(ticket.getId());
         HBox card = new HBox();
         card.setAlignment(Pos.CENTER_LEFT);
         card.setSpacing(20);
         card.setOnMouseClicked(event -> handleOpenTicket(id));
 
-        boolean isNonLu = false;
-        if (WebSocketService.getInstance() != null) {
-            isNonLu = WebSocketService.getInstance().isTicketNonLu(Integer.parseInt(id));
-        }
+        boolean jeSuisAuteur = (ticket.getAuteur() != null && ticket.getAuteur().getId() == currentUser.getId());
+        boolean isNonLu = jeSuisAuteur ? ticket.isNonLuAuteur() : ticket.isNonLuAdmin();
 
         if (isNonLu) {
             card.setStyle("-fx-background-color: #FFE5E5; -fx-background-radius: 10; -fx-cursor: hand; -fx-border-color: #E74C3C; -fx-border-radius: 10; -fx-border-width: 2; -fx-padding: 15;");
         } else {
-            card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand; -fx-border-color: black; -fx-border-radius: 10; -fx-border-width: 1; -fx-padding: 15;");
+            card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand; -fx-border-color: #DDDDDD; -fx-border-radius: 10; -fx-border-width: 1; -fx-padding: 15;");
         }
 
         VBox infoBox = new VBox(5);
@@ -169,9 +158,12 @@ public class TicketsListController implements ParametrizedController {
             idLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: black; -fx-font-weight: bold;");
         }
 
-        Label subjectLabel = new Label(subject);
-        subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
-        if (isNonLu) subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-font-weight: bold;");
+        Label subjectLabel = new Label(ticket.getSujet() != null ? ticket.getSujet() : "Sans sujet");
+        if (isNonLu) {
+            subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-font-weight: bold;");
+        } else {
+            subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
+        }
 
         infoBox.getChildren().addAll(idLabel, subjectLabel);
 
@@ -180,11 +172,12 @@ public class TicketsListController implements ParametrizedController {
 
         VBox metaBox = new VBox(5);
         metaBox.setAlignment(Pos.CENTER_RIGHT);
-        Label statusLabel = new Label("Statut: " + status);
+        String statusStr = ticket.getStatut().name();
+        Label statusLabel = new Label("Statut: " + statusStr);
         statusLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " +
-                (status.matches("EN_ATTENTE|EN_COURS|OPEN|IN PROGRESS") ? "green;" : "red;"));
+                (statusStr.matches("EN_ATTENTE|EN_COURS|OPEN|IN_PROGRESS") ? "green;" : "red;"));
 
-        Label dateLabel = new Label(date);
+        Label dateLabel = new Label(ticketService.formatTicketDate(ticket.getDateOuverture()));
         dateLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666666;");
         metaBox.getChildren().addAll(statusLabel, dateLabel);
 
@@ -205,26 +198,22 @@ public class TicketsListController implements ParametrizedController {
 
         Label titreLabel = new Label("NOUVEAU TICKET");
         titreLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #5882D6;");
+
         VBox sujetBox = new VBox(5);
         Label sujetTitre = new Label("Sujet");
         sujetTitre.setStyle("-fx-font-weight: bold;");
         TextField sujetField = new TextField();
         sujetField.setPromptText("Ex: Mon écran ne s'allume plus");
         sujetField.setPrefHeight(35);
-        sujetField.getStyleClass().add("champform");
         sujetBox.getChildren().addAll(sujetTitre, sujetField);
 
         VBox serviceBox = new VBox(5);
         Label serviceTitre = new Label("Service concerné");
         serviceTitre.setStyle("-fx-font-weight: bold;");
         ComboBox<String> serviceComboBox = new ComboBox<>();
-        serviceComboBox.setItems(FXCollections.observableArrayList(
-                "ADMIN", "RH"
-        ));
+        serviceComboBox.setItems(FXCollections.observableArrayList("ADMIN", "RH"));
         serviceComboBox.setPromptText("Sélectionnez un service...");
-        serviceComboBox.setPrefHeight(35);
         serviceComboBox.setMaxWidth(Double.MAX_VALUE);
-        serviceComboBox.getStyleClass().add("champform");
         serviceBox.getChildren().addAll(serviceTitre, serviceComboBox);
 
         VBox descBox = new VBox(5);
@@ -234,19 +223,15 @@ public class TicketsListController implements ParametrizedController {
         descriptionArea.setPromptText("Détaillez votre problème...");
         descriptionArea.setWrapText(true);
         descriptionArea.setPrefHeight(150);
-        descriptionArea.getStyleClass().add("champform");
         VBox.setVgrow(descBox, Priority.ALWAYS);
         descBox.getChildren().addAll(descTitre, descriptionArea);
 
         HBox boutonsBox = new HBox(15);
         boutonsBox.setAlignment(Pos.CENTER_RIGHT);
-        boutonsBox.setPadding(new Insets(10, 0, 0, 0));
-
         Button btnAnnuler = new Button("ANNULER");
-        btnAnnuler.setStyle("-fx-background-color: transparent; -fx-text-fill: #5882D6; -fx-border-color: #5882D6; -fx-border-radius: 5; -fx-cursor: hand; -fx-padding: 8 20;");
-
+        btnAnnuler.setStyle("-fx-background-color: transparent; -fx-text-fill: #5882D6; -fx-border-color: #5882D6; -fx-border-radius: 5; -fx-cursor: hand;");
         Button btnCreer = new Button("CRÉER");
-        btnCreer.setStyle("-fx-background-color: #5882D6; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand; -fx-padding: 8 20;");
+        btnCreer.setStyle("-fx-background-color: #5882D6; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand;");
 
         boutonsBox.getChildren().addAll(btnAnnuler, btnCreer);
         root.getChildren().addAll(titreLabel, sujetBox, serviceBox, descBox, boutonsBox);
@@ -259,9 +244,7 @@ public class TicketsListController implements ParametrizedController {
             String description = descriptionArea.getText().trim();
 
             if (sujet.isEmpty() || service == null || description.isEmpty()) {
-                Alert alert = new Alert(Alert.AlertType.WARNING, "Veuillez remplir tous les champs.");
-                alert.setHeaderText(null);
-                alert.showAndWait();
+                new Alert(Alert.AlertType.WARNING, "Veuillez remplir tous les champs.").showAndWait();
                 return;
             }
 
@@ -270,37 +253,42 @@ public class TicketsListController implements ParametrizedController {
                 nouveauTicket.setSujet(sujet);
                 nouveauTicket.setService(service);
                 nouveauTicket.setDescription(description);
-                nouveauTicket.setAuteur(SessionService.getUtilisateurConnecte());
+                nouveauTicket.setAuteur(currentUser);
 
                 ticketService.creerTicket(nouveauTicket);
+                ticketService.marquerTicketNonLu(nouveauTicket.getId(), true);
 
                 popupStage.close();
+
                 if (WebSocketService.getInstance() != null) {
-                    List<Integer> rhIds = userService.getIdsByRole("RH");
-                    List<Integer> adminIds = userService.getIdsByRole("ADMIN");
                     java.util.Set<Integer> staffIds = new java.util.HashSet<>();
-                    if (rhIds != null) staffIds.addAll(rhIds);
-                    if (adminIds != null) staffIds.addAll(adminIds);
-                    staffIds.remove(SessionService.getUtilisateurConnecte().getId());
+
+                    if ("RH".equalsIgnoreCase(service)) {
+                        List<Integer> rhIds = userService.getIdsByRole("RH");
+                        if (rhIds != null) staffIds.addAll(rhIds);
+                    } else if ("ADMIN".equalsIgnoreCase(service)) {
+                        List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+                        if (adminIds != null) staffIds.addAll(adminIds);
+                    }
+
+                    staffIds.remove(currentUser.getId());
 
                     WebSocketService.getInstance().envoyerNotificationGroupée(
                             new java.util.ArrayList<>(staffIds),
-                            0,
+                            nouveauTicket.getId(),
                             "TECH"
                     );
                 }
 
-                initialize();
+                rafraichirAffichage();
 
             } catch (Exception ex) {
                 ex.printStackTrace();
-                Alert alert = new Alert(Alert.AlertType.ERROR, "Erreur lors de la création du ticket : " + ex.getMessage());
-                alert.showAndWait();
+                new Alert(Alert.AlertType.ERROR, "Erreur lors de la création du ticket.").showAndWait();
             }
         });
 
-        Scene scene = new Scene(root, 500, 550);
-        popupStage.setScene(scene);
+        popupStage.setScene(new Scene(root, 500, 550));
         popupStage.showAndWait();
     }
 
@@ -315,10 +303,56 @@ public class TicketsListController implements ParametrizedController {
 
             if (MenuController.getInstance() != null) {
                 MenuController.getInstance().setCenterView(view);
-                MenuController.getInstance().changerTitre("Ticket N°" + ticketId);
+                MenuController.getInstance().changerTitre("TICKET N°" + ticketId);
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void handleFiltreEnCours(ActionEvent event) {
+        modeArchivesActif = false;
+        mettreAJourStyleBoutons();
+        rafraichirAffichageLocal();
+    }
+
+    @FXML
+    public void handleFiltreArchives(ActionEvent event) {
+        modeArchivesActif = true;
+        mettreAJourStyleBoutons();
+        rafraichirAffichageLocal();
+    }
+
+    private void mettreAJourStyleBoutons() {
+        String styleActif = "-fx-background-color: #5882D6; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;";
+        String styleInactif = "-fx-background-color: white; -fx-text-fill: #5882D6; -fx-border-color: #5882D6; -fx-border-radius: 5; -fx-font-weight: bold; -fx-cursor: hand;";
+
+        if (modeArchivesActif) {
+            btnFiltreArchives.setStyle(styleActif);
+            btnFiltreEnCours.setStyle(styleInactif);
+        } else {
+            btnFiltreEnCours.setStyle(styleActif);
+            btnFiltreArchives.setStyle(styleInactif);
+        }
+    }
+
+    private void rafraichirAffichageLocal() {
+        if (filtreActuel != null) {
+            initData(filtreActuel);
+        } else {
+            afficherMesTickets();
+        }
+    }
+
+    private boolean correspondAuModeActuel(Ticket t) {
+        String statut = t.getStatut().name().toUpperCase();
+        boolean estFerme = statut.equals("FERME") || statut.equals("RESOLU");
+
+        if (modeArchivesActif) {
+            return estFerme;
+        } else {
+            return !estFerme;
         }
     }
 }

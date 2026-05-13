@@ -130,9 +130,9 @@ public class TicketServiceImpl implements TicketService {
     }
 
 
-    public int getNombreTicketsNonLusAdmin(String service) {
+    public int getNombreTicketsNonLusAdmin(String service, int idCurrentUser) {
         try {
-            return ticketDAO.countTicketsNonLusAdmin(service);
+            return ticketDAO.countTicketsNonLusAdmin(service, idCurrentUser);
         } catch (SQLException e) {
             e.printStackTrace();
             return 0;

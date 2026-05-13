@@ -51,11 +51,10 @@ public class MenuController {
     @FXML
     public void initialize() {
         instance = this;
-
-        chargerPage("home");
-        if (btnAccueil != null) updateButtonStyles(btnAccueil);
         badgeAccueil = installerBadge(btnAccueil);
         badgeTicket = installerBadge(btnTicket);
+        if (btnAccueil != null) updateButtonStyles(btnAccueil);
+        chargerPage("home");
         WebSocketService.getInstance().connecter();
     }
 
@@ -86,14 +85,26 @@ public class MenuController {
     }
 
 
-    public void allumerBadge(String typeCible) {
+    public void allumerBadge(String typeCible, int nombreExact) {
         Platform.runLater(() -> {
             if ("TECH".equals(typeCible)) {
-                incrementerBadge(badgeAccueil);
+                mettreAJourBadgeRelatif(badgeAccueil, nombreExact);
             } else {
-                incrementerBadge(badgeTicket);
+                mettreAJourBadgeRelatif(badgeTicket, nombreExact);
             }
         });
+    }
+
+    private void mettreAJourBadgeRelatif(Label badge, int nombre) {
+        if (badge == null) return;
+
+        if (nombre <= 0) {
+            badge.setVisible(false);
+            badge.setText("0");
+        } else {
+            badge.setText(String.valueOf(nombre));
+            badge.setVisible(true);
+        }
     }
 
     private void incrementerBadge(Label badge) {

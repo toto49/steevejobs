@@ -244,13 +244,15 @@ public class TicketDAO {
         }
         return 0;
     }
-  
-    public int countTicketsNonLusAdmin(String service) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_admin = 1 AND service = ?";
+
+    public int countTicketsNonLusAdmin(String service, int idCurrentUser) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_admin = 1 AND service = ? AND id_auteur != ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, service);
+            stmt.setInt(2, idCurrentUser);
+
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -322,6 +324,8 @@ public class TicketDAO {
                 rs.getTimestamp("date_ouverture").toLocalDateTime(),
                 auteur
         );
+        ticket.setNonLuAdmin(rs.getBoolean("non_lu_admin"));
+        ticket.setNonLuAuteur(rs.getBoolean("non_lu_auteur"));
         Timestamp derniereActivite = rs.getTimestamp("date_derniere_activite");
         if (derniereActivite != null) {
             ticket.setDateDerniereActivite(derniereActivite.toLocalDateTime());

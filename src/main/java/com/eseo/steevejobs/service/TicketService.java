@@ -25,7 +25,7 @@ public interface TicketService {
 
     String formatTicketDate(LocalDateTime dateOuverture);
 
-    int getNombreTicketsNonLusAdmin(String service);
+    int getNombreTicketsNonLusAdmin(String service, int idCurrentUser);
 
     int getNombreTicketsNonLusAuteur(int idAuteur);
 
