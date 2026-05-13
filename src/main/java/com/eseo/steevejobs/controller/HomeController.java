@@ -3,9 +3,7 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.PermissionService;
-import com.eseo.steevejobs.service.SessionService;
-import com.eseo.steevejobs.service.UserService;
+import com.eseo.steevejobs.service.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
@@ -71,6 +69,21 @@ public class HomeController {
 
     public void onUserLogin(int idUserConnecte) {
         this.currentUserPermissions = permissionService.getUserPermissions(idUserConnecte);
+
+        TicketService ticketService = new TicketServiceImpl();
+
+        if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
+            notificationsTech = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole());
+            if (MenuController.getInstance() != null && notificationsTech > 0) {
+                MenuController.getInstance().allumerBadge("TECH");
+            }
+        } else {
+            notificationsAuteur = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
+            if (MenuController.getInstance() != null && notificationsAuteur > 0) {
+                MenuController.getInstance().allumerBadge("AUTEUR");
+            }
+        }
+
         renderAppCenter();
     }
 
@@ -206,15 +219,6 @@ public class HomeController {
         card.setOnMouseEntered(e -> card.setOpacity(0.8));
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
-            if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                notificationsTech = 0;
-                if (badge != null) badge.setVisible(false);
-                if (MenuController.getInstance() != null) MenuController.getInstance().effacerBadgeAccueil();
-
-            } else if ("MES_TICKETS".equals(codeAction)) {
-                notificationsAuteur = 0;
-                if (badge != null) badge.setVisible(false);
-            }
 
             if (MenuController.getInstance() != null) {
                 if (parametreFacultatif != null) {

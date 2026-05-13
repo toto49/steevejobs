@@ -110,23 +110,36 @@ public class TicketController {
             if (WebSocketService.getInstance() != null) {
                 int monId = currentUser.getId();
                 int idAuteurTicket = currentTicket.getAuteur().getId();
-
                 if (monId == idAuteurTicket) {
-                    List<Integer> rhIds = userService.getIdsByRole("RH");
-                    List<Integer> adminIds = userService.getIdsByRole("ADMIN");
-
+                    ticketService.marquerTicketNonLu(currentTicket.getId(), true);
                     java.util.Set<Integer> staffIds = new java.util.HashSet<>();
-                    if (rhIds != null) staffIds.addAll(rhIds);
-                    if (adminIds != null) staffIds.addAll(adminIds);
+                    String serviceDuTicket = currentTicket.getService();
+
+                    if ("RH".equalsIgnoreCase(serviceDuTicket)) {
+                        List<Integer> rhIds = userService.getIdsByRole("RH");
+                        if (rhIds != null) staffIds.addAll(rhIds);
+
+                    } else if ("ADMIN".equalsIgnoreCase(serviceDuTicket)) {
+                        List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+                        if (adminIds != null) staffIds.addAll(adminIds);
+
+                    } else {
+                        List<Integer> rhIds = userService.getIdsByRole("RH");
+                        List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+                        if (rhIds != null) staffIds.addAll(rhIds);
+                        if (adminIds != null) staffIds.addAll(adminIds);
+                    }
 
                     staffIds.remove(monId);
-
                     WebSocketService.getInstance().envoyerNotificationGroupée(
                             new java.util.ArrayList<>(staffIds),
                             currentTicket.getId(),
                             "TECH"
                     );
                 } else {
+
+                    ticketService.marquerTicketNonLu(currentTicket.getId(), false);
+
                     WebSocketService.getInstance().envoyerNotification(
                             idAuteurTicket,
                             currentTicket.getId(),
@@ -135,6 +148,7 @@ public class TicketController {
                 }
             }
         } catch (Exception wsException) {
+            System.err.println("❌ Erreur lors de la notification de mise à jour : " + wsException.getMessage());
             wsException.printStackTrace();
         }
     }
@@ -288,10 +302,6 @@ public class TicketController {
 
     public void initData(int ticketId) {
         activeInstance = this;
-        if (WebSocketService.getInstance() != null) {
-            WebSocketService.getInstance().marquerCommeLu(ticketId);
-            MenuController.getInstance().effacerBadgeticket();
-        }
         chatMessagesContainer.getChildren().clear();
 
         ProgressIndicator loader = new ProgressIndicator();
@@ -318,6 +328,23 @@ public class TicketController {
                 showAlert("Erreur", "Le ticket demandé est introuvable.");
                 return;
             }
+            if (WebSocketService.getInstance() != null) {
+                WebSocketService.getInstance().marquerCommeLu(ticketId);
+                boolean jeSuisAdmin = (currentUser.getId() != currentTicket.getAuteur().getId());
+                ticketService.marquerTicketLu(ticketId, jeSuisAdmin);
+
+                if (currentUser.getId() == currentTicket.getAuteur().getId()) {
+                    if (MenuController.getInstance() != null) {
+                        MenuController.getInstance().effacerBadgeticket();
+                    }
+                } else {
+                    if (MenuController.getInstance() != null) {
+                        MenuController.getInstance().effacerBadgeAccueil();
+                    }
+                    HomeController.notificationsTech = 0;
+                }
+            }
+
             ticketTitleLabel.setText("TICKET N°" + currentTicket.getId());
             ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
             serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());

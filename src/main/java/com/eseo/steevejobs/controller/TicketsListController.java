@@ -57,7 +57,7 @@ public class TicketsListController implements ParametrizedController {
 
         } catch (RuntimeException e) {
             System.err.println("Erreur lors du chargement : " + e.getMessage());
-            e.printStackTrace(); // <-- AJOUTE CETTE LIGNE
+            e.printStackTrace();
         }
     }
 

@@ -244,7 +244,61 @@ public class TicketDAO {
         }
         return 0;
     }
+  
+    public int countTicketsNonLusAdmin(String service) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_admin = 1 AND service = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
+            stmt.setString(1, service);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    public int countTicketsNonLusAuteur(int idAuteur) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_auteur = 1 AND id_auteur = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idAuteur);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    public void marquerTicketLu(int idTicket, boolean estAdmin) throws SQLException {
+        String colonne = estAdmin ? "non_lu_admin" : "non_lu_auteur";
+        String sql = "UPDATE TICKETS SET " + colonne + " = 0 WHERE id_tickets = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idTicket);
+            stmt.executeUpdate();
+        }
+    }
+
+
+    public void marquerTicketNonLu(int idTicket, boolean cibleAdmin) throws SQLException {
+        String colonne = cibleAdmin ? "non_lu_admin" : "non_lu_auteur";
+        String sql = "UPDATE TICKETS SET " + colonne + " = 1 WHERE id_tickets = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idTicket);
+            stmt.executeUpdate();
+        }
+    }
     private Ticket mapperTicket(ResultSet rs) throws SQLException {
         User auteur = new User(
                 rs.getInt("id_user"),
