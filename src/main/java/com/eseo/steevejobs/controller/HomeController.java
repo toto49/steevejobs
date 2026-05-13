@@ -26,6 +26,11 @@ public class HomeController {
         this.permissionService = new PermissionService();
     }
 
+    private static int idUserConnecte;
+    public static int getIdUserConnecte() {
+        return idUserConnecte;
+    }
+
     @FXML
     public void initialize() {
 
@@ -34,6 +39,7 @@ public class HomeController {
 
     public void onUserLogin(int idUserConnecte) {
         this.currentUserPermissions = permissionService.getUserPermissions(idUserConnecte);
+        HomeController.idUserConnecte = idUserConnecte;
         renderAppCenter();
     }
 

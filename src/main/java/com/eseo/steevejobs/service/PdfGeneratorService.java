@@ -1,7 +1,9 @@
 package com.eseo.steevejobs.service;
 
+import com.eseo.steevejobs.controller.HomeController;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.FichePaye;
+import com.eseo.steevejobs.model.User;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import com.lowagie.text.Image;
@@ -101,11 +103,11 @@ public class PdfGeneratorService {
     private void ajouterContenuDocument(com.lowagie.text.Document doc,
                                         com.eseo.steevejobs.model.Document document,
                                         List<Composer> lignes) throws DocumentException {
-        // ajoute le logo steeve costume en haut a droite
+        // logo steeve costume en haut a droite
         Image logo = chargerLogo();
         if (logo != null) {
             logo.setAlignment(Element.ALIGN_RIGHT);
-            logo.setSpacingAfter(10);
+            logo.setSpacingAfter(5);
             doc.add(logo);
         }
         //style
@@ -119,11 +121,13 @@ public class PdfGeneratorService {
         String typeLabel = switch (document.getType()) {
             case DEVIS           -> "DEVIS";
             case FACTURE         -> "FACTURE";
-            case BON_COMMANDE -> "BON DE COMMANDE";
+            case BON_COMMANDE    -> "BON DE COMMANDE";
         };
 
         Paragraph titre = new Paragraph(typeLabel, fontTitre);
         titre.setAlignment(Element.ALIGN_CENTER);
+        titre.setSpacingBefore(0);
+        titre.setSpacingAfter(2);
         doc.add(titre);
 
         Paragraph ref = new Paragraph("N° " + document.getId() + "  —  " +
@@ -135,6 +139,7 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
+        // SECTION CLIENT
         doc.add(new Paragraph("CLIENT", fontSection));
         doc.add(new Paragraph(" "));
 
@@ -142,7 +147,7 @@ public class PdfGeneratorService {
         tableInfos.setWidthPercentage(100);
         tableInfos.setWidths(new float[]{1, 3});
         tableInfos.getDefaultCell().setBorder(com.lowagie.text.Rectangle.NO_BORDER);
-        tableInfos.getDefaultCell().setPadding(4);
+        tableInfos.getDefaultCell().setPadding(2);
 
         ajouterInfoLigne(tableInfos, "Nom",     document.getTiers().getNom(),     fontGris, fontNormal);
         ajouterInfoLigne(tableInfos, "Email",   document.getTiers().getEmail(),   fontGris, fontNormal);
@@ -157,6 +162,34 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
+        // SECTION VENDEUR
+        doc.add(new Paragraph("VENDEUR", fontSection));
+        doc.add(new Paragraph(" "));
+
+        PdfPTable tableVendeur = new PdfPTable(2);
+        tableVendeur.setWidthPercentage(100);
+        tableVendeur.setWidths(new float[]{1, 3});
+        tableVendeur.getDefaultCell().setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        tableVendeur.getDefaultCell().setPadding(2);
+
+        User vendeur = document.getEditeur();
+        if (vendeur != null) {
+            String nomComplet = (vendeur.getPrenom() != null ? vendeur.getPrenom() : "") + " " + (vendeur.getNom() != null ? vendeur.getNom() : "");
+            ajouterInfoLigne(tableVendeur, "Nom", nomComplet.trim().isEmpty() ? "Non renseigné" : nomComplet, fontGris, fontNormal);
+            ajouterInfoLigne(tableVendeur, "Poste", vendeur.getPoste() != null ? vendeur.getPoste() : "Non renseigné", fontGris, fontNormal);
+            ajouterInfoLigne(tableVendeur, "Email", vendeur.getEmail() != null ? vendeur.getEmail() : "Non renseigné", fontGris, fontNormal);
+        } else {
+            ajouterInfoLigne(tableVendeur, "Nom", "Non renseigné", fontGris, fontNormal);
+            ajouterInfoLigne(tableVendeur, "Poste", "Non renseigné", fontGris, fontNormal);
+            ajouterInfoLigne(tableVendeur, "Email", "Non renseigné", fontGris, fontNormal);
+        }
+        doc.add(tableVendeur);
+
+        doc.add(new Paragraph(" "));
+        ajouterSeparateur(doc);
+        doc.add(new Paragraph(" "));
+
+        // SECTION DÉTAIL DES PRESTATIONS
         doc.add(new Paragraph("DÉTAIL DES PRESTATIONS", fontSection));
         doc.add(new Paragraph(" "));
 
@@ -167,7 +200,7 @@ public class PdfGeneratorService {
         for (String entete : new String[]{"Désignation", "Qté", "Prix unit. HT", "TVA", "Total HT"}) {
             PdfPCell cell = new PdfPCell(new Phrase(entete, fontBold));
             cell.setBackgroundColor(COULEUR_FOND_LIGNE);
-            cell.setPadding(7);
+            cell.setPadding(5);
             cell.setBorderColor(COULEUR_BORDURE);
             tableLignes.addCell(cell);
         }
@@ -186,6 +219,7 @@ public class PdfGeneratorService {
         doc.add(tableLignes);
         doc.add(new Paragraph(" "));
 
+        // TOTAUX
         PdfPTable tableTotaux = new PdfPTable(2);
         tableTotaux.setWidthPercentage(45);
         tableTotaux.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -196,11 +230,15 @@ public class PdfGeneratorService {
 
         doc.add(new Paragraph(" "));
         ajouterSeparateur(doc);
+
+        // STATUT
         Paragraph statut = new Paragraph("Statut : " + document.getStatut().name(), fontGris);
         statut.setAlignment(Element.ALIGN_RIGHT);
         doc.add(statut);
 
         doc.add(new Paragraph(" "));
+
+        // FOOTER
         Paragraph footer = new Paragraph(
                 "Document généré par SteevéJobs — " +
                         java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
