@@ -2,10 +2,7 @@ package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.ConnexionService;
-import com.eseo.steevejobs.service.MailService;
-import com.eseo.steevejobs.service.SessionService;
-import com.eseo.steevejobs.service.UserService;
+import com.eseo.steevejobs.service.*;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -146,6 +143,9 @@ public class BienvenueController {
             } else {
                 errror_connexion.setText("");
                 SessionService.setUtilisateurConnecte(connectedUser);
+                String token = JwtService.genererToken(connectedUser.getId());
+                SessionService.setTokenJWT(token);
+                com.eseo.steevejobs.service.WebSocketService.getInstance().connecter();
 
                 if (save) {
                     prefService.sauvegarderEmail(mail);
