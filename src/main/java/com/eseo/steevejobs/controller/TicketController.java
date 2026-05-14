@@ -7,12 +7,12 @@ import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.*;
 
 import javafx.application.Platform;
-import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -21,6 +21,8 @@ import javafx.scene.layout.VBox;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class TicketController {
 
@@ -66,7 +68,6 @@ public class TicketController {
     @FXML
     public void initialize() {
         this.currentUser = SessionService.getUtilisateurConnecte();
-
         chatMessagesContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
             Platform.runLater(() -> {
                 messageScrollPane.layout();
@@ -81,39 +82,30 @@ public class TicketController {
 
     public void refreshChatSilently() {
         if (currentTicket == null) return;
-
         int ticketId = currentTicket.getId();
+        CompletableFuture.supplyAsync(() -> {
+            currentTicket = ticketService.getTicketById(ticketId);
+            return ticketService.getMessagesDuTicket(ticketId);
+        }).thenAcceptAsync(messages -> {
+            List<Node> bulles = messages.stream()
+                    .map(this::creerMessageBubble)
+                    .collect(Collectors.toList());
 
-        Task<List<Message>> loadTask = new Task<List<Message>>() {
-            @Override
-            protected List<Message> call() throws Exception {
-                currentTicket = ticketService.getTicketById(ticketId);
-                return ticketService.getMessagesDuTicket(ticketId);
-            }
-        };
-
-        loadTask.setOnSucceeded(e -> {
-            List<Message> messages = loadTask.getValue();
-            chatMessagesContainer.getChildren().clear();
-
-            for (Message msg : messages) {
-                addMessageBubble(msg);
-            }
-            Platform.runLater(() -> {
-                messageScrollPane.setVvalue(1.0);
-                updateStatusUI();
-            });
+            chatMessagesContainer.getChildren().setAll(bulles);
+            updateStatusUI();
+            messageScrollPane.setVvalue(1.0);
+        }, Platform::runLater).exceptionally(ex -> {
+            ex.printStackTrace();
+            return null;
         });
-
-        Thread thread = new Thread(loadTask);
-        thread.setDaemon(true);
-        thread.start();
     }
+
     private void notifierMiseAJourTicket() {
         try {
             if (WebSocketService.getInstance() != null) {
                 int monId = currentUser.getId();
                 int idAuteurTicket = currentTicket.getAuteur().getId();
+
                 if (monId == idAuteurTicket) {
                     ticketService.marquerTicketNonLu(currentTicket.getId(), true);
                     java.util.Set<Integer> staffIds = new java.util.HashSet<>();
@@ -122,11 +114,9 @@ public class TicketController {
                     if ("RH".equalsIgnoreCase(serviceDuTicket)) {
                         List<Integer> rhIds = userService.getIdsByRole("RH");
                         if (rhIds != null) staffIds.addAll(rhIds);
-
                     } else if ("ADMIN".equalsIgnoreCase(serviceDuTicket)) {
                         List<Integer> adminIds = userService.getIdsByRole("ADMIN");
                         if (adminIds != null) staffIds.addAll(adminIds);
-
                     } else {
                         List<Integer> rhIds = userService.getIdsByRole("RH");
                         List<Integer> adminIds = userService.getIdsByRole("ADMIN");
@@ -141,9 +131,7 @@ public class TicketController {
                             "TECH"
                     );
                 } else {
-
                     ticketService.marquerTicketNonLu(currentTicket.getId(), false);
-
                     WebSocketService.getInstance().envoyerNotification(
                             idAuteurTicket,
                             currentTicket.getId(),
@@ -152,8 +140,7 @@ public class TicketController {
                 }
             }
         } catch (Exception wsException) {
-            System.err.println("❌ Erreur lors de la notification de mise à jour : " + wsException.getMessage());
-            wsException.printStackTrace();
+            System.err.println("❌ Erreur WS : " + wsException.getMessage());
         }
     }
 
@@ -161,9 +148,9 @@ public class TicketController {
     public void handleSendMessage() {
         String texte = messageInput.getText().trim();
 
-        if (texte.isEmpty() || currentTicket == null) {
-            return;
-        }
+        if (texte.isEmpty() || currentTicket == null) return;
+        messageInput.setDisable(true);
+        messageInput.clear();
 
         Message nouveauMessage = new Message();
         nouveauMessage.setContenu(texte);
@@ -171,33 +158,29 @@ public class TicketController {
         nouveauMessage.setTicket(currentTicket);
         nouveauMessage.setDateEnvoi(LocalDateTime.now());
 
-        addMessageBubble(nouveauMessage);
-        messageInput.clear();
+        chatMessagesContainer.getChildren().add(creerMessageBubble(nouveauMessage));
 
-        Task<Void> sendTask = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
-                currentTicket = ticketService.getTicketById(currentTicket.getId());
-                notifierMiseAJourTicket();
+        CompletableFuture.runAsync(() -> {
+            ticketService.ajouterMessage(currentTicket.getId(), nouveauMessage);
+            currentTicket = ticketService.getTicketById(currentTicket.getId());
+            notifierMiseAJourTicket();
+        }).thenRunAsync(() -> {
 
-                return null;
-            }
-        };
-
-        sendTask.setOnSucceeded(e -> Platform.runLater(this::updateStatusUI));
-
-        sendTask.setOnFailed(e -> {
-            e.getSource().getException().printStackTrace();
-            Platform.runLater(() -> showAlert("Erreur réseau", "Le message n'a pas pu être envoyé."));
+            messageInput.setDisable(false);
+            messageInput.requestFocus();
+            updateStatusUI();
+        }, Platform::runLater).exceptionally(ex -> {
+            ex.printStackTrace();
+            Platform.runLater(() -> {
+                messageInput.setDisable(false);
+                messageInput.setText(texte);
+                showAlert("Erreur réseau", "Le message n'a pas pu être envoyé.");
+            });
+            return null;
         });
-
-        Thread thread = new Thread(sendTask);
-        thread.setDaemon(true);
-        thread.start();
     }
 
-    private void addMessageBubble(Message message) {
+    private HBox creerMessageBubble(Message message) {
         HBox messageWrapper = new HBox();
         messageWrapper.setPadding(new Insets(5, 0, 5, 0));
 
@@ -229,7 +212,8 @@ public class TicketController {
 
         contentBox.getChildren().addAll(messageLabel, infoLabel);
         messageWrapper.getChildren().add(contentBox);
-        chatMessagesContainer.getChildren().add(messageWrapper);
+
+        return messageWrapper;
     }
 
     @FXML
@@ -240,24 +224,22 @@ public class TicketController {
                 ? StatutTicket.valueOf("FERME")
                 : StatutTicket.EN_ATTENTE;
 
-        Task<Void> updateStatusTask = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                currentTicket = ticketService.changerStatut(currentTicket.getId(), nouveauStatut);
-                notifierMiseAJourTicket();
+        actionButton.setDisable(true); // Sécurité anti-spam
 
-                return null;
-            }
-        };
-
-        updateStatusTask.setOnSucceeded(e -> Platform.runLater(this::updateStatusUI));
-
-        updateStatusTask.setOnFailed(e -> {
-            e.getSource().getException().printStackTrace();
-            Platform.runLater(() -> showAlert("Erreur", "Impossible de changer le statut du ticket."));
+        CompletableFuture.runAsync(() -> {
+            currentTicket = ticketService.changerStatut(currentTicket.getId(), nouveauStatut);
+            notifierMiseAJourTicket();
+        }).thenRunAsync(() -> {
+            actionButton.setDisable(false);
+            updateStatusUI();
+        }, Platform::runLater).exceptionally(ex -> {
+            ex.printStackTrace();
+            Platform.runLater(() -> {
+                actionButton.setDisable(false);
+                showAlert("Erreur", "Impossible de changer le statut du ticket.");
+            });
+            return null;
         });
-
-        new Thread(updateStatusTask).start();
     }
 
     private void updateStatusUI() {
@@ -323,24 +305,15 @@ public class TicketController {
 
         ProgressIndicator loader = new ProgressIndicator();
         loader.setMaxSize(50, 50);
-
         VBox loaderContainer = new VBox(loader);
         loaderContainer.setAlignment(Pos.CENTER);
         loaderContainer.prefHeightProperty().bind(messageScrollPane.heightProperty());
-
         chatMessagesContainer.getChildren().add(loaderContainer);
 
-        Task<List<Message>> loadMessagesTask = new Task<List<Message>>() {
-            @Override
-            protected List<Message> call() throws Exception {
-                currentTicket = ticketService.getTicketById(ticketId);
-                return ticketService.getMessagesDuTicket(ticketId);
-            }
-        };
-
-        loadMessagesTask.setOnSucceeded(event -> {
-            List<Message> messages = loadMessagesTask.getValue();
-
+        CompletableFuture.supplyAsync(() -> {
+            currentTicket = ticketService.getTicketById(ticketId);
+            return ticketService.getMessagesDuTicket(ticketId);
+        }).thenAcceptAsync(messages -> {
             if (currentTicket == null) {
                 showAlert("Erreur", "Le ticket demandé est introuvable.");
                 return;
@@ -351,23 +324,22 @@ public class TicketController {
                 boolean jeSuisAdmin = (currentUser.getId() != currentTicket.getAuteur().getId());
                 ticketService.marquerTicketLu(ticketId, jeSuisAdmin);
 
+                int restants = jeSuisAdmin
+                        ? ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId())
+                        : ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
+
                 if (jeSuisAdmin) {
-                    int restants = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId());
                     HomeController.notificationsTech = restants;
-
-                    if (MenuController.getInstance() != null) {
+                    if (MenuController.getInstance() != null)
                         MenuController.getInstance().allumerBadge("TECH", restants);
-                    }
                 } else {
-                    int restants = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
                     HomeController.notificationsAuteur = restants;
-
-                    if (MenuController.getInstance() != null) {
+                    if (MenuController.getInstance() != null)
                         MenuController.getInstance().allumerBadge("AUTEUR", restants);
-                    }
                 }
             }
 
+            // MàJ Textes Header
             ticketTitleLabel.setText("TICKET N°" + currentTicket.getId());
             ticketObjectLabel.setText("OBJET : " + (currentTicket.getSujet() != null ? currentTicket.getSujet().toUpperCase() : "SANS SUJET"));
             serviceLabel.setText("SERVICE\n" + currentTicket.getService().toUpperCase());
@@ -375,25 +347,24 @@ public class TicketController {
             descriptionLabel.setText("DESCRIPTION : \n\n" + (currentTicket.getDescription() != null ? currentTicket.getDescription().toUpperCase() : "SANS DESCRIPTION"));
 
             updateStatusUI();
-            chatMessagesContainer.getChildren().clear();
 
-            for (Message msg : messages) {
-                addMessageBubble(msg);
-            }
+            // ⭐ Batch Rendering des messages initiaux
+            List<Node> bulles = messages.stream()
+                    .map(this::creerMessageBubble)
+                    .collect(Collectors.toList());
 
-            Platform.runLater(() -> messageScrollPane.setVvalue(1.0));
+            chatMessagesContainer.getChildren().setAll(bulles);
+            messageScrollPane.setVvalue(1.0);
+
+        }, Platform::runLater).exceptionally(ex -> {
+            Platform.runLater(() -> {
+                chatMessagesContainer.getChildren().clear();
+                Label errorLabel = new Label("Erreur de connexion au serveur.");
+                errorLabel.setStyle("-fx-text-fill: red;");
+                chatMessagesContainer.getChildren().add(errorLabel);
+            });
+            ex.printStackTrace();
+            return null;
         });
-
-        loadMessagesTask.setOnFailed(event -> {
-            chatMessagesContainer.getChildren().clear();
-            Label errorLabel = new Label("Erreur de connexion au serveur.");
-            errorLabel.setStyle("-fx-text-fill: red;");
-            chatMessagesContainer.getChildren().add(errorLabel);
-            event.getSource().getException().printStackTrace();
-        });
-
-        Thread thread = new Thread(loadMessagesTask);
-        thread.setDaemon(true);
-        thread.start();
     }
 }

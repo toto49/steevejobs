@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -21,7 +22,9 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 public class TicketsListController implements ParametrizedController {
@@ -56,8 +59,8 @@ public class TicketsListController implements ParametrizedController {
             this.userService = new UserService();
             this.sessionService = new SessionService();
             this.currentUser = SessionService.getUtilisateurConnecte();
-            this.tousLesTicketsBDD = ticketService.getAllTickets();
-            afficherMesTickets();
+
+            chargerTicketsBDDAsync(this::afficherMesTickets);
 
         } catch (RuntimeException e) {
             System.err.println("Erreur lors du chargement : " + e.getMessage());
@@ -65,10 +68,28 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    private void chargerTicketsBDDAsync(Runnable actionApresChargement) {
+        CompletableFuture.supplyAsync(() -> {
+            return ticketService.getAllTickets();
+        }).thenAcceptAsync(tickets -> {
+            this.tousLesTicketsBDD = tickets;
+            if (actionApresChargement != null) {
+                actionApresChargement.run();
+            }
+        }, Platform::runLater).exceptionally(ex -> {
+            ex.printStackTrace();
+            return null;
+        });
+    }
+
     public void afficherMesTickets() {
-        if (tousLesTicketsBDD == null) return;
         this.filtreActuel = null;
         titlepageticket.setText("MES TICKETS");
+
+        if (tousLesTicketsBDD == null) {
+            chargerTicketsBDDAsync(this::afficherMesTickets);
+            return;
+        }
 
         List<Ticket> mesTickets = tousLesTicketsBDD.stream()
                 .filter(t -> t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId())
@@ -80,9 +101,13 @@ public class TicketsListController implements ParametrizedController {
 
     @Override
     public void initData(String parametreService) {
-        titlepageticket.setText("TICKETS " + parametreService.toUpperCase());
-        if (tousLesTicketsBDD == null) return;
         this.filtreActuel = parametreService;
+        titlepageticket.setText("TICKETS " + parametreService.toUpperCase());
+
+        if (tousLesTicketsBDD == null) {
+            chargerTicketsBDDAsync(() -> initData(parametreService));
+            return;
+        }
 
         List<Ticket> ticketsFiltres = tousLesTicketsBDD.stream()
                 .filter(t -> t.getService() != null
@@ -96,19 +121,7 @@ public class TicketsListController implements ParametrizedController {
     }
 
     public void rafraichirAffichage() {
-        Platform.runLater(() -> {
-            try {
-                this.tousLesTicketsBDD = ticketService.getAllTickets();
-
-                if (filtreActuel != null) {
-                    initData(filtreActuel);
-                } else {
-                    afficherMesTickets();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
 
     private void remplirLeContainer(List<Ticket> liste) {
@@ -126,14 +139,15 @@ public class TicketsListController implements ParametrizedController {
 
             return date2.compareTo(date1);
         });
-
-        ticketsContainer.getChildren().clear();
+        List<Node> cartesVisuelles = new ArrayList<>();
         for (Ticket ticket : liste) {
-            addTicketCard(ticket);
+            cartesVisuelles.add(creerTicketCard(ticket));
         }
+
+        ticketsContainer.getChildren().setAll(cartesVisuelles);
     }
 
-    private void addTicketCard(Ticket ticket) {
+    private HBox creerTicketCard(Ticket ticket) {
         String id = String.valueOf(ticket.getId());
         HBox card = new HBox();
         card.setAlignment(Pos.CENTER_LEFT);
@@ -151,19 +165,10 @@ public class TicketsListController implements ParametrizedController {
 
         VBox infoBox = new VBox(5);
         Label idLabel = new Label("TICKET N°" + id + (isNonLu ? " (NOUVEAU MESSAGE)" : ""));
-
-        if (isNonLu) {
-            idLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #E74C3C; -fx-font-weight: bold;");
-        } else {
-            idLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: black; -fx-font-weight: bold;");
-        }
+        idLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + (isNonLu ? "#E74C3C;" : "black;"));
 
         Label subjectLabel = new Label(ticket.getSujet() != null ? ticket.getSujet() : "Sans sujet");
-        if (isNonLu) {
-            subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: black; -fx-font-weight: bold;");
-        } else {
-            subjectLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
-        }
+        subjectLabel.setStyle("-fx-font-size: 16px; " + (isNonLu ? "-fx-font-weight: bold; -fx-text-fill: black;" : "-fx-text-fill: #333333;"));
 
         infoBox.getChildren().addAll(idLabel, subjectLabel);
 
@@ -182,7 +187,7 @@ public class TicketsListController implements ParametrizedController {
         metaBox.getChildren().addAll(statusLabel, dateLabel);
 
         card.getChildren().addAll(infoBox, spacer, metaBox);
-        ticketsContainer.getChildren().add(card);
+        return card;
     }
 
     @FXML
