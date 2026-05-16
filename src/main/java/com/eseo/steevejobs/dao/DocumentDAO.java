@@ -7,7 +7,6 @@ import com.eseo.steevejobs.model.Enum.DocumentType;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,10 +21,12 @@ public class DocumentDAO {
 
     /**
      * Créer un nouveau document
+     *
      * @param document le document à créer
+     * @return
      * @throws SQLException exception SQL
      */
-    public void createDocument(Document document) throws SQLException {
+    public boolean createDocument(Document document) throws SQLException {
         String sql = "INSERT INTO DOCUMENTS (type, date, total_ht, total_ttc, statut, url, id_tiers, id_vendeur) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -51,17 +52,24 @@ public class DocumentDAO {
                 if (generatedKeys.next()) {
                     document.setId(generatedKeys.getInt(1));
                 }
-            }
+            } return true;
+
+        } catch (SQLException e) {
+            return false;
         }
     }
 
     /**
      * Mettre à jour un document existant
+     *
      * @param document le document à mettre à jour
+     * @return
      * @throws SQLException exception SQL
      */
-    public void updateDocument(Document document) throws SQLException {
+    public boolean updateDocument(Document document) throws SQLException {
         String sql = "UPDATE DOCUMENTS SET type = ?, date = ?, total_ht = ?, total_ttc = ?, statut = ?, url = ?, id_tiers = ?, id_vendeur = ? WHERE id_documents = ?";
+
+        int rowsAffected;
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -82,8 +90,9 @@ public class DocumentDAO {
 
             stmt.setInt(9, document.getId());
 
-            stmt.executeUpdate();
+            rowsAffected = stmt.executeUpdate();
         }
+        return rowsAffected > 0;
     }
 
     /**
@@ -479,8 +488,8 @@ public class DocumentDAO {
                 "ORDER BY d.date DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 Tiers tiers = null;
