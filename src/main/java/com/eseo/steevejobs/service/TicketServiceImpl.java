@@ -128,4 +128,41 @@ public class TicketServiceImpl implements TicketService {
         long heures = ChronoUnit.HOURS.between(ticket.getDateOuverture(), LocalDateTime.now());
         return "Ouvert il y a " + heures + " heure(s)";
     }
+
+
+    public int getNombreTicketsNonLusAdmin(String service, int idCurrentUser) {
+        try {
+            return ticketDAO.countTicketsNonLusAdmin(service, idCurrentUser);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    public int getNombreTicketsNonLusAuteur(int idAuteur) {
+        try {
+            return ticketDAO.countTicketsNonLusAuteur(idAuteur);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    public void marquerTicketLu(int idTicket, boolean estAdmin) {
+        try {
+            ticketDAO.marquerTicketLu(idTicket, estAdmin);
+        } catch (SQLException e) {
+            System.err.println("Erreur lors du marquage du ticket comme lu : " + e.getMessage());
+        }
+    }
+
+    public void marquerTicketNonLu(int idTicket, boolean cibleAdmin) {
+        try {
+            ticketDAO.marquerTicketNonLu(idTicket, cibleAdmin);
+        } catch (SQLException e) {
+            System.err.println("Erreur lors du marquage du ticket comme non lu : " + e.getMessage());
+        }
+    }
+
+
 }

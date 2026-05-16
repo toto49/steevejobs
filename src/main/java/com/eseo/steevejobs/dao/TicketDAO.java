@@ -10,20 +10,13 @@ import java.util.List;
 
 /**
  * Data Access Object dédié aux opérations sur la table des tickets.
- * <p>
- * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- * et sauvegarder les objets {@link com.eseo.steevejobs.model.Ticket} en base de données.
- * </p>
  */
 public class TicketDAO {
 
     /**
      * Créer un nouveau ticket
-     * @param ticket le ticket à créer
-     * @throws SQLException exception SQL
      */
     public void createTicket(Ticket ticket) throws SQLException {
-        // Ajout de 'sujet' et 'description'
         String sql = "INSERT INTO TICKETS (sujet, description, service, statut, date_ouverture, id_auteur) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -48,11 +41,8 @@ public class TicketDAO {
 
     /**
      * Mettre à jour un ticket existant
-     * @param ticket le ticket à mettre à jour
-     * @throws SQLException exception SQL
      */
     public void updateTicket(Ticket ticket) throws SQLException {
-        // Ajout de 'sujet' et 'description'
         String sql = "UPDATE TICKETS SET sujet = ?, description = ?, service = ?, statut = ?, date_ouverture = ?, id_auteur = ? WHERE id_tickets = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -72,9 +62,6 @@ public class TicketDAO {
 
     /**
      * Supprimer un ticket par son ID
-     * @param id l'ID du ticket
-     * @return true si supprimé, false sinon
-     * @throws SQLException exception SQL
      */
     public boolean deleteTicket(int id) throws SQLException {
         String sql = "DELETE FROM TICKETS WHERE id_tickets = ?";
@@ -90,13 +77,11 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer un ticket par son ID
-     * @param id l'ID du ticket
-     * @return le ticket trouvé, null sinon
-     * @throws SQLException exception SQL
+     * Récupérer un ticket par son ID (Avec la date de dernière activité)
      */
     public Ticket getById(int id) throws SQLException {
-        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, " +
+                "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets) AS date_derniere_activite " +
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
                 "WHERE t.id_tickets = ?";
@@ -107,27 +92,7 @@ public class TicketDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    User auteur = new User(
-                            rs.getInt("id_user"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif")
-                    );
-                    return new Ticket(
-                            rs.getInt("id_tickets"),
-                            rs.getString("sujet"),
-                            rs.getString("description"),
-                            rs.getString("service"),
-                            StatutTicket.valueOf(rs.getString("statut")),
-                            rs.getTimestamp("date_ouverture").toLocalDateTime(),
-                            auteur
-                    );
+                    return mapperTicket(rs);
                 }
                 return null;
             }
@@ -135,18 +100,16 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer tous les tickets d'un auteur
-     * @param auteurId l'ID de l'auteur
-     * @return la liste des tickets de l'auteur
-     * @throws SQLException exception SQL
+     * Récupérer tous les tickets d'un auteur (Triés par activité)
      */
     public List<Ticket> findByAuteurId(int auteurId) throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
-        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, " +
+                "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets) AS date_derniere_activite " +
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
                 "WHERE t.id_auteur = ? " +
-                "ORDER BY t.date_ouverture DESC";
+                "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -154,27 +117,7 @@ public class TicketDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    User auteur = new User(
-                            rs.getInt("id_user"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif")
-                    );
-                    tickets.add(new Ticket(
-                            rs.getInt("id_tickets"),
-                            rs.getString("sujet"),
-                            rs.getString("description"),
-                            rs.getString("service"),
-                            StatutTicket.valueOf(rs.getString("statut")),
-                            rs.getTimestamp("date_ouverture").toLocalDateTime(),
-                            auteur
-                    ));
+                    tickets.add(mapperTicket(rs));
                 }
             }
         }
@@ -182,18 +125,16 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer les tickets par statut
-     * @param statut le statut du ticket (EN_ATTENTE, EN_COURS, FERMÉ)
-     * @return la liste des tickets correspondants
-     * @throws SQLException exception SQL
+     * Récupérer les tickets par statut (Triés par activité)
      */
     public List<Ticket> findByStatut(StatutTicket statut) throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
-        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, " +
+                "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets) AS date_derniere_activite " +
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
                 "WHERE t.statut = ? " +
-                "ORDER BY t.date_ouverture DESC";
+                "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -201,27 +142,7 @@ public class TicketDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    User auteur = new User(
-                            rs.getInt("id_user"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif")
-                    );
-                    tickets.add(new Ticket(
-                            rs.getInt("id_tickets"),
-                            rs.getString("sujet"),
-                            rs.getString("description"),
-                            rs.getString("service"),
-                            StatutTicket.valueOf(rs.getString("statut")),
-                            rs.getTimestamp("date_ouverture").toLocalDateTime(),
-                            auteur
-                    ));
+                    tickets.add(mapperTicket(rs));
                 }
             }
         }
@@ -229,43 +150,22 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer tous les tickets
-     * @return la liste de tous les tickets
-     * @throws SQLException exception SQL
+     * Récupérer tous les tickets (Triés par activité)
      */
     public List<Ticket> findAll() throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
-        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, " +
+                "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets) AS date_derniere_activite " +
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
-                "ORDER BY t.date_ouverture DESC";
+                "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                User auteur = new User(
-                        rs.getInt("id_user"),
-                        rs.getString("nom"),
-                        rs.getString("prenom"),
-                        rs.getString("email"),
-                        rs.getString("mdp"),
-                        rs.getString("adresse"),
-                        rs.getString("role"),
-                        rs.getString("tel"),
-                        rs.getString("poste"),
-                        rs.getBoolean("actif")
-                );
-                tickets.add(new Ticket(
-                        rs.getInt("id_tickets"),
-                        rs.getString("sujet"),
-                        rs.getString("description"),
-                        rs.getString("service"),
-                        StatutTicket.valueOf(rs.getString("statut")),
-                        rs.getTimestamp("date_ouverture").toLocalDateTime(),
-                        auteur
-                ));
+                tickets.add(mapperTicket(rs));
             }
         }
         return tickets;
@@ -273,10 +173,6 @@ public class TicketDAO {
 
     /**
      * Mettre à jour le statut d'un ticket
-     * @param id     l'ID du ticket
-     * @param statut le nouveau statut
-     * @return true si mis à jour, false sinon
-     * @throws SQLException exception SQL
      */
     public boolean updateStatut(int id, StatutTicket statut) throws SQLException {
         String sql = "UPDATE TICKETS SET statut = ? WHERE id_tickets = ?";
@@ -294,8 +190,6 @@ public class TicketDAO {
 
     /**
      * Compter le nombre total de tickets
-     * @return le nombre total de tickets
-     * @throws SQLException exception SQL
      */
     public int countTickets() throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS";
@@ -313,9 +207,6 @@ public class TicketDAO {
 
     /**
      * Compter le nombre de tickets par statut
-     * @param statut le statut
-     * @return le nombre de tickets avec ce statut
-     * @throws SQLException exception SQL
      */
     public int countByStatut(StatutTicket statut) throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS WHERE statut = ?";
@@ -336,9 +227,6 @@ public class TicketDAO {
 
     /**
      * Compter le nombre de tickets par auteur
-     * @param auteurId l'ID de l'auteur
-     * @return le nombre de tickets de l'auteur
-     * @throws SQLException exception SQL
      */
     public int countByAuteurId(int auteurId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS WHERE id_auteur = ?";
@@ -355,5 +243,96 @@ public class TicketDAO {
             }
         }
         return 0;
+    }
+
+    public int countTicketsNonLusAdmin(String service, int idCurrentUser) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_admin = 1 AND service = ? AND id_auteur != ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, service);
+            stmt.setInt(2, idCurrentUser);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    public int countTicketsNonLusAuteur(int idAuteur) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_auteur = 1 AND id_auteur = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idAuteur);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    public void marquerTicketLu(int idTicket, boolean estAdmin) throws SQLException {
+        String colonne = estAdmin ? "non_lu_admin" : "non_lu_auteur";
+        String sql = "UPDATE TICKETS SET " + colonne + " = 0 WHERE id_tickets = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idTicket);
+            stmt.executeUpdate();
+        }
+    }
+
+
+    public void marquerTicketNonLu(int idTicket, boolean cibleAdmin) throws SQLException {
+        String colonne = cibleAdmin ? "non_lu_admin" : "non_lu_auteur";
+        String sql = "UPDATE TICKETS SET " + colonne + " = 1 WHERE id_tickets = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idTicket);
+            stmt.executeUpdate();
+        }
+    }
+    private Ticket mapperTicket(ResultSet rs) throws SQLException {
+        User auteur = new User(
+                rs.getInt("id_user"),
+                rs.getString("nom"),
+                rs.getString("prenom"),
+                rs.getString("email"),
+                rs.getString("mdp"),
+                rs.getString("adresse"),
+                rs.getString("role"),
+                rs.getString("tel"),
+                rs.getString("poste"),
+                rs.getBoolean("actif")
+        );
+
+        Ticket ticket = new Ticket(
+                rs.getInt("id_tickets"),
+                rs.getString("sujet"),
+                rs.getString("description"),
+                rs.getString("service"),
+                StatutTicket.valueOf(rs.getString("statut")),
+                rs.getTimestamp("date_ouverture").toLocalDateTime(),
+                auteur
+        );
+        ticket.setNonLuAdmin(rs.getBoolean("non_lu_admin"));
+        ticket.setNonLuAuteur(rs.getBoolean("non_lu_auteur"));
+        Timestamp derniereActivite = rs.getTimestamp("date_derniere_activite");
+        if (derniereActivite != null) {
+            ticket.setDateDerniereActivite(derniereActivite.toLocalDateTime());
+        } else {
+            ticket.setDateDerniereActivite(ticket.getDateOuverture());
+        }
+
+        return ticket;
     }
 }
