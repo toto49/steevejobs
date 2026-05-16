@@ -38,6 +38,7 @@ public class TicketsListController implements ParametrizedController {
     private VBox ticketsContainer;
     @FXML
     private Label titlepageticket;
+
     private List<Ticket> tousLesTicketsBDD;
     private static TicketsListController activeInstance;
     private String filtreActuel = null;
@@ -47,6 +48,7 @@ public class TicketsListController implements ParametrizedController {
     @FXML
     private Button btnFiltreArchives;
     private boolean modeArchivesActif = false;
+    private boolean isFetching = false;
 
     public static TicketsListController getActiveInstance() {
         return activeInstance;
@@ -54,70 +56,82 @@ public class TicketsListController implements ParametrizedController {
 
     @FXML
     public void initialize() {
-        try {
-            activeInstance = this;
-            this.userService = new UserService();
-            this.sessionService = new SessionService();
-            this.currentUser = SessionService.getUtilisateurConnecte();
-
-            chargerTicketsBDDAsync(this::afficherMesTickets);
-
-        } catch (RuntimeException e) {
-            System.err.println("Erreur lors du chargement : " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void chargerTicketsBDDAsync(Runnable actionApresChargement) {
-        CompletableFuture.supplyAsync(() -> {
-            return ticketService.getAllTickets();
-        }).thenAcceptAsync(tickets -> {
-            this.tousLesTicketsBDD = tickets;
-            if (actionApresChargement != null) {
-                actionApresChargement.run();
-            }
-        }, Platform::runLater).exceptionally(ex -> {
-            ex.printStackTrace();
-            return null;
-        });
-    }
-
-    public void afficherMesTickets() {
-        this.filtreActuel = null;
-        titlepageticket.setText("MES TICKETS");
-
-        if (tousLesTicketsBDD == null) {
-            chargerTicketsBDDAsync(this::afficherMesTickets);
-            return;
-        }
-
-        List<Ticket> mesTickets = tousLesTicketsBDD.stream()
-                .filter(t -> t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId())
-                .filter(this::correspondAuModeActuel)
-                .collect(Collectors.toList());
-
-        remplirLeContainer(mesTickets);
+        activeInstance = this;
+        this.userService = new UserService();
+        this.sessionService = new SessionService();
+        this.currentUser = SessionService.getUtilisateurConnecte();
+        chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
 
     @Override
     public void initData(String parametreService) {
         this.filtreActuel = parametreService;
-        titlepageticket.setText("TICKETS " + parametreService.toUpperCase());
-
-        if (tousLesTicketsBDD == null) {
-            chargerTicketsBDDAsync(() -> initData(parametreService));
-            return;
+        if (titlepageticket != null) {
+            titlepageticket.setText("TICKETS " + parametreService.toUpperCase());
         }
 
-        List<Ticket> ticketsFiltres = tousLesTicketsBDD.stream()
-                .filter(t -> t.getService() != null
-                        && t.getService().equalsIgnoreCase(parametreService)
-                        && t.getAuteur() != null
-                        && t.getAuteur().getId() != currentUser.getId())
-                .filter(this::correspondAuModeActuel)
-                .collect(Collectors.toList());
+        if (tousLesTicketsBDD != null) {
+            rafraichirAffichageLocal();
+        } else {
+            chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
+        }
+    }
 
-        remplirLeContainer(ticketsFiltres);
+    public void afficherMesTickets() {
+        this.filtreActuel = null;
+        if (titlepageticket != null) {
+            titlepageticket.setText("MES TICKETS");
+        }
+
+        if (tousLesTicketsBDD != null) {
+            rafraichirAffichageLocal();
+        } else {
+            chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
+        }
+    }
+
+    private void chargerTicketsBDDAsync(Runnable actionApresChargement) {
+        if (isFetching) return;
+        isFetching = true;
+
+        CompletableFuture.supplyAsync(() -> {
+            return ticketService.getAllTickets();
+        }).thenAcceptAsync(tickets -> {
+            this.tousLesTicketsBDD = tickets;
+            this.isFetching = false;
+            if (actionApresChargement != null) {
+                actionApresChargement.run();
+            }
+        }, Platform::runLater).exceptionally(ex -> {
+            this.isFetching = false;
+            ex.printStackTrace();
+            return null;
+        });
+    }
+
+    private void rafraichirAffichageLocal() {
+        if (tousLesTicketsBDD == null) return;
+        activeInstance = this;
+
+        List<Ticket> listeAFicher;
+
+        if (filtreActuel != null && !filtreActuel.isEmpty()) {
+            listeAFicher = tousLesTicketsBDD.stream()
+                    .filter(t -> t.getService() != null
+                            && t.getService().equalsIgnoreCase(filtreActuel)
+                            && t.getAuteur() != null
+                            && t.getAuteur().getId() != currentUser.getId())
+                    .filter(this::correspondAuModeActuel)
+                    .collect(Collectors.toList());
+        } else {
+            // MODE MES TICKETS
+            listeAFicher = tousLesTicketsBDD.stream()
+                    .filter(t -> t.getAuteur() != null && t.getAuteur().getId() == currentUser.getId())
+                    .filter(this::correspondAuModeActuel)
+                    .collect(Collectors.toList());
+        }
+
+        remplirLeContainer(listeAFicher);
     }
 
     public void rafraichirAffichage() {
@@ -134,11 +148,13 @@ public class TicketsListController implements ParametrizedController {
 
             if (nonLu1 && !nonLu2) return -1;
             if (!nonLu1 && nonLu2) return 1;
+
             LocalDateTime date1 = (t1.getDateDerniereActivite() != null) ? t1.getDateDerniereActivite() : t1.getDateOuverture();
             LocalDateTime date2 = (t2.getDateDerniereActivite() != null) ? t2.getDateDerniereActivite() : t2.getDateOuverture();
 
             return date2.compareTo(date1);
         });
+
         List<Node> cartesVisuelles = new ArrayList<>();
         for (Ticket ticket : liste) {
             cartesVisuelles.add(creerTicketCard(ticket));
@@ -192,6 +208,7 @@ public class TicketsListController implements ParametrizedController {
 
     @FXML
     public void handleCreateTicket(ActionEvent event) {
+        // Logique de création inchangée (garde la tienne si tu l'avais modifiée)
         Stage popupStage = new Stage();
         popupStage.initModality(Modality.APPLICATION_MODAL);
         popupStage.setTitle("Créer un nouveau ticket");
@@ -299,8 +316,7 @@ public class TicketsListController implements ParametrizedController {
 
     private void handleOpenTicket(String ticketId) {
         try {
-            activeInstance = null;
-
+            activeInstance = null; // On libère l'instance pour éviter les refreshs en arrière-plan
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticket-view.fxml"));
             Parent view = loader.load();
             TicketController controller = loader.getController();
@@ -342,22 +358,9 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
-    private void rafraichirAffichageLocal() {
-        if (filtreActuel != null) {
-            initData(filtreActuel);
-        } else {
-            afficherMesTickets();
-        }
-    }
-
     private boolean correspondAuModeActuel(Ticket t) {
         String statut = t.getStatut().name().toUpperCase();
         boolean estFerme = statut.equals("FERME") || statut.equals("RESOLU");
-
-        if (modeArchivesActif) {
-            return estFerme;
-        } else {
-            return !estFerme;
-        }
+        return modeArchivesActif == estFerme;
     }
 }

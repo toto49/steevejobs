@@ -161,12 +161,23 @@ public class MenuController {
         updateButtonStyles(btnPlanning);
         changerTitre("Calendrier");
     }
-
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("ticketsList");
-        updateButtonStyles(btnTicket);
-        changerTitre("Tickets");
+        TicketController.fermerChat();
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticketsList-view.fxml"));
+            Parent root = loader.load();
+
+            TicketsListController controller = loader.getController();
+            controller.afficherMesTickets();
+
+            setCenterView(root);
+            updateButtonStyles(btnTicket);
+            changerTitre("Tickets");
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Erreur lors de l'ouverture de la vue ticketsList");
+        }
     }
 
     public void effacerBadgeticket() {
