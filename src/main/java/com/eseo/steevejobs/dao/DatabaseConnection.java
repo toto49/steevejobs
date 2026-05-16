@@ -1,19 +1,45 @@
 package com.eseo.steevejobs.dao;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    static Dotenv dotenv = Dotenv.configure().directory("./").load();
+    private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+    private static HikariDataSource dataSource;
 
-    private static final String URL = dotenv.get("DB_URL");
-    private static final String USER = dotenv.get("DB_USER");
-    private static final String PASSWORD = dotenv.get("DB_PASSWORD");
+    static {
+        try {
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl(dotenv.get("DB_URL"));
+            config.setUsername(dotenv.get("DB_USER"));
+            config.setPassword(dotenv.get("DB_PASSWORD"));
+
+
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(2);
+            config.setConnectionTimeout(5000);
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("prepStmtCacheSize", "250");
+            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+            dataSource = new HikariDataSource(config);
+
+        } catch (Exception e) {
+            System.err.println("❌ Erreur critique lors de l'initialisation de la BDD : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        return dataSource.getConnection();
+    }
+
+    public static void fermerPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+        }
     }
 }

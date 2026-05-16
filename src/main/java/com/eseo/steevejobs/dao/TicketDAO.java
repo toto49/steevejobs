@@ -161,8 +161,8 @@ public class TicketDAO {
                 "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 tickets.add(mapperTicket(rs));
@@ -195,8 +195,8 @@ public class TicketDAO {
         String sql = "SELECT COUNT(*) FROM TICKETS";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);
