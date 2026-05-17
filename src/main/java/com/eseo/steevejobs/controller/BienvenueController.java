@@ -18,7 +18,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.sql.SQLException;
 
 public class BienvenueController {
 
@@ -145,8 +144,7 @@ public class BienvenueController {
                 SessionService.setUtilisateurConnecte(connectedUser);
                 String token = JwtService.genererToken(connectedUser.getId());
                 SessionService.setTokenJWT(token);
-                com.eseo.steevejobs.service.WebSocketService.getInstance().connecter();
-
+                WebSocketService.getInstance().connecter();
                 if (save) {
                     prefService.sauvegarderEmail(mail);
                 } else {
@@ -164,12 +162,14 @@ public class BienvenueController {
                     errror_connexion.setStyle("-fx-fill: red; -fx-font-weight: bold;");
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            errror_connexion.setText("Erreur de connexion à la base de données.");
+
+        } catch (SecurityException e) {
+            errror_connexion.setText("🔒 " + e.getMessage());
+            errror_connexion.setStyle("-fx-fill: red; -fx-font-weight: bold;");
+
+        } catch (Exception e) {
+            errror_connexion.setText(e.getMessage() != null ? e.getMessage() : "Erreur de connexion.");
             errror_connexion.setStyle("-fx-fill: red; -fx-font-weight: bold;");
         }
     }
-
-
 }
