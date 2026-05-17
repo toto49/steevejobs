@@ -208,7 +208,6 @@ public class TicketsListController implements ParametrizedController {
 
     @FXML
     public void handleCreateTicket(ActionEvent event) {
-        // Logique de création inchangée (garde la tienne si tu l'avais modifiée)
         Stage popupStage = new Stage();
         popupStage.initModality(Modality.APPLICATION_MODAL);
         popupStage.setTitle("Créer un nouveau ticket");
@@ -223,28 +222,31 @@ public class TicketsListController implements ParametrizedController {
 
         VBox sujetBox = new VBox(5);
         Label sujetTitre = new Label("Sujet");
-        sujetTitre.setStyle("-fx-font-weight: bold;");
+        sujetTitre.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
         TextField sujetField = new TextField();
         sujetField.setPromptText("Ex: Mon écran ne s'allume plus");
         sujetField.setPrefHeight(35);
+        sujetField.getStyleClass().add("champform");
         sujetBox.getChildren().addAll(sujetTitre, sujetField);
 
         VBox serviceBox = new VBox(5);
         Label serviceTitre = new Label("Service concerné");
-        serviceTitre.setStyle("-fx-font-weight: bold;");
+        serviceTitre.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
         ComboBox<String> serviceComboBox = new ComboBox<>();
         serviceComboBox.setItems(FXCollections.observableArrayList("ADMIN", "RH"));
         serviceComboBox.setPromptText("Sélectionnez un service...");
         serviceComboBox.setMaxWidth(Double.MAX_VALUE);
+        serviceComboBox.getStyleClass().add("menu-burger");
         serviceBox.getChildren().addAll(serviceTitre, serviceComboBox);
 
         VBox descBox = new VBox(5);
         Label descTitre = new Label("Description détaillée");
-        descTitre.setStyle("-fx-font-weight: bold;");
+        descTitre.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
         TextArea descriptionArea = new TextArea();
         descriptionArea.setPromptText("Détaillez votre problème...");
         descriptionArea.setWrapText(true);
         descriptionArea.setPrefHeight(150);
+        descriptionArea.getStyleClass().add("textarea-form");
         VBox.setVgrow(descBox, Priority.ALWAYS);
         descBox.getChildren().addAll(descTitre, descriptionArea);
 
@@ -310,7 +312,17 @@ public class TicketsListController implements ParametrizedController {
             }
         });
 
-        popupStage.setScene(new Scene(root, 500, 550));
+        Scene scene = new Scene(root, 500, 550);
+
+
+        try {
+            String css = getClass().getResource("/style/style.css").toExternalForm();
+            scene.getStylesheets().add(css);
+        } catch (NullPointerException e) {
+            System.err.println("Fichier CSS introuvable ! Vérifie le chemin d'accès.");
+        }
+
+        popupStage.setScene(scene);
         popupStage.showAndWait();
     }
 

@@ -96,3 +96,103 @@
     -fx-pref-height: 45;
     -fx-font-family: 'Arial';
 }
+
+.textarea-form {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-border-color: #000000;
+    -fx-background-color: transparent;
+    -fx-font-family: 'Arial';
+    -fx-pref-height: 150;
+    -fx-padding: 5;
+    -fx-text-fill: #000000;
+    -fx-highlight-fill: #5584D5;
+    -fx-highlight-text-fill: white;
+}
+
+
+.textarea-form .content,
+.textarea-form .viewport,
+.textarea-form .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical .thumb {
+    -fx-background-color: #cccccc;
+    -fx-background-radius: 10;
+}
+
+.textarea-form .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5584D5;
+}
+
+.textarea-form .scroll-bar:vertical .increment-button,
+.textarea-form .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.textarea-form .scroll-bar:vertical .increment-arrow,
+.textarea-form .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+.menu-burger {
+    -fx-background-color: white;
+    -fx-background-radius: 25;
+    -fx-border-color: #000000;
+    -fx-border-radius: 25;
+    -fx-pref-height: 45;
+    -fx-padding: 0 5 0 5;
+}
+
+.menu-burger > .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-font-family: 'Arial';
+    -fx-font-size: 14px;
+}
+
+.menu-burger .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 15 0 0;
+}
+
+.menu-burger .arrow {
+    -fx-background-color: black;
+}
+
+.menu-burger .combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    -fx-border-color: #000000;
+    -fx-border-radius: 15;
+    -fx-padding: 5;
+}
+
+.menu-burger .combo-box-popup .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-padding: 8 10 8 10;
+    -fx-background-radius: 10;
+    -fx-font-family: 'Arial';
+}
+
+.menu-burger .combo-box-popup .list-view .list-cell:filled:hover,
+.menu-burger .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #5584D5;
+    -fx-text-fill: white;
+}
