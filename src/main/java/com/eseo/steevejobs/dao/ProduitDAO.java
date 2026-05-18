@@ -166,8 +166,8 @@ public class ProduitDAO {
         String sql = "SELECT * FROM PRODUITS ORDER BY nom";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 produits.add(new Produit(
@@ -297,8 +297,8 @@ public class ProduitDAO {
         String sql = "SELECT COUNT(*) FROM PRODUITS";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);

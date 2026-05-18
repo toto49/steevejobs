@@ -37,14 +37,164 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.1), 10, 0, 0, 5);
 }
 
-/* Enlever la bordure par défaut du ScrollPane */
-.transparent-scroll {
+/* 1. On rend TOUT le conteneur transparent */
+.rounded-scroll-pane {
     -fx-background-color: transparent;
-    -fx-background: transparent;
+    -fx-background: transparent; /* Ligne magique souvent requise pour le ScrollPane */
+    -fx-padding: 0;
+    -fx-border-color: transparent;
 }
 
-.transparent-scroll .viewport {
+/* 2. On arrondit uniquement la zone blanche où il y a les messages */
+.rounded-scroll-pane .viewport {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+}
+
+/* 3. On affine la barre verticale entière */
+.rounded-scroll-pane .scroll-bar:vertical {
     -fx-background-color: transparent;
+    -fx-pref-width: 10; /* Rend la barre plus fine et élégante */
+}
+
+/* 4. On CACHE totalement le rail noir/gris (le problème sur votre image) */
+.rounded-scroll-pane .scroll-bar:vertical .track,
+.rounded-scroll-pane .scroll-bar:vertical .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* 5. On style la poignée qu'on attrape (le thumb) */
+.rounded-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #BBD2FA; /* La même couleur bleue que vos bulles */
+    -fx-background-radius: 10;
+}
+
+/* 6. On cache les petites flèches moches en haut et en bas */
+.rounded-scroll-pane .scroll-bar:vertical .increment-button,
+.rounded-scroll-pane .scroll-bar:vertical .decrement-button,
+.rounded-scroll-pane .scroll-bar:vertical .increment-arrow,
+.rounded-scroll-pane .scroll-bar:vertical .decrement-arrow {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-shape: " "; /* Supprime la forme de la flèche */
+}
+
+/* 7. On cache le petit carré gris d'intersection en bas à droite */
+.rounded-scroll-pane .corner {
+    -fx-background-color: transparent;
+}
+
+.champform {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-highlight-fill: #5584D5;
+    -fx-highlight-text-fill: white;
+    -fx-text-fill: black;
+    -fx-border-color: #000000;
+    -fx-background-color: transparent;
+    -fx-pref-height: 45;
+    -fx-font-family: 'Arial';
+}
+
+.textarea-form {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-border-color: #000000;
+    -fx-background-color: transparent;
+    -fx-font-family: 'Arial';
+    -fx-pref-height: 150;
+    -fx-padding: 5;
+    -fx-text-fill: #000000;
+    -fx-highlight-fill: #5584D5;
+    -fx-highlight-text-fill: white;
+}
+
+
+.textarea-form .content,
+.textarea-form .viewport,
+.textarea-form .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical .thumb {
+    -fx-background-color: #cccccc;
+    -fx-background-radius: 10;
+}
+
+.textarea-form .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5584D5;
+}
+
+.textarea-form .scroll-bar:vertical .increment-button,
+.textarea-form .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.textarea-form .scroll-bar:vertical .increment-arrow,
+.textarea-form .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+.menu-burger {
+    -fx-background-color: white;
+    -fx-background-radius: 25;
+    -fx-border-color: #000000;
+    -fx-border-radius: 25;
+    -fx-pref-height: 45;
+    -fx-padding: 0 5 0 5;
+}
+
+.menu-burger > .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-font-family: 'Arial';
+    -fx-font-size: 14px;
+}
+
+.menu-burger .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 15 0 0;
+}
+
+.menu-burger .arrow {
+    -fx-background-color: black;
+}
+
+.menu-burger .combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    -fx-border-color: #000000;
+    -fx-border-radius: 15;
+    -fx-padding: 5;
+}
+
+.menu-burger .combo-box-popup .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-padding: 8 10 8 10;
+    -fx-background-radius: 10;
+    -fx-font-family: 'Arial';
+}
+
+.menu-burger .combo-box-popup .list-view .list-cell:filled:hover,
+.menu-burger .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #5584D5;
+    -fx-text-fill: white;
 }
 
 /* ============================================
