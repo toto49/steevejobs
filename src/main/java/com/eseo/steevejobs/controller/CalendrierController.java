@@ -1,8 +1,10 @@
 package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.dao.PlanningDAO;
+import com.eseo.steevejobs.model.HeuresTravail;
 import com.eseo.steevejobs.model.Planning;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.service.HeuresTravailService;
 import com.eseo.steevejobs.service.PlanningService;
 import com.eseo.steevejobs.service.SessionService;
 import javafx.event.ActionEvent;
@@ -29,8 +31,14 @@ import java.util.Locale;
 
 public class CalendrierController {
 
+    // --- STYLES ---
+    private static final String STYLE_ACTIF = "-fx-background-color: #e1f5fe; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20; -fx-background-radius: 20; -fx-font-size: 12; -fx-cursor: hand;";
+    private static final String STYLE_INACTIF = "-fx-background-color: #e0e0e0; -fx-text-fill: #a0a0a0; -fx-background-radius: 20; -fx-font-size: 12;";
+
     @FXML
     private Label lundiLabel, mardiLabel, mercrediLabel, jeudiLabel, vendrediLabel, samediLabel, dimancheLabel;
+    @FXML
+    private Button lundiHeuresBtn, mardiHeuresBtn, mercrediHeuresBtn, jeudiHeuresBtn, vendrediHeuresBtn, samediHeuresBtn, dimancheHeuresBtn;
     @FXML
     private Label labelSemaine;
     @FXML
@@ -42,6 +50,8 @@ public class CalendrierController {
     private List<Planning> events;
     private User utilisateur;
     private PlanningService planningService;
+    private HeuresTravailService heuresTravailService;
+
 
     // ==========================================
     // INITIALISATION
@@ -51,6 +61,7 @@ public class CalendrierController {
     public void initialize() throws SQLException {
         PlanningDAO planningDAO = new PlanningDAO();
         planningService = new PlanningService(planningDAO);
+        heuresTravailService = new HeuresTravailService();
         utilisateur = SessionService.getUtilisateurConnecte();
 
         events = initEvent();
@@ -81,9 +92,23 @@ public class CalendrierController {
     public void rafraichirCalendrier() throws SQLException {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("EEEE dd MMMM", Locale.FRENCH);
         Label[] labels = {lundiLabel, mardiLabel, mercrediLabel, jeudiLabel, vendrediLabel, samediLabel, dimancheLabel};
+        Button[] boutonsHeures = {lundiHeuresBtn, mardiHeuresBtn, mercrediHeuresBtn, jeudiHeuresBtn, vendrediHeuresBtn, samediHeuresBtn, dimancheHeuresBtn};
+
+        LocalDate aujourdhui = LocalDate.now();
+        LocalDate dateLimite = aujourdhui.minusDays(7); // Bloqué si plus vieux que 7 jours
 
         for (int i = 0; i < 7; i++) {
-            labels[i].setText(dateDebutSemaineAffichee.plusDays(i).format(dtf).toUpperCase());
+            LocalDate dateJour = dateDebutSemaineAffichee.plusDays(i);
+            labels[i].setText(dateJour.format(dtf).toUpperCase());
+
+            // Vérification : Futur
+            if (dateJour.isAfter(aujourdhui)) {
+                boutonsHeures[i].setDisable(true);
+                boutonsHeures[i].setStyle(STYLE_INACTIF);
+            } else {
+                boutonsHeures[i].setDisable(false);
+                boutonsHeures[i].setStyle(STYLE_ACTIF);
+            }
         }
 
         DateTimeFormatter sf = DateTimeFormatter.ofPattern("dd MMMM", Locale.FRENCH);
@@ -93,7 +118,100 @@ public class CalendrierController {
     }
 
     // ==========================================
-    // GESTION DE L'AFFICHAGE DES BLOCS
+    // GESTION DES HEURES DE TRAVAIL
+    // ==========================================
+
+    @FXML
+    public void ouvrirPopupHeures(ActionEvent event) {
+        Node source = (Node) event.getSource();
+        int dayIndex = Integer.parseInt(source.getUserData().toString());
+        LocalDate dateCible = dateDebutSemaineAffichee.plusDays(dayIndex);
+
+        // --- DÉTECTION DU MODE LECTURE SEULE ---
+        boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(isReadOnly ? "Consultation des heures" : "Saisie des heures");
+        dialog.setHeaderText("Heures du " + dateCible.format(DateTimeFormatter.ofPattern("EEEE dd MMMM", Locale.FRENCH)));
+
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+
+        // 1. récupération BDD
+        HeuresTravail heuresExistantes = null;
+        try {
+            heuresExistantes = heuresTravailService.getHeuresParDate(utilisateur.getId(), dateCible);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        boolean aDejaSaisi = (heuresExistantes != null);
+        int heuresMatinExistantes = aDejaSaisi ? heuresExistantes.getHeuresMatin() : 0;
+        int heuresApremExistantes = aDejaSaisi ? heuresExistantes.getHeuresAprem() : 0;
+
+        // 2. Création et paramétrage des champs
+        ComboBox<Integer> cbMatin = new ComboBox<>();
+        cbMatin.getItems().addAll(0, 1, 2, 3, 4, 5, 6, 7, 8);
+        cbMatin.setValue(heuresMatinExistantes);
+        cbMatin.setDisable(isReadOnly);
+
+        ComboBox<Integer> cbAprem = new ComboBox<>();
+        cbAprem.getItems().addAll(0, 1, 2, 3, 4, 5, 6, 7, 8);
+        cbAprem.setValue(heuresApremExistantes);
+        cbAprem.setDisable(isReadOnly);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(15);
+        grid.setVgap(15);
+
+        // Ajout style CSS sur les labels
+        Label lblMatin = new Label("Heures travaillées (Matin) :");
+        lblMatin.getStyleClass().add("label-style");
+        Label lblAprem = new Label("Heures travaillées (Après-midi) :");
+        lblAprem.getStyleClass().add("label-style");
+
+        grid.add(lblMatin, 0, 0);
+        grid.add(cbMatin, 1, 0);
+        grid.add(lblAprem, 0, 1);
+        grid.add(cbAprem, 1, 1);
+
+        dp.setContent(grid);
+
+        // 3. Gestion dynamique des boutons du pop-up
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) {
+            btnOk.getStyleClass().add("button-ok");
+            if (isReadOnly) {
+                btnOk.setText("Fermer");
+            } else {
+                btnOk.setText(aDejaSaisi ? "Modifier" : "Enregistrer");
+            }
+        }
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) {
+            btnCancel.getStyleClass().add("button-cancel");
+            btnCancel.setText("Annuler");
+            if (isReadOnly) {
+                btnCancel.setVisible(false);
+            }
+        }
+
+        // 4. Enregistrement BDD
+        dialog.showAndWait().ifPresent(res -> {
+            if (res == ButtonType.OK && !isReadOnly) {
+                try {
+                    heuresTravailService.sauvegarderHeures(utilisateur.getId(), dateCible, cbMatin.getValue(), cbAprem.getValue());
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // GESTION DE L'AFFICHAGE DES BLOCS PLANNING
     // ==========================================
 
     public void showEvent() {
@@ -108,9 +226,7 @@ public class CalendrierController {
 
             while (!dateCourante.isAfter(dateFinEvent)) {
                 if (!dateCourante.isBefore(dateDebutSemaineAffichee) && !dateCourante.isAfter(dateFinSemaine)) {
-
                     boolean estDerniereCaseVisible = dateCourante.isEqual(derniereDateVisible);
-
                     placerEvenementDansGrille(event, dateCourante, estDerniereCaseVisible);
                 }
                 dateCourante = dateCourante.plusDays(1);
@@ -145,7 +261,6 @@ public class CalendrierController {
 
         box.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 5;");
 
-        // Header de base
         Label lblType = new Label(event.getType());
         lblType.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 11px;");
 
@@ -154,7 +269,6 @@ public class CalendrierController {
         HBox header = new HBox(lblType, spacer);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        // Ajout conditionnel des boutons d'action
         if (afficherBoutons) {
             Button btnEdit = new Button("✎");
             btnEdit.setStyle("-fx-background-color: #4a90e2; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
@@ -181,7 +295,7 @@ public class CalendrierController {
     }
 
     // ==========================================
-    // ACTIONS ET FORMULAIRE (AJOUT / MODIF)
+    // ACTIONS ET FORMULAIRE (AJOUT / MODIF PLANNING)
     // ==========================================
 
     @FXML
@@ -204,9 +318,8 @@ public class CalendrierController {
 
         Button okButton = (Button) dp.lookupButton(ButtonType.OK);
         okButton.getStyleClass().add("button-ok");
-        okButton.setText(isEdit ? "Enregistrer les modifications" : "Ajouter l'événement");
+        okButton.setText(isEdit ? "Enregistrer" : "Ajouter");
 
-        // --- CHAMPS DU FORMULAIRE ---
         GridPane grid = new GridPane();
         grid.setHgap(20); grid.setVgap(15); grid.setPrefWidth(450);
 
@@ -220,7 +333,6 @@ public class CalendrierController {
         DatePicker dFP = new DatePicker();
         TextField hFF = new TextField(); hFF.setPrefWidth(80);
 
-        // --- PRÉ-REMPLISSAGE ---
         if (isEdit) {
             typeBox.setValue(eventToEdit.getType());
             descField.setText(eventToEdit.getDescription());
@@ -248,8 +360,6 @@ public class CalendrierController {
                 try {
                     LocalDateTime start = LocalDateTime.of(dDP.getValue(), LocalTime.parse(hDF.getText()));
                     LocalDateTime end = LocalDateTime.of(dFP.getValue(), LocalTime.parse(hFF.getText()));
-
-                    // Si on modifie, on passe l'ID de l'événement à supprimer d'abord
                     traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), isEdit ? eventToEdit.getId() : -1);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -266,15 +376,12 @@ public class CalendrierController {
     }
 
     private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, int idToDelete) throws SQLException {
-        // 1. Si c'est une modification, on supprime l'ancien pour éviter qu'il s'auto-conflit
         if (idToDelete != -1) {
             planningService.deletePlanning(idToDelete);
         }
 
-        // 2. Gestion des conflits
         List<Planning> conflits = new ArrayList<>();
         for (Planning p : events) {
-            // On ignore l'ancien ID car il vient d'être supprimé ou n'existe pas
             if (p.getId() != idToDelete && start.isBefore(p.getJourFin()) && !end.isBefore(p.getJourDebut())) {
                 conflits.add(p);
             }
@@ -282,18 +389,15 @@ public class CalendrierController {
 
         if (!conflits.isEmpty()) {
             Alert a = new Alert(Alert.AlertType.CONFIRMATION, "Ce créneau est déjà occupé. Voulez-vous remplacer l'existant ?", ButtonType.YES, ButtonType.NO);
-            a.setTitle("Conflit d'horaire");
-            a.setHeaderText("Créneau indisponible");
             appliquerStyleAlert(a);
-
             if (a.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
                 events = initEvent();
                 rafraichirCalendrier();
+                return;
             }
 
             for (Planning p : conflits) {
                 planningService.deletePlanning(p.getId());
-                // Découpage intelligent (facultatif selon ton besoin)
                 if (p.getJourDebut().isBefore(start)) {
                     planningService.ajouterPlanning(new Planning(0, p.getJourDebut(), start, p.getType(), p.getDescription(), utilisateur));
                 }
@@ -306,7 +410,6 @@ public class CalendrierController {
             }
         }
 
-        // 3. Ajout du nouvel (ou modifié) événement
         planningService.ajouterPlanning(new Planning(0, start, end, type, desc, utilisateur));
         events = initEvent();
         rafraichirCalendrier();
@@ -314,8 +417,6 @@ public class CalendrierController {
 
     private void supprimerEvenement(Planning event) {
         Alert a = new Alert(Alert.AlertType.CONFIRMATION, "Voulez-vous vraiment supprimer cet événement ?", ButtonType.YES, ButtonType.NO);
-        a.setTitle("Suppression");
-        a.setHeaderText("Confirmation de suppression");
         appliquerStyleAlert(a);
 
         a.showAndWait().ifPresent(res -> {
@@ -332,17 +433,12 @@ public class CalendrierController {
     private void appliquerStyleAlert(Alert alert) {
         DialogPane dp = alert.getDialogPane();
         dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
-
         Button btnOk = (Button) dp.lookupButton(ButtonType.YES);
-        if (btnOk == null) {
-            btnOk = (Button) dp.lookupButton(ButtonType.OK);
-            btnOk.getStyleClass().add("button-ok");
-        }
+        if (btnOk == null) btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
 
         Button btnNo = (Button) dp.lookupButton(ButtonType.NO);
-        if (btnNo == null) {
-            btnNo = (Button) dp.lookupButton(ButtonType.CANCEL);
-            btnNo.getStyleClass().add("button-cancel");
-        }
+        if (btnNo == null) btnNo = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnNo != null) btnNo.getStyleClass().add("button-cancel");
     }
 }

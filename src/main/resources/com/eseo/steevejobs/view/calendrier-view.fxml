@@ -7,7 +7,6 @@
 
 <BorderPane prefHeight="720.0" prefWidth="1280.0" style="-fx-background-color: #f4f5f7;" stylesheets="@/style/date_picker.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.eseo.steevejobs.controller.CalendrierController">
 
-
     <top>
         <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #6a8bce;" BorderPane.alignment="CENTER">
             <padding>
@@ -35,22 +34,21 @@
 
                                 <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10 20 10 20; -fx-border-color: #bdc3c7; -fx-border-width: 0 0 1 0;">
                                     <children>
-                                        <Label fx:id="labelSemaine" text="Semaine du 11 Mai au 17 Mai" textFill="BLACK">
+                                        <Label fx:id="labelSemaine" text="Semaine..." textFill="BLACK">
                                             <font>
                                                 <Font name="System Bold" size="18.0" />
                                             </font>
                                         </Label>
                                         <Region HBox.hgrow="ALWAYS" />
-                                          <DatePicker fx:id="datePickerSemaine" prefHeight="35" styleClass="date-picker-custom" />
-                                          <Button onAction="#lastWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5;" text="◀ Précédent" />
-                                          <Button onAction="#nextWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5;" text="Suivant ▶" />
-                                          <Button onAction="#ouvrirPopupAjout" prefHeight="35" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5; -fx-font-weight: bold;" text="Nouvel Événement" />
+                                        <DatePicker fx:id="datePickerSemaine" prefHeight="35" styleClass="date-picker-custom" />
+                                        <Button onAction="#lastWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5;" text="◀ Précédent" />
+                                        <Button onAction="#nextWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5;" text="Suivant ▶" />
+                                        <Button onAction="#ouvrirPopupAjout" prefHeight="35" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5; -fx-font-weight: bold;" text="Nouvel Événement" />
                                         <HBox spacing="10.0" />
                                     </children>
                                 </HBox>
 
                                 <GridPane fx:id="gridPlanning" gridLinesVisible="true" style="-fx-background-color: transparent;">
-
                                     <VBox.margin>
                                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
                                     </VBox.margin>
@@ -90,31 +88,31 @@
 
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="1">
                                             <Label fx:id="lundiLabel" text="LUNDI" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #e1f5fe;-fx-background-radius: 20; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="lundiHeuresBtn" onAction="#ouvrirPopupHeures" userData="0" text="MES HEURES" />
                                         </VBox>
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="2">
                                             <Label fx:id="mardiLabel" text="MARDI" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #e1f5fe;-fx-background-radius: 20; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="mardiHeuresBtn" onAction="#ouvrirPopupHeures" userData="1" text="MES HEURES" />
                                         </VBox>
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="3">
                                             <Label fx:id="mercrediLabel" text="MERCREDI" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #e1f5fe;-fx-background-radius: 20; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="mercrediHeuresBtn" onAction="#ouvrirPopupHeures" userData="2" text="MES HEURES" />
                                         </VBox>
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="4">
                                             <Label fx:id="jeudiLabel" text="JEUDI" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #e1f5fe;-fx-background-radius: 20; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="jeudiHeuresBtn" onAction="#ouvrirPopupHeures" userData="3" text="MES HEURES" />
                                         </VBox>
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="5">
                                             <Label fx:id="vendrediLabel" text="VENDREDI" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #e1f5fe;-fx-background-radius: 20; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="vendrediHeuresBtn" onAction="#ouvrirPopupHeures" userData="4" text="MES HEURES" />
                                         </VBox>
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="6">
                                             <Label fx:id="samediLabel" text="SAMEDI" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #e1f5fe;-fx-background-radius: 20; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="samediHeuresBtn" onAction="#ouvrirPopupHeures" userData="5" text="MES HEURES" />
                                         </VBox>
                                         <VBox alignment="CENTER" spacing="5.0" GridPane.columnIndex="7">
                                             <Label fx:id="dimancheLabel" text="DIMANCHE" textFill="BLACK" />
-                                            <Button style="-fx-font-size: 12; -fx-background-color: #01579b;-fx-background-radius: 20; -fx-text-fill: #ffffff; -fx-border-color: #01579b; -fx-border-radius: 20" text="MES HEURES" />
+                                            <Button fx:id="dimancheHeuresBtn" onAction="#ouvrirPopupHeures" userData="6" text="MES HEURES" />
                                         </VBox>
 
                                         <Label text="6 : 00" textFill="BLACK" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
@@ -142,5 +140,4 @@
             </content>
         </ScrollPane>
     </center>
-
 </BorderPane>
