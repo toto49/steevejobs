@@ -8,6 +8,7 @@ import com.eseo.steevejobs.model.Enum.DocumentStatut;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class DocumentService {
 
@@ -68,8 +69,19 @@ public class DocumentService {
     }
 
     public void supprimerDocument(int idDocument) throws SQLException {
+        Document doc = documentDAO.getById(idDocument);
+        if (doc == null) return;
+        String nomFichier = String.format("%s_%d.pdf", doc.getType().getValeur().replace(" ", "_"), doc.getId());
+
         boolean success = documentDAO.deleteDocument(idDocument);
-        if (!success) throw new RuntimeException("Erreur BDD : Impossible de supprimer ce document.");
+
+        if (!success) {
+            throw new RuntimeException("Erreur BDD : Impossible de supprimer ce document.");
+        }
+
+        CompletableFuture.runAsync(() -> {
+            WebDavService.supprimerFichierDuNAS("documents_commerciaux", nomFichier);
+        });
     }
 
     public List<Document> getByTiersId(int tiersId) throws SQLException {

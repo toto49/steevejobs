@@ -1,14 +1,17 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.controller.HomeController;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
 import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
+import com.lowagie.text.Font;
 import com.lowagie.text.Image;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 
-import java.awt.Color;
+import java.awt.*;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,11 +21,10 @@ import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.io.File;
 
 public class PdfGeneratorService {
- // A CHANGER -************************************************************************************
-    private static final String OUTPUT_DIR = "documents/";
+
+    private static final String OUTPUT_DIR = System.getProperty("user.home") + java.io.File.separator + "Downloads" + java.io.File.separator;
 
     private static final Color COULEUR_PRINCIPALE = new Color(75, 120, 204);
     private static final Color COULEUR_GRIS       = new Color(107, 114, 128);
@@ -33,7 +35,6 @@ public class PdfGeneratorService {
     // PDF GENERER PAR OPEN PDF
     // -------------------------------------------------------
 
-    // A CHANGER *************************************************************************************
     public String genererDocument(com.eseo.steevejobs.model.Document document, List<Composer> lignes) {
         creerDossier();
         String nomFichier = String.format("%s_%d.pdf",
@@ -52,19 +53,25 @@ public class PdfGeneratorService {
             doc.open();
             ajouterContenuDocument(doc, document, lignes);
             doc.close();
+            try {
+                byte[] pdfBytes = Files.readAllBytes(Paths.get(chemin));
+                WebDavService.envoyerFichierSurNAS("documents_commerciaux", nomFichier, pdfBytes);
+            } catch (Exception e) {
+                System.err.println("⚠️ Le PDF a été généré localement, mais l'envoi NAS a échoué : " + e.getMessage());
+            }
+
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF document : " + e.getMessage(), e);
         }
         return chemin;
     }
 
-    public String genererFichePaye(FichePaye fiche, double salaireBase,
-                                   double tauxCotisations, long joursConge) {
+    public String genererFichePaye(FichePaye fiche, double salaireBase, double tauxCotisations, long joursConge) {
         creerDossier();
         String nomFichier = String.format("fiche_%d_%d_%02d.pdf",
                 fiche.getEmploye().getId(),
-                fiche.getMois().getYear(),
-                fiche.getMois().getMonthValue());
+                fiche.getDate().getYear(),
+                fiche.getDate().getMonthValue());
         String chemin = OUTPUT_DIR + nomFichier;
 
         try (FileOutputStream fos = new FileOutputStream(chemin)) {
@@ -73,22 +80,32 @@ public class PdfGeneratorService {
             doc.open();
             ajouterContenuFichePaye(doc, fiche, salaireBase, tauxCotisations, joursConge);
             doc.close();
+            try {
+                byte[] pdfBytes = Files.readAllBytes(Paths.get(chemin));
+                String dossierEmploye = "employe_" + fiche.getEmploye().getId();
+                if (fiche.getEmploye().getPrenom() != null && fiche.getEmploye().getNom() != null) {
+                    dossierEmploye = (fiche.getEmploye().getPrenom() + "_" + fiche.getEmploye().getNom()).toLowerCase().replaceAll("[^a-z0-9_]", "");
+                }
+
+                WebDavService.envoyerFichierSurNAS(dossierEmploye, nomFichier, pdfBytes);
+            } catch (Exception e) {
+                System.err.println("⚠️ Fiche de paie générée localement, mais l'envoi NAS a échoué : " + e.getMessage());
+            }
+
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF fiche de paie : " + e.getMessage(), e);
         }
         return chemin;
     }
+
     private Image chargerLogo() {
         try {
-            // Charger l'image depuis les ressources
             InputStream is = getClass().getResourceAsStream("/images/logo.png");
             if (is == null) {
                 System.err.println("Logo non trouvé : /images/logo.png");
                 return null;
             }
             Image logo = Image.getInstance(is.readAllBytes());
-
-            // Redimensionner le logo (largeur 80px, hauteur automatique)
             logo.scaleToFit(80, 80);
             return logo;
         } catch (Exception e) {
@@ -96,6 +113,7 @@ public class PdfGeneratorService {
             return null;
         }
     }
+
     // -------------------------------------------------------
     // CONTENU — DOCUMENT : devis, facture, bon de commande
     // -------------------------------------------------------
@@ -103,14 +121,13 @@ public class PdfGeneratorService {
     private void ajouterContenuDocument(com.lowagie.text.Document doc,
                                         com.eseo.steevejobs.model.Document document,
                                         List<Composer> lignes) throws DocumentException {
-        // logo steeve costume en haut a droite
         Image logo = chargerLogo();
         if (logo != null) {
             logo.setAlignment(Element.ALIGN_RIGHT);
             logo.setSpacingAfter(5);
             doc.add(logo);
         }
-        //style
+
         Font fontTitre   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COULEUR_PRINCIPALE);
         Font fontSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COULEUR_PRINCIPALE);
         Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
@@ -253,7 +270,6 @@ public class PdfGeneratorService {
     private void ajouterContenuFichePaye(com.lowagie.text.Document doc, FichePaye fiche,
                                          double salaireBase, double tauxCotisations,
                                          long joursConge) throws DocumentException {
-        //ajoute le steeve coustume en haut a droite
         Image logo = chargerLogo();
         if (logo != null) {
             logo.setAlignment(Element.ALIGN_RIGHT);
@@ -267,7 +283,7 @@ public class PdfGeneratorService {
         Font fontGris    = FontFactory.getFont(FontFactory.HELVETICA, 10, COULEUR_GRIS);
         Font fontNet     = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, COULEUR_PRINCIPALE);
 
-        String periode = fiche.getMois()
+        String periode = fiche.getDate()
                 .format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH));
 
         Paragraph titre = new Paragraph("BULLETIN DE PAIE", fontTitre);

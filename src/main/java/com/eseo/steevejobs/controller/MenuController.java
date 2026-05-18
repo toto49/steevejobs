@@ -189,7 +189,7 @@ public class MenuController {
 
     @FXML
     void afficherFiles(ActionEvent event) {
-        chargerPage("document");
+        chargerPage("documentUser");
         updateButtonStyles(btnFiles);
         changerTitre("Document");
     }

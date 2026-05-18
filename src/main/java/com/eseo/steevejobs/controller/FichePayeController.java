@@ -11,11 +11,15 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
@@ -204,7 +208,7 @@ public class FichePayeController implements Initializable {
             return new SimpleStringProperty(u.getPrenom() + " " + u.getNom());
         });
         colMois.setCellValueFactory(data ->
-                new SimpleStringProperty(data.getValue().getMois().format(FMT_MOIS)));
+                new SimpleStringProperty(data.getValue().getDate().format(FMT_MOIS)));
         colPoste.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getEmploye().getPoste()));
 
@@ -282,7 +286,7 @@ public class FichePayeController implements Initializable {
         confirm.setTitle("Supprimer la fiche");
         confirm.setHeaderText("Supprimer la fiche de " +
                 fiche.getEmploye().getPrenom() + " " + fiche.getEmploye().getNom() +
-                " — " + fiche.getMois().format(FMT_MOIS) + " ?");
+                " — " + fiche.getDate().format(FMT_MOIS) + " ?");
         confirm.setContentText("Le fichier PDF sera également supprimé. Action irréversible.");
         confirm.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
 
