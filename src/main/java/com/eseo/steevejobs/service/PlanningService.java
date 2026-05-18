@@ -11,7 +11,6 @@ public class PlanningService {
 
     private final PlanningDAO planningDAO;
 
-
     public PlanningService(PlanningDAO planningDAO) {
         this.planningDAO = planningDAO;
     }
