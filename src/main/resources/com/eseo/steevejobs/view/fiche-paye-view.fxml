@@ -50,6 +50,8 @@
                 <TableView fx:id="tableFiches" VBox.vgrow="ALWAYS" style="-fx-background-color: white">
                     <columns>
                         <TableColumn fx:id="colEmploye" text="EMPLOYÉ" prefWidth="350.0"/>
+                        <TableColumn fx:id="colEmail" text="EMAIL" prefWidth="220.0"/>
+                        <TableColumn fx:id="colService" text="SERVICE" prefWidth="150.0"/>
                         <TableColumn fx:id="colMois" text="MOIS" prefWidth="250.0"/>
                         <TableColumn fx:id="colPoste" text="POSTE" prefWidth="250.0"/>
                         <TableColumn fx:id="colActions" text="" prefWidth="80.0"/>

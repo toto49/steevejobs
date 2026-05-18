@@ -45,6 +45,8 @@ public class FichePayeController implements Initializable {
     @FXML private ComboBox<Integer> comboAnneeFiltre;
     @FXML private TableView<FichePaye> tableFiches;
     @FXML private TableColumn<FichePaye, String> colEmploye;
+    @FXML private TableColumn<FichePaye, String> colEmail;
+    @FXML private TableColumn<FichePaye, String> colService;
     @FXML private TableColumn<FichePaye, String> colMois;
     @FXML private TableColumn<FichePaye, String> colPoste;
     @FXML private TableColumn<FichePaye, Void> colActions;
@@ -71,7 +73,12 @@ public class FichePayeController implements Initializable {
     private void configurerColonnes() {
         colEmploye.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getEmploye().getPrenom() + " " + data.getValue().getEmploye().getNom()));
-
+        colEmail.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getEmploye().getEmail() != null ?
+                        data.getValue().getEmploye().getEmail() : "Non renseigné"));
+        colService.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getEmploye().getRole() != null ?
+                        data.getValue().getEmploye().getRole() : "Non renseigné"));
         colMois.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getDate().format(FMT_MOIS)));
 
@@ -89,6 +96,14 @@ public class FichePayeController implements Initializable {
                 btnOuvrir.setOnAction(e -> ouvrirPdf(getTableView().getItems().get(getIndex())));
                 btnSuppr.setOnAction(e -> confirmerSuppression(getTableView().getItems().get(getIndex())));
                 box.setAlignment(Pos.CENTER);
+
+                // Ajustement automatique des largeurs
+                colEmploye.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.20));
+                colEmail.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.22));
+                colService.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.15));
+                colMois.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.15));
+                colPoste.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.18));
+                colActions.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.10));
             }
 
             @Override
@@ -97,6 +112,11 @@ public class FichePayeController implements Initializable {
                 setGraphic(empty ? null : box);
             }
         });
+        // FORCER LA LARGEUR DES COLONNES POUR ÉVITER LES COLONNES FANTÔMES
+        colEmploye.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.40));
+        colMois.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.25));
+        colPoste.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.25));
+        colActions.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.10));
     }
 
     private void chargerFiltreEmployes() {
