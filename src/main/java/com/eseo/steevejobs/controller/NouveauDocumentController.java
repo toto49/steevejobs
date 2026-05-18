@@ -1,5 +1,5 @@
 package com.eseo.steevejobs.controller;
-import com.eseo.steevejobs.controller.HomeController;
+
 import com.eseo.steevejobs.dao.DocumentDAO;
 import com.eseo.steevejobs.dao.ProduitDAO;
 import com.eseo.steevejobs.dao.TiersDAO;
@@ -7,6 +7,7 @@ import com.eseo.steevejobs.model.*;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
 import com.eseo.steevejobs.service.DocumentService;
+import com.eseo.steevejobs.service.SessionService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -37,10 +38,12 @@ public class NouveauDocumentController implements Initializable {
     @FXML private Label lblTotalHT, lblTVA, lblTotalTTC;
     @FXML private Button btnAnnuler, btnCreer;
 
+
     private final TiersDAO tiersDAO = new TiersDAO();
     private final ProduitDAO produitDAO = new ProduitDAO();
     private final DocumentService documentService = new DocumentService(new DocumentDAO());
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
+    private User user;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -49,6 +52,7 @@ public class NouveauDocumentController implements Initializable {
         chargerDonnees();
         tableLignes.setItems(lignes);
         updateTotaux();
+        user = SessionService.getUtilisateurConnecte();
     }
 
     private void configurerComboBox() {
@@ -187,7 +191,8 @@ public class NouveauDocumentController implements Initializable {
         }
         // Crée le vendeur avec l'ID de l'utilisateur connecté
         User vendeur = new User();
-        vendeur.setId(HomeController.getIdUserConnecte());
+
+        vendeur.setId(user.getId());
 
         Document doc = new Document(0, comboType.getValue(), datePicker.getValue().atStartOfDay(),
                 totalHT, totalHT.multiply(new BigDecimal("1.20")), comboStatut.getValue(),
