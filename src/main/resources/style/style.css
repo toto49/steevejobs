@@ -96,3 +96,259 @@
     -fx-pref-height: 45;
     -fx-font-family: 'Arial';
 }
+
+.textarea-form {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-border-color: #000000;
+    -fx-background-color: transparent;
+    -fx-font-family: 'Arial';
+    -fx-pref-height: 150;
+    -fx-padding: 5;
+    -fx-text-fill: #000000;
+    -fx-highlight-fill: #5584D5;
+    -fx-highlight-text-fill: white;
+}
+
+
+.textarea-form .content,
+.textarea-form .viewport,
+.textarea-form .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+
+.textarea-form .scroll-bar:vertical .thumb {
+    -fx-background-color: #cccccc;
+    -fx-background-radius: 10;
+}
+
+.textarea-form .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5584D5;
+}
+
+.textarea-form .scroll-bar:vertical .increment-button,
+.textarea-form .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.textarea-form .scroll-bar:vertical .increment-arrow,
+.textarea-form .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+.menu-burger {
+    -fx-background-color: white;
+    -fx-background-radius: 25;
+    -fx-border-color: #000000;
+    -fx-border-radius: 25;
+    -fx-pref-height: 45;
+    -fx-padding: 0 5 0 5;
+}
+
+.menu-burger > .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-font-family: 'Arial';
+    -fx-font-size: 14px;
+}
+
+.menu-burger .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 15 0 0;
+}
+
+.menu-burger .arrow {
+    -fx-background-color: black;
+}
+
+.menu-burger .combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    -fx-border-color: #000000;
+    -fx-border-radius: 15;
+    -fx-padding: 5;
+}
+
+.menu-burger .combo-box-popup .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-padding: 8 10 8 10;
+    -fx-background-radius: 10;
+    -fx-font-family: 'Arial';
+}
+
+.menu-burger .combo-box-popup .list-view .list-cell:filled:hover,
+.menu-burger .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #5584D5;
+    -fx-text-fill: white;
+}
+
+/* ============================================
+   STYLE POUR LES ÉLÉMENTS EN FOND NOIR (background par defaut)
+   ============================================ */
+
+/* Tableau */
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 5;
+}
+
+/* Entête du tableau (Type, Client, Date ...) */
+.table-view .column-header-background {
+    -fx-background-color: #f4f5f7;
+}
+
+.table-view .column-header {
+    -fx-background-color: #f4f5f7;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #333333;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Lignes du tableau */
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-row-cell:empty {
+    -fx-border-width: 0;
+}
+
+/* Cellules du tableau */
+.table-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+    -fx-font-size: 13px;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 0 1 0 0;
+}
+
+/* Sélection d'une ligne */
+.table-row-cell:selected {
+    -fx-background-color: #e5e7eb;
+}
+
+.table-row-cell:selected .table-cell {
+    -fx-background-color: #e5e7eb;
+}
+
+/* Filtres (ComboBox) */
+.combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 5 10;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #e5e7eb;
+}
+
+/* Champ recherche */
+.text-field {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 8 12;
+    -fx-text-fill: #333333;
+}
+
+.text-field:focused {
+    -fx-border-color: #4B78CC;
+}
+
+/* ============================================
+   STYLE POUR LES DIALOG (POPUP)
+   ============================================ */
+
+.dialog-pane {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #f4f5f7;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: #333333;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .content {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+.dialog-pane .combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 5;
+}
+
+.dialog-pane .combo-box .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+.dialog-pane .combo-box-popup .list-view {
+    -fx-background-color: white;
+}
+
+.dialog-pane .button {
+    -fx-background-color: #4B78CC;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+}
+
+.dialog-pane .button:hover {
+    -fx-opacity: 0.9;
+}
+
+.dialog-pane .button:cancel {
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: #333333;
+}

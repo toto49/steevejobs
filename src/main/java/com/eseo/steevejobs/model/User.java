@@ -1,8 +1,8 @@
 package com.eseo.steevejobs.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 //Commentaires géré par IA
 
 /**
@@ -41,10 +41,14 @@ import java.util.List;
     private boolean actif;
 
     /** Liste des plannings et fiches de paye associés à cet utilisateur */
-    private List<Planning> plannings;
+    private final List<Planning> plannings;
 
-    private List<FichePaye> fichesPaye;
+    private final List<FichePaye> fichesPaye;
 
+    private int tentativesEchouees;
+    private LocalDateTime bloqueJusqua;
+
+    private LocalDateTime dateDernierEchec;
     /**
      * Constructeur par défaut.
      *
@@ -170,6 +174,30 @@ import java.util.List;
     }
     public void removeFichePaye(FichePaye fichePaye) {
         this.fichesPaye.remove(fichePaye);
+    }
+
+    public int getTentativesEchouees() {
+        return tentativesEchouees;
+    }
+
+    public void setTentativesEchouees(int tentativesEchouees) {
+        this.tentativesEchouees = tentativesEchouees;
+    }
+
+    public LocalDateTime getBloqueJusqua() {
+        return bloqueJusqua;
+    }
+
+    public void setBloqueJusqua(LocalDateTime bloqueJusqua) {
+        this.bloqueJusqua = bloqueJusqua;
+    }
+
+    public LocalDateTime getDateDernierEchec() {
+        return dateDernierEchec;
+    }
+
+    public void setDateDernierEchec(LocalDateTime dateDernierEchec) {
+        this.dateDernierEchec = dateDernierEchec;
     }
 
 }

@@ -24,4 +24,14 @@ public interface TicketService {
     List<Message> getMessagesDuTicket(int ticketId);
 
     String formatTicketDate(LocalDateTime dateOuverture);
+
+    int getNombreTicketsNonLusAdmin(String service, int idCurrentUser);
+
+    int getNombreTicketsNonLusAuteur(int idAuteur);
+
+    void marquerTicketLu(int idTicket, boolean estAdmin);
+
+    void marquerTicketNonLu(int idTicket, boolean cibleAdmin);
+
+
 }
