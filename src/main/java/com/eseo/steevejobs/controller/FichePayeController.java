@@ -4,16 +4,15 @@ import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.FichePayeService;
+import com.eseo.steevejobs.service.WebDavService;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
@@ -21,14 +20,10 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -38,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 public class FichePayeController implements Initializable {
 
@@ -166,14 +162,12 @@ public class FichePayeController implements Initializable {
         ButtonType btnGenerer = new ButtonType("Générer", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(btnGenerer, ButtonType.CANCEL);
 
-        // Création du GridPane (comme dans NouveauDocumentController)
         GridPane grid = new GridPane();
         grid.setHgap(12);
         grid.setVgap(12);
         grid.setPadding(new Insets(20));
         grid.setStyle("-fx-background-color: white;");
 
-        // Champs
         ComboBox<User> comboEmploye = new ComboBox<>();
         ComboBox<String> comboMois = new ComboBox<>();
         ComboBox<Integer> comboAnnee = new ComboBox<>();
@@ -190,20 +184,17 @@ public class FichePayeController implements Initializable {
         comboMois.setStyle(fieldStyle);
         comboAnnee.setStyle(fieldStyle);
 
-        // Configuration des années
         int anneeActuelle = LocalDate.now().getYear();
         for (int a = anneeActuelle - 2; a <= anneeActuelle + 1; a++) {
             comboAnnee.getItems().add(a);
         }
         comboAnnee.setValue(anneeActuelle);
 
-        // Configuration des mois
         String[] mois = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
                 "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
         comboMois.getItems().addAll(mois);
         comboMois.setValue(mois[LocalDate.now().getMonthValue() - 1]);
 
-        // Configuration employé
         try {
             comboEmploye.setItems(FXCollections.observableArrayList(userDAO.findActiveUsers()));
         } catch (SQLException e) {
@@ -218,7 +209,6 @@ public class FichePayeController implements Initializable {
             @Override public User fromString(String s) { return null; }
         });
 
-        // Labels
         String labelStyle = "-fx-text-fill: #333333; -fx-font-weight: bold;";
 
         Label lblEmploye = new Label("Employé :"); lblEmploye.setStyle(labelStyle);
@@ -228,7 +218,6 @@ public class FichePayeController implements Initializable {
         Label lblTaux = new Label("Taux cotisations :"); lblTaux.setStyle(labelStyle);
         Label lblExemple = new Label("(ex : 0.22 = 22%)"); lblExemple.setStyle("-fx-text-fill: #6b7280; -fx-font-size: 11px;");
 
-        // Ajout au grid
         grid.add(lblEmploye, 0, 0);
         grid.add(comboEmploye, 1, 0);
         grid.add(lblMois, 0, 1);
@@ -244,7 +233,6 @@ public class FichePayeController implements Initializable {
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().setPrefWidth(460);
 
-        // Style des boutons
         Button btnOk = (Button) dialog.getDialogPane().lookupButton(btnGenerer);
         Button btnCancel = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
 
@@ -258,14 +246,12 @@ public class FichePayeController implements Initializable {
         Optional<ButtonType> result = dialog.showAndWait();
         if (result.isEmpty() || result.get() != btnGenerer) return;
 
-        // Validation
         if (comboEmploye.getValue() == null || comboMois.getValue() == null || comboAnnee.getValue() == null
                 || txtSalaireBase.getText().isBlank() || txtTauxCotis.getText().isBlank()) {
             afficherErreur("Tous les champs sont obligatoires.");
             return;
         }
 
-        // Récupération des valeurs
         User employe = comboEmploye.getValue();
         double salaireBase, tauxCotisations;
         try {
@@ -282,8 +268,33 @@ public class FichePayeController implements Initializable {
 
         try {
             FichePaye fiche = fichePayeService.genererFichePaye(employe, date, salaireBase, tauxCotisations);
-            afficherSucces("Fiche générée avec succès !");
-            chargerToutesFiches();
+
+            String nomFichier = String.format("fiche_%d_%d_%02d.pdf", employe.getId(), date.getYear(), date.getMonthValue());
+            String dossierEmploye = "employe_" + employe.getId();
+            if (employe.getPrenom() != null && employe.getNom() != null) {
+                dossierEmploye = (employe.getPrenom() + "_" + employe.getNom()).toLowerCase().replaceAll("[^a-z0-9_]", "");
+            }
+            final String finalDossier = dossierEmploye;
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    WebDavService.envoyerFichierLocalSurNAS(finalDossier, nomFichier, fiche.getUrl());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }).thenAcceptAsync(v -> {
+                Platform.runLater(() -> {
+                    afficherSucces("Fiche générée et sauvegardée sur le NAS avec succès !");
+                    chargerToutesFiches();
+                });
+            }).exceptionally(ex -> {
+                Platform.runLater(() -> {
+                    afficherErreur("Fiche générée localement, mais échec de l'envoi sur le NAS : " + ex.getCause().getMessage());
+                    chargerToutesFiches();
+                });
+                return null;
+            });
+
         } catch (IllegalStateException | IllegalArgumentException e) {
             afficherErreur(e.getMessage());
         } catch (Exception e) {
@@ -346,6 +357,16 @@ public class FichePayeController implements Initializable {
                 try {
                     fichePayeService.supprimer(fiche.getId());
                     new File(fiche.getUrl()).delete();
+                    String nomFichier = String.format("fiche_%d_%d_%02d.pdf", fiche.getEmploye().getId(), fiche.getDate().getYear(), fiche.getDate().getMonthValue());
+                    String dossierEmploye = "employe_" + fiche.getEmploye().getId();
+                    if (fiche.getEmploye().getPrenom() != null && fiche.getEmploye().getNom() != null) {
+                        dossierEmploye = (fiche.getEmploye().getPrenom() + "_" + fiche.getEmploye().getNom()).toLowerCase().replaceAll("[^a-z0-9_]", "");
+                    }
+                    final String finalDossier = dossierEmploye;
+                    CompletableFuture.runAsync(() -> {
+                        WebDavService.supprimerFichierDuNAS(finalDossier, nomFichier);
+                    });
+
                     chargerToutesFiches();
                 } catch (SQLException e) {
                     afficherErreur("Erreur suppression : " + e.getMessage());

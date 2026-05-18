@@ -198,4 +198,41 @@ public class WebDavService {
             throw new RuntimeException("Le NAS a refusé le téléchargement (Code " + response.statusCode() + ")");
         }
     }
+
+    public static void envoyerFichierLocalSurNAS(String nomDossier, String nomFichier, String cheminLocal) throws Exception {
+        String baseUrl = getDotenv().get("WEBDAV_BASE_URL");
+        String username = getDotenv().get("WEBDAV_USERNAME");
+        String password = getDotenv().get("WEBDAV_PASSWORD");
+
+        if (baseUrl == null || username == null || password == null) {
+            throw new IllegalStateException("Configuration NAS introuvable.");
+        }
+
+        if (!baseUrl.endsWith("/")) baseUrl += "/";
+
+        HttpClient client = HttpClient.newBuilder().sslContext(creerSSLContextInsecable()).build();
+        String auth = java.util.Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+        String authHeader = "Basic " + auth;
+        String urlDossier = baseUrl + nomDossier + "/";
+        HttpRequest requestDossier = HttpRequest.newBuilder()
+                .uri(URI.create(urlDossier))
+                .header("Authorization", authHeader)
+                .method("MKCOL", HttpRequest.BodyPublishers.noBody())
+                .build();
+        client.send(requestDossier, HttpResponse.BodyHandlers.discarding());
+        String urlFichier = urlDossier + nomFichier;
+        HttpRequest requestFichier = HttpRequest.newBuilder()
+                .uri(URI.create(urlFichier))
+                .header("Authorization", authHeader)
+                .PUT(HttpRequest.BodyPublishers.ofFile(java.nio.file.Paths.get(cheminLocal)))
+                .build();
+
+        HttpResponse<String> response = client.send(requestFichier, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 400) {
+            throw new RuntimeException("Le NAS a refusé l'envoi (Code " + response.statusCode() + "). Réponse : " + response.body());
+        } else {
+            LOGGER.info("Fichier envoyé avec succès sur le NAS : " + urlFichier);
+        }
+    }
 }
