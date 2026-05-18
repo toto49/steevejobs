@@ -1,12 +1,27 @@
 package com.eseo.steevejobs.model.Enum;
 
 public enum DocumentStatut {
+    A_PAYER("à payer"),
+    EN_ATTENTE("en attente"),
+    PAYE("payé"),
+    REFUSE("refusé");
 
-    À_PAYER,
+    private final String valeur;
 
-    EN_ATTENTE,
+    DocumentStatut(String valeur) {
+        this.valeur = valeur;
+    }
 
-    PAYÉ,
+    public String getValeur() {
+        return valeur;
+    }
 
-    REFUSÉ
+    public static DocumentStatut fromValeur(String valeur) {
+        for (DocumentStatut statut : values()) {
+            if (statut.valeur.equals(valeur)) {
+                return statut;
+            }
+        }
+        throw new IllegalArgumentException("Statut inconnu : " + valeur);
+    }
 }

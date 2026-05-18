@@ -182,7 +182,7 @@ public class ParametresController {
         if (isPushEnabled) {
             SystemNotificationService.send("SteeveJobs - Test", "Les notifications push sont bien activées !");
         } else {
-            showAlert(Alert.AlertType.INFORMATION, "Notifications désactivées", "Vous avez décoché la case : aucun test n'a été envoyé.");
+            showAlert(Alert.AlertType.INFORMATION, "Notifications désactivées", "Vous avez désactivé les notifications push, aucun test n'a été envoyé.");
         }
     }
 

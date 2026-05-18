@@ -1,19 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.VBox?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" spacing="15.0" style="-fx-background-color: white; -fx-padding: 30;"
-      xmlns="http://javafx.com/javafx/17" fx:controller="com.eseo.steevejobs.controller.AdminPermissionController">
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
+      style="-fx-background-color: #DDE8FF;" stylesheets="@../../../../style/style.css" xmlns="http://javafx.com/javafx/21"
+      fx:controller="com.eseo.steevejobs.controller.AdminPermissionController">
 
-    <Label style="-fx-font-size: 24px; -fx-font-weight: bold;" text="⚙️ Administration des Permissions"/>
+    <HBox alignment="CENTER_LEFT" prefHeight="80.0"
+          style="-fx-background-color: #7A9FE0; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+        <padding>
+            <Insets left="40.0" right="40.0"/>
+        </padding>
+        <children>
+            <Label fx:id="titlepageticket" text="GESTION DES PERMISSIONS"
+                   style="-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold;"/>
+        </children>
+    </HBox>
 
-    <Label style="-fx-text-fill: gray;" text="Sélectionnez un rôle pour modifier ses accès en temps réel."/>
+    <VBox spacing="20.0" VBox.vgrow="ALWAYS">
+        <padding>
+            <Insets bottom="30.0" left="40.0" right="40.0" top="30.0"/>
+        </padding>
+        <children>
 
-    <ComboBox fx:id="roleComboBox" prefWidth="250.0" promptText="Choisir un rôle..."/>
+            <VBox spacing="20.0"
+                  style="-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #d1d5db;"
+                  VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="25.0" left="30.0" right="30.0" top="25.0"/>
+                </padding>
+                <children>
 
-    <Separator prefWidth="200.0"/>
+                    <VBox spacing="5.0">
+                        <children>
+                            <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"
+                                   text="Configuration des accès"/>
+                            <Label style="-fx-text-fill: #6b7280;"
+                                   text="Sélectionnez un rôle ci-dessous pour modifier ses accès en temps réel.">
+                                <font>
+                                    <Font name="System Italic" size="14.0"/>
+                                </font>
+                            </Label>
+                        </children>
+                    </VBox>
 
-    <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #5585E5;" text="Permissions Actives"/>
-    <VBox fx:id="permissionsContainer" spacing="10.0"/>
+                    <ComboBox fx:id="roleComboBox" prefHeight="40.0" prefWidth="300.0" promptText="Choisir un rôle..."
+                              styleClass="combo-box" style="-fx-font-size: 14px; -fx-background-radius: 5;"/>
 
+                    <Separator prefWidth="200.0">
+                        <VBox.margin>
+                            <Insets bottom="10.0" top="10.0"/>
+                        </VBox.margin>
+                    </Separator>
+
+                    <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #7A9FE0;"
+                           text="Permissions Actives"/>
+
+                    <ScrollPane fitToWidth="true"
+                                style="-fx-background-color: transparent; -fx-background: transparent;"
+                                VBox.vgrow="ALWAYS">
+                        <content>
+                            <VBox fx:id="permissionsContainer" spacing="12.0" style="-fx-background-color: white;">
+                                <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                                </padding>
+                            </VBox>
+                        </content>
+                    </ScrollPane>
+
+                </children>
+            </VBox>
+        </children>
+    </VBox>
 </VBox>
