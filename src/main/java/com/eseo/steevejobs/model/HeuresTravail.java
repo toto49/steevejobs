@@ -1,33 +1,84 @@
 package com.eseo.steevejobs.model;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
+/**
+ * Représente les créneaux d'heures de travail effectués par un utilisateur pour une journée.
+ */
 public class HeuresTravail {
-    private int idHeures;
-    private int idUser;
-    private LocalDate dateJour;
-    private int heuresMatin;
-    private int heuresAprem;
 
-    public HeuresTravail(int idHeures, int idUser, LocalDate dateJour, int heuresMatin, int heuresAprem) {
+    private int idHeures;
+    private LocalDate dateJour;
+    private LocalTime debutMatin;
+    private LocalTime finMatin;
+    private LocalTime debutAprem;
+    private LocalTime finAprem;
+    private User user;
+
+    public HeuresTravail(int idHeures, LocalDate dateJour, LocalTime debutMatin, LocalTime finMatin, LocalTime debutAprem, LocalTime finAprem, User user) {
         this.idHeures = idHeures;
-        this.idUser = idUser;
         this.dateJour = dateJour;
-        this.heuresMatin = heuresMatin;
-        this.heuresAprem = heuresAprem;
+        this.debutMatin = debutMatin;
+        this.finMatin = finMatin;
+        this.debutAprem = debutAprem;
+        this.finAprem = finAprem;
+        this.user = user;
     }
 
-    // Getters
-    public int getIdHeures() { return idHeures; }
-    public int getIdUser() { return idUser; }
-    public LocalDate getDateJour() { return dateJour; }
-    public int getHeuresMatin() { return heuresMatin; }
-    public int getHeuresAprem() { return heuresAprem; }
+    public int getIdHeures() {
+        return idHeures;
+    }
 
-    // Setters
-    public void setIdHeures(int idHeures) { this.idHeures = idHeures; }
-    public void setIdUser(int idUser) { this.idUser = idUser; }
-    public void setDateJour(LocalDate dateJour) { this.dateJour = dateJour; }
-    public void setHeuresMatin(int heuresMatin) { this.heuresMatin = heuresMatin; }
-    public void setHeuresAprem(int heuresAprem) { this.heuresAprem = heuresAprem; }
+    public void setIdHeures(int idHeures) {
+        this.idHeures = idHeures;
+    }
+
+    public LocalDate getDateJour() {
+        return dateJour;
+    }
+
+    public void setDateJour(LocalDate dateJour) {
+        this.dateJour = dateJour;
+    }
+
+    public LocalTime getDebutMatin() {
+        return debutMatin;
+    }
+
+    public void setDebutMatin(LocalTime debutMatin) {
+        this.debutMatin = debutMatin;
+    }
+
+    public LocalTime getFinMatin() {
+        return finMatin;
+    }
+
+    public void setFinMatin(LocalTime finMatin) {
+        this.finMatin = finMatin;
+    }
+
+    public LocalTime getDebutAprem() {
+        return debutAprem;
+    }
+
+    public void setDebutAprem(LocalTime debutAprem) {
+        this.debutAprem = debutAprem;
+    }
+
+    public LocalTime getFinAprem() {
+        return finAprem;
+    }
+
+    public void setFinAprem(LocalTime finAprem) {
+        this.finAprem = finAprem;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

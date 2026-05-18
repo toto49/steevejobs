@@ -20,13 +20,12 @@
     -fx-font-weight: bold;
     -fx-font-size: 12px;
 }
-
 /* =======================================================
-   2. CHAMPS DE SAISIE (Texte, Listes, Dates)
-   ======================================================= */
+2. CHAMPS DE SAISIE (Texte, Listes, Dates, Couleurs)
+======================================================= */
 
 /* Style commun pour tous les champs de saisie (au repos) */
-.text-field, .combo-box, .date-picker {
+.text-field, .combo-box, .date-picker, .color-picker {
     -fx-background-color: white;
     -fx-background-radius: 8;
     -fx-border-color: #e2e8f0;
@@ -35,13 +34,13 @@
     -fx-min-height: 35;
 }
 
-/* Forcer la couleur du texte à l'intérieur des champs (évite les bugs liés au dark mode Windows/Mac) */
-.text-field, .combo-box .list-cell, .date-picker .text-field {
+/* Forcer la couleur du texte à l'intérieur des champs */
+.text-field, .combo-box .list-cell, .date-picker .text-field, .color-picker .label {
     -fx-text-fill: #1e293b;
 }
 
-/* Effet lors du clic/focus sur un champ (bordure bleue et légère ombre) */
-.text-field:focused, .combo-box:focused, .date-picker:focused {
+/* Effet lors du clic/focus sur un champ */
+.text-field:focused, .combo-box:focused, .date-picker:focused, .color-picker:focused {
     -fx-border-color: #6588d9;
     -fx-border-width: 1;
     -fx-effect: dropshadow(three-pass-box, rgba(101,136,217,0.3), 4, 0, 0, 0);
