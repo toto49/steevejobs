@@ -1,10 +1,26 @@
 package com.eseo.steevejobs.model.Enum;
 
 public enum DocumentType {
+    DEVIS("devis"),
+    FACTURE("facture"),
+    BON_COMMANDE("bon commande");
 
-    BON_COMMANDE,
+    private final String valeur;
 
-    DEVIS,
+    DocumentType(String valeur) {
+        this.valeur = valeur;
+    }
 
-    FACTURE
+    public String getValeur() {
+        return valeur;
+    }
+
+    public static DocumentType fromValeur(String valeur) {
+        for (DocumentType type : values()) {
+            if (type.valeur.equals(valeur)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Type inconnu : " + valeur);
+    }
 }
