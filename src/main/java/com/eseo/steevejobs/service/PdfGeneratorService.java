@@ -2,34 +2,48 @@ package com.eseo.steevejobs.service;
 
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.FichePaye;
+import com.eseo.steevejobs.model.HeuresTravail;
 import com.eseo.steevejobs.model.User;
 import com.lowagie.text.*;
-import com.lowagie.text.Font;
+import com.lowagie.text.pdf.*;
 import com.lowagie.text.Image;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfWriter;
 
-import java.awt.*;
-import java.io.File;
+import java.awt.Color;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.io.File;
 
 public class PdfGeneratorService {
 
-    private static final String OUTPUT_DIR = System.getProperty("user.home") + java.io.File.separator + "Downloads" + java.io.File.separator;
+    private static final String OUTPUT_DIR = "documents/";
+
+    // Constantes pour les calculs de la fiche de paie
+    private static final double TAUX_IMPOT_FICTIF = 0.15;
+    private static final double MUTUELLE_MENSUELLE = 35.00;
+    private static final double PRIX_TICKET_RESTO = 8.50;
+    private static final int NB_JOURS_OUVRES_MOIS = 22;
 
     private static final Color COULEUR_PRINCIPALE = new Color(75, 120, 204);
     private static final Color COULEUR_GRIS       = new Color(107, 114, 128);
     private static final Color COULEUR_FOND_LIGNE = new Color(244, 245, 247);
     private static final Color COULEUR_BORDURE    = new Color(209, 213, 219);
+    private static final Color COULEUR_TEXTE      = new Color(50, 50, 50);  // Texte plus visible
+
+    private HeuresTravailService heuresTravailService;
+
+    public PdfGeneratorService() {
+        this.heuresTravailService = new HeuresTravailService();
+    }
 
     // -------------------------------------------------------
     // PDF GENERER PAR OPEN PDF
@@ -53,20 +67,14 @@ public class PdfGeneratorService {
             doc.open();
             ajouterContenuDocument(doc, document, lignes);
             doc.close();
-            try {
-                byte[] pdfBytes = Files.readAllBytes(Paths.get(chemin));
-                WebDavService.envoyerFichierSurNAS("documents_commerciaux", nomFichier, pdfBytes);
-            } catch (Exception e) {
-                System.err.println("⚠️ Le PDF a été généré localement, mais l'envoi NAS a échoué : " + e.getMessage());
-            }
-
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF document : " + e.getMessage(), e);
         }
         return chemin;
     }
 
-    public String genererFichePaye(FichePaye fiche, double salaireBase, double tauxCotisations, long joursConge) {
+    public String genererFichePaye(FichePaye fiche, double salaireBase,
+                                   double tauxCotisations, long joursConge) {
         creerDossier();
         String nomFichier = String.format("fiche_%d_%d_%02d.pdf",
                 fiche.getEmploye().getId(),
@@ -78,44 +86,64 @@ public class PdfGeneratorService {
             com.lowagie.text.Document doc = new com.lowagie.text.Document(PageSize.A4, 55, 55, 60, 60);
             PdfWriter.getInstance(doc, fos);
             doc.open();
-            ajouterContenuFichePaye(doc, fiche, salaireBase, tauxCotisations, joursConge);
+
+            HeuresMois heuresMois = calculerHeuresTravaillees(fiche.getEmploye().getId(), fiche.getDate());
+
+            ajouterContenuFichePaye(doc, fiche, salaireBase, tauxCotisations, joursConge, heuresMois);
             doc.close();
-            try {
-                byte[] pdfBytes = Files.readAllBytes(Paths.get(chemin));
-                String dossierEmploye = "employe_" + fiche.getEmploye().getId();
-                if (fiche.getEmploye().getPrenom() != null && fiche.getEmploye().getNom() != null) {
-                    dossierEmploye = (fiche.getEmploye().getPrenom() + "_" + fiche.getEmploye().getNom()).toLowerCase().replaceAll("[^a-z0-9_]", "");
-                }
-
-                WebDavService.envoyerFichierSurNAS(dossierEmploye, nomFichier, pdfBytes);
-            } catch (Exception e) {
-                System.err.println("⚠️ Fiche de paie générée localement, mais l'envoi NAS a échoué : " + e.getMessage());
-            }
-
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF fiche de paie : " + e.getMessage(), e);
         }
         return chemin;
     }
 
+    private HeuresMois calculerHeuresTravaillees(int userId, LocalDateTime date) {
+        int annee = date.getYear();
+        int moisValeur = date.getMonthValue();
+
+        LocalDate debutMois = LocalDate.of(annee, moisValeur, 1);
+        LocalDate finMois = debutMois.plusMonths(1).minusDays(1);
+
+        int totalHeuresMatin = 0;
+        int totalHeuresAprem = 0;
+        int joursTravailles = 0;
+
+        LocalDate dateCourante = debutMois;
+        while (!dateCourante.isAfter(finMois)) {
+            try {
+                HeuresTravail heures = heuresTravailService.getHeuresParDate(userId, dateCourante);
+                if (heures != null) {
+                    totalHeuresMatin += heures.getHeuresMatin();
+                    totalHeuresAprem += heures.getHeuresAprem();
+                    joursTravailles++;
+                }
+            } catch (SQLException e) {
+                System.err.println("Erreur récupération heures pour " + dateCourante);
+            }
+            dateCourante = dateCourante.plusDays(1);
+        }
+
+        int totalHeures = totalHeuresMatin + totalHeuresAprem;
+
+        return new HeuresMois(totalHeures, totalHeuresMatin, totalHeuresAprem, joursTravailles);
+    }
+
     private Image chargerLogo() {
         try {
             InputStream is = getClass().getResourceAsStream("/images/logo.png");
             if (is == null) {
-                System.err.println("Logo non trouvé : /images/logo.png");
                 return null;
             }
             Image logo = Image.getInstance(is.readAllBytes());
             logo.scaleToFit(80, 80);
             return logo;
         } catch (Exception e) {
-            System.err.println("Erreur chargement logo : " + e.getMessage());
             return null;
         }
     }
 
     // -------------------------------------------------------
-    // CONTENU — DOCUMENT : devis, facture, bon de commande
+    // CONTENU — DOCUMENT (devis, facture, bon de commande)
     // -------------------------------------------------------
 
     private void ajouterContenuDocument(com.lowagie.text.Document doc,
@@ -130,24 +158,22 @@ public class PdfGeneratorService {
 
         Font fontTitre   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COULEUR_PRINCIPALE);
         Font fontSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COULEUR_PRINCIPALE);
-        Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
-        Font fontBold    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
+        Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, COULEUR_TEXTE);
+        Font fontBold    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, COULEUR_TEXTE);
         Font fontGris    = FontFactory.getFont(FontFactory.HELVETICA, 10, COULEUR_GRIS);
         Font fontTotal   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, COULEUR_PRINCIPALE);
 
         String typeLabel = switch (document.getType()) {
-            case DEVIS           -> "DEVIS";
-            case FACTURE         -> "FACTURE";
-            case BON_COMMANDE    -> "BON DE COMMANDE";
+            case DEVIS -> "DEVIS";
+            case FACTURE -> "FACTURE";
+            case BON_COMMANDE -> "BON DE COMMANDE";
         };
 
         Paragraph titre = new Paragraph(typeLabel, fontTitre);
         titre.setAlignment(Element.ALIGN_CENTER);
-        titre.setSpacingBefore(0);
-        titre.setSpacingAfter(2);
         doc.add(titre);
 
-        Paragraph ref = new Paragraph("N° " + document.getId() + "  —  " +
+        Paragraph ref = new Paragraph("N° " + document.getId() + " — " +
                 document.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
         ref.setAlignment(Element.ALIGN_CENTER);
         doc.add(ref);
@@ -156,37 +182,34 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
-        // SECTION CLIENT
+        // CLIENT
         doc.add(new Paragraph("CLIENT", fontSection));
         doc.add(new Paragraph(" "));
 
         PdfPTable tableInfos = new PdfPTable(2);
         tableInfos.setWidthPercentage(100);
         tableInfos.setWidths(new float[]{1, 3});
-        tableInfos.getDefaultCell().setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        tableInfos.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         tableInfos.getDefaultCell().setPadding(2);
 
-        ajouterInfoLigne(tableInfos, "Nom",     document.getTiers().getNom(),     fontGris, fontNormal);
-        ajouterInfoLigne(tableInfos, "Email",   document.getTiers().getEmail(),   fontGris, fontNormal);
+        ajouterInfoLigne(tableInfos, "Nom", document.getTiers().getNom(), fontGris, fontNormal);
+        ajouterInfoLigne(tableInfos, "Email", document.getTiers().getEmail(), fontGris, fontNormal);
         ajouterInfoLigne(tableInfos, "Adresse", document.getTiers().getAdresse(), fontGris, fontNormal);
-        ajouterInfoLigne(tableInfos, "Tél",     document.getTiers().getTel(),     fontGris, fontNormal);
-        if (document.getTiers().getSiret() != null) {
-            ajouterInfoLigne(tableInfos, "SIRET", document.getTiers().getSiret(), fontGris, fontNormal);
-        }
+        ajouterInfoLigne(tableInfos, "Tél", document.getTiers().getTel(), fontGris, fontNormal);
         doc.add(tableInfos);
 
         doc.add(new Paragraph(" "));
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
-        // SECTION VENDEUR
+        // VENDEUR
         doc.add(new Paragraph("VENDEUR", fontSection));
         doc.add(new Paragraph(" "));
 
         PdfPTable tableVendeur = new PdfPTable(2);
         tableVendeur.setWidthPercentage(100);
         tableVendeur.setWidths(new float[]{1, 3});
-        tableVendeur.getDefaultCell().setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        tableVendeur.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         tableVendeur.getDefaultCell().setPadding(2);
 
         User vendeur = document.getEditeur();
@@ -195,10 +218,6 @@ public class PdfGeneratorService {
             ajouterInfoLigne(tableVendeur, "Nom", nomComplet.trim().isEmpty() ? "Non renseigné" : nomComplet, fontGris, fontNormal);
             ajouterInfoLigne(tableVendeur, "Poste", vendeur.getPoste() != null ? vendeur.getPoste() : "Non renseigné", fontGris, fontNormal);
             ajouterInfoLigne(tableVendeur, "Email", vendeur.getEmail() != null ? vendeur.getEmail() : "Non renseigné", fontGris, fontNormal);
-        } else {
-            ajouterInfoLigne(tableVendeur, "Nom", "Non renseigné", fontGris, fontNormal);
-            ajouterInfoLigne(tableVendeur, "Poste", "Non renseigné", fontGris, fontNormal);
-            ajouterInfoLigne(tableVendeur, "Email", "Non renseigné", fontGris, fontNormal);
         }
         doc.add(tableVendeur);
 
@@ -206,7 +225,7 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
-        // SECTION DÉTAIL DES PRESTATIONS
+        // DÉTAIL DES PRESTATIONS
         doc.add(new Paragraph("DÉTAIL DES PRESTATIONS", fontSection));
         doc.add(new Paragraph(" "));
 
@@ -241,47 +260,48 @@ public class PdfGeneratorService {
         tableTotaux.setWidthPercentage(45);
         tableTotaux.setHorizontalAlignment(Element.ALIGN_RIGHT);
         tableTotaux.setWidths(new float[]{2, 2});
-        ajouterLigneTotaux(tableTotaux, "Total HT",  String.format("%.2f €", document.getPrixHt()),  fontNormal);
+        ajouterLigneTotaux(tableTotaux, "Total HT", String.format("%.2f €", document.getPrixHt()), fontNormal);
         ajouterLigneTotaux(tableTotaux, "Total TTC", String.format("%.2f €", document.getPrixTtc()), fontTotal);
         doc.add(tableTotaux);
 
         doc.add(new Paragraph(" "));
         ajouterSeparateur(doc);
 
-        // STATUT
         Paragraph statut = new Paragraph("Statut : " + document.getStatut().name(), fontGris);
         statut.setAlignment(Element.ALIGN_RIGHT);
         doc.add(statut);
 
         doc.add(new Paragraph(" "));
 
-        // FOOTER
         Paragraph footer = new Paragraph(
                 "Document généré par SteevéJobs — " +
-                        java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
+                        LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
         footer.setAlignment(Element.ALIGN_CENTER);
         doc.add(footer);
     }
 
     // -------------------------------------------------------
-    // CONTENU — FICHE DE PAIE EN LIEN AVEC PLANNING
+    // CONTENU — FICHE DE PAIE (version corrigée)
     // -------------------------------------------------------
 
     private void ajouterContenuFichePaye(com.lowagie.text.Document doc, FichePaye fiche,
                                          double salaireBase, double tauxCotisations,
-                                         long joursConge) throws DocumentException {
+                                         long joursConge, HeuresMois heuresMois) throws DocumentException {
+
         Image logo = chargerLogo();
         if (logo != null) {
             logo.setAlignment(Element.ALIGN_RIGHT);
             logo.setSpacingAfter(10);
             doc.add(logo);
         }
+
+        // Polices avec texte bien visible
         Font fontTitre   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COULEUR_PRINCIPALE);
         Font fontSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COULEUR_PRINCIPALE);
-        Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
-        Font fontBold    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
+        Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, COULEUR_TEXTE);
+        Font fontBold    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, COULEUR_TEXTE);
         Font fontGris    = FontFactory.getFont(FontFactory.HELVETICA, 10, COULEUR_GRIS);
-        Font fontNet     = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, COULEUR_PRINCIPALE);
+        Font fontNet     = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, COULEUR_PRINCIPALE);
 
         String periode = fiche.getDate()
                 .format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH));
@@ -298,16 +318,17 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
+        // INFORMATIONS EMPLOYÉ
         doc.add(new Paragraph("INFORMATIONS EMPLOYÉ", fontSection));
         doc.add(new Paragraph(" "));
 
         PdfPTable tableInfos = new PdfPTable(2);
         tableInfos.setWidthPercentage(100);
         tableInfos.setWidths(new float[]{1, 2});
-        tableInfos.getDefaultCell().setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        tableInfos.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         tableInfos.getDefaultCell().setPadding(4);
 
-        ajouterInfoLigne(tableInfos, "Nom",   fiche.getEmploye().getPrenom() + " " + fiche.getEmploye().getNom(), fontGris, fontNormal);
+        ajouterInfoLigne(tableInfos, "Nom", fiche.getEmploye().getPrenom() + " " + fiche.getEmploye().getNom(), fontGris, fontNormal);
         ajouterInfoLigne(tableInfos, "Poste", fiche.getEmploye().getPoste(), fontGris, fontNormal);
         ajouterInfoLigne(tableInfos, "Email", fiche.getEmploye().getEmail(), fontGris, fontNormal);
         doc.add(tableInfos);
@@ -316,14 +337,82 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
+        // RÉCAPITULATIF DES HEURES (simplifié avec nombre de jours)
+        doc.add(new Paragraph("RÉCAPITULATIF DES HEURES TRAVAILLÉES", fontSection));
+        doc.add(new Paragraph(" "));
+
+        PdfPTable tableRecap = new PdfPTable(2);
+        tableRecap.setWidthPercentage(60);
+        tableRecap.setWidths(new float[]{2, 1.5f});
+        tableRecap.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        // En-têtes
+        String[] entetes = {"Libellé", "Valeur"};
+        for (String entete : entetes) {
+            PdfPCell cell = new PdfPCell(new Phrase(entete, fontBold));
+            cell.setBackgroundColor(COULEUR_FOND_LIGNE);
+            cell.setPadding(8);
+            cell.setBorderColor(COULEUR_BORDURE);
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            tableRecap.addCell(cell);
+        }
+
+        // Total heures
+        PdfPCell cLibHeures = new PdfPCell(new Phrase("Total heures travaillées", fontNormal));
+        cLibHeures.setPadding(8);
+        cLibHeures.setBorderColor(COULEUR_BORDURE);
+        tableRecap.addCell(cLibHeures);
+
+        PdfPCell cTotalHeures = new PdfPCell(new Phrase(String.valueOf(heuresMois.totalHeures) + " h", fontBold));
+        cTotalHeures.setPadding(8);
+        cTotalHeures.setBorderColor(COULEUR_BORDURE);
+        cTotalHeures.setHorizontalAlignment(Element.ALIGN_CENTER);
+        tableRecap.addCell(cTotalHeures);
+
+        // Jours travaillés
+        PdfPCell cLibJours = new PdfPCell(new Phrase("Jours travaillés", fontNormal));
+        cLibJours.setPadding(8);
+        cLibJours.setBorderColor(COULEUR_BORDURE);
+        tableRecap.addCell(cLibJours);
+
+        PdfPCell cTotalJours = new PdfPCell(new Phrase(String.valueOf(heuresMois.joursTravailles), fontBold));
+        cTotalJours.setPadding(8);
+        cTotalJours.setBorderColor(COULEUR_BORDURE);
+        cTotalJours.setHorizontalAlignment(Element.ALIGN_CENTER);
+        tableRecap.addCell(cTotalJours);
+
+        doc.add(tableRecap);
+        doc.add(new Paragraph(" "));
+        ajouterSeparateur(doc);
+        doc.add(new Paragraph(" "));
+
+        // DÉTAIL DE LA RÉMUNÉRATION
         doc.add(new Paragraph("DÉTAIL DE LA RÉMUNÉRATION", fontSection));
         doc.add(new Paragraph(" "));
 
-        double tauxJournalier    = salaireBase / 22.0;
-        double deductionConges   = joursConge > 0 ? tauxJournalier * joursConge : 0;
-        double salaireBrutAjuste = salaireBase - deductionConges;
-        double cotisations       = salaireBrutAjuste * tauxCotisations;
-        double netAPayer         = salaireBrutAjuste - cotisations;
+        double salaireHoraire = salaireBase / (NB_JOURS_OUVRES_MOIS * 7.0);
+        double salaireBrutAjuste;
+
+        if (heuresMois.totalHeures > 0) {
+            salaireBrutAjuste = salaireHoraire * heuresMois.totalHeures;
+        } else {
+            double tauxJournalier = salaireBase / NB_JOURS_OUVRES_MOIS;
+            double deductionConges = joursConge > 0 ? tauxJournalier * joursConge : 0;
+            salaireBrutAjuste = salaireBase - deductionConges;
+        }
+
+        double cotisations = salaireBrutAjuste * tauxCotisations;
+        double impotRevenu = salaireBrutAjuste * TAUX_IMPOT_FICTIF;
+
+        double mutuelle = MUTUELLE_MENSUELLE;
+        if (heuresMois.joursTravailles > 0 && heuresMois.joursTravailles < NB_JOURS_OUVRES_MOIS) {
+            mutuelle = MUTUELLE_MENSUELLE * heuresMois.joursTravailles / NB_JOURS_OUVRES_MOIS;
+        }
+
+        int nbJoursPourTickets = heuresMois.joursTravailles > 0 ? heuresMois.joursTravailles : NB_JOURS_OUVRES_MOIS;
+        double ticketResto = PRIX_TICKET_RESTO * nbJoursPourTickets;
+        double totalCharges = cotisations + impotRevenu + mutuelle + ticketResto;
+        double netAPayer = salaireBrutAjuste - totalCharges;
 
         PdfPTable tableMontants = new PdfPTable(3);
         tableMontants.setWidthPercentage(100);
@@ -332,7 +421,7 @@ public class PdfGeneratorService {
         for (String entete : new String[]{"Libellé", "Taux / Détail", "Montant"}) {
             PdfPCell cell = new PdfPCell(new Phrase(entete, fontBold));
             cell.setBackgroundColor(COULEUR_FOND_LIGNE);
-            cell.setPadding(7);
+            cell.setPadding(8);
             cell.setBorderColor(COULEUR_BORDURE);
             tableMontants.addCell(cell);
         }
@@ -340,47 +429,91 @@ public class PdfGeneratorService {
         ajouterLigneMontant(tableMontants, "Salaire de base mensuel", "",
                 String.format("%.2f €", salaireBase), fontNormal, false);
 
-        if (joursConge > 0) {
+        if (heuresMois.totalHeures > 0) {
             ajouterLigneMontant(tableMontants,
-                    "Congés (" + joursConge + " jour(s) détecté(s))",
-                    String.format("%.2f € / jour", tauxJournalier),
+                    "Heures travaillées (" + heuresMois.totalHeures + "h)",
+                    String.format("%.2f € / h", salaireHoraire),
+                    String.format("%.2f €", salaireBrutAjuste),
+                    fontNormal, true);
+        }
+
+        if (joursConge > 0 && heuresMois.totalHeures == 0) {
+            double tauxJournalier = salaireBase / NB_JOURS_OUVRES_MOIS;
+            double deductionConges = tauxJournalier * joursConge;
+            ajouterLigneMontant(tableMontants,
+                    "Congés (" + joursConge + "j)",
+                    String.format("%.2f € / j", tauxJournalier),
                     String.format("- %.2f €", deductionConges),
                     fontNormal, true);
         }
 
-        ajouterLigneMontant(tableMontants, "Salaire brut après congés", "",
+        ajouterLigneMontant(tableMontants, "Salaire brut", "",
                 String.format("%.2f €", salaireBrutAjuste), fontNormal, false);
-
         ajouterLigneMontant(tableMontants, "Cotisations salariales",
                 String.format("%.1f %%", tauxCotisations * 100),
                 String.format("- %.2f €", cotisations), fontNormal, true);
+        ajouterLigneMontant(tableMontants, "Impôt sur le revenu",
+                String.format("%.0f %%", TAUX_IMPOT_FICTIF * 100),
+                String.format("- %.2f €", impotRevenu), fontNormal, true);
+        ajouterLigneMontant(tableMontants, "Mutuelle",
+                (heuresMois.joursTravailles > 0 && heuresMois.joursTravailles < NB_JOURS_OUVRES_MOIS) ? "Pro-ratisé" : "Forfait",
+                String.format("- %.2f €", mutuelle), fontNormal, true);
+        ajouterLigneMontant(tableMontants, "Ticket restaurant",
+                String.format("%d j x %.2f€", nbJoursPourTickets, PRIX_TICKET_RESTO),
+                String.format("- %.2f €", ticketResto), fontNormal, true);
+        ajouterLigneMontant(tableMontants, "Total des charges", "",
+                String.format("- %.2f €", totalCharges), fontNormal, true);
 
+        // NET À PAYER (mise en évidence)
         PdfPCell cLib = new PdfPCell(new Phrase("NET À PAYER", fontNet));
-        cLib.setBorder(com.lowagie.text.Rectangle.TOP); cLib.setPadding(8);
+        cLib.setBorder(Rectangle.TOP);
+        cLib.setPadding(10);
+        cLib.setBackgroundColor(new Color(240, 248, 255));
         tableMontants.addCell(cLib);
+
         PdfPCell cDet = new PdfPCell(new Phrase("", fontNet));
-        cDet.setBorder(com.lowagie.text.Rectangle.TOP); cDet.setPadding(8);
+        cDet.setBorder(Rectangle.TOP);
+        cDet.setPadding(10);
+        cDet.setBackgroundColor(new Color(240, 248, 255));
         tableMontants.addCell(cDet);
+
         PdfPCell cNet = new PdfPCell(new Phrase(String.format("%.2f €", netAPayer), fontNet));
-        cNet.setBorder(com.lowagie.text.Rectangle.TOP);
+        cNet.setBorder(Rectangle.TOP);
         cNet.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cNet.setPadding(8);
+        cNet.setPadding(10);
+        cNet.setBackgroundColor(new Color(240, 248, 255));
         tableMontants.addCell(cNet);
 
         doc.add(tableMontants);
 
-        if (joursConge > 0) {
+        // Notes
+        doc.add(new Paragraph(" "));
+        Paragraph note = new Paragraph(
+                "ⓘ  Cotisations " + String.format("%.0f", tauxCotisations * 100) +
+                        "%, Impôt " + String.format("%.0f", TAUX_IMPOT_FICTIF * 100) +
+                        "%, Mutuelle " + String.format("%.2f€", MUTUELLE_MENSUELLE) +
+                        ", Tickets restaurant " + String.format("%.2f€", PRIX_TICKET_RESTO) + "/j",
+                fontGris);
+        note.setAlignment(Element.ALIGN_CENTER);
+        doc.add(note);
+
+        if (heuresMois.totalHeures > 0) {
             doc.add(new Paragraph(" "));
-            doc.add(new Paragraph(
-                    "ⓘ  " + joursConge + " jour(s) de congé détecté(s) automatiquement depuis le planning.",
-                    fontGris));
+            doc.add(new Paragraph("ⓘ  " + heuresMois.totalHeures + " heure(s) travaillée(s) enregistrée(s)", fontGris));
+        }
+        if (heuresMois.joursTravailles > 0) {
+            doc.add(new Paragraph("ⓘ  " + heuresMois.joursTravailles + " jour(s) travaillé(s) sur le mois", fontGris));
+        }
+        if (joursConge > 0) {
+            doc.add(new Paragraph("ⓘ  " + joursConge + " jour(s) de congé détecté(s)", fontGris));
         }
 
         doc.add(new Paragraph(" "));
         ajouterSeparateur(doc);
+
         Paragraph footer = new Paragraph(
-                "Document généré automatiquement par SteevéJobs " +
-                        java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
+                "Document généré automatiquement par SteevéJobs — " +
+                        LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
         footer.setAlignment(Element.ALIGN_CENTER);
         doc.add(footer);
     }
@@ -414,10 +547,12 @@ public class PdfGeneratorService {
     private void ajouterInfoLigne(PdfPTable table, String label, String valeur,
                                   Font fLabel, Font fValeur) {
         PdfPCell cL = new PdfPCell(new Phrase(label, fLabel));
-        cL.setBorder(com.lowagie.text.Rectangle.NO_BORDER); cL.setPadding(4);
+        cL.setBorder(Rectangle.NO_BORDER);
+        cL.setPadding(4);
         table.addCell(cL);
         PdfPCell cV = new PdfPCell(new Phrase(valeur != null ? valeur : "", fValeur));
-        cV.setBorder(com.lowagie.text.Rectangle.NO_BORDER); cV.setPadding(4);
+        cV.setBorder(Rectangle.NO_BORDER);
+        cV.setPadding(4);
         table.addCell(cV);
     }
 
@@ -435,13 +570,21 @@ public class PdfGeneratorService {
                                      String montant, Font font, boolean alterne) {
         Color fond = alterne ? COULEUR_FOND_LIGNE : Color.WHITE;
         PdfPCell cL = new PdfPCell(new Phrase(libelle, font));
-        cL.setBackgroundColor(fond); cL.setPadding(7); cL.setBorderColor(COULEUR_BORDURE);
+        cL.setBackgroundColor(fond);
+        cL.setPadding(8);
+        cL.setBorderColor(COULEUR_BORDURE);
         table.addCell(cL);
+
         PdfPCell cD = new PdfPCell(new Phrase(detail, font));
-        cD.setBackgroundColor(fond); cD.setPadding(7); cD.setBorderColor(COULEUR_BORDURE);
+        cD.setBackgroundColor(fond);
+        cD.setPadding(8);
+        cD.setBorderColor(COULEUR_BORDURE);
         table.addCell(cD);
+
         PdfPCell cM = new PdfPCell(new Phrase(montant, font));
-        cM.setBackgroundColor(fond); cM.setPadding(7); cM.setBorderColor(COULEUR_BORDURE);
+        cM.setBackgroundColor(fond);
+        cM.setPadding(8);
+        cM.setBorderColor(COULEUR_BORDURE);
         cM.setHorizontalAlignment(Element.ALIGN_RIGHT);
         table.addCell(cM);
     }
@@ -449,11 +592,27 @@ public class PdfGeneratorService {
     private void ajouterLigneTotaux(PdfPTable table, String label,
                                     String montant, Font font) {
         PdfPCell cL = new PdfPCell(new Phrase(label, font));
-        cL.setPadding(7); cL.setBorderColor(COULEUR_BORDURE);
+        cL.setPadding(7);
+        cL.setBorderColor(COULEUR_BORDURE);
         table.addCell(cL);
         PdfPCell cM = new PdfPCell(new Phrase(montant, font));
-        cM.setPadding(7); cM.setBorderColor(COULEUR_BORDURE);
+        cM.setPadding(7);
+        cM.setBorderColor(COULEUR_BORDURE);
         cM.setHorizontalAlignment(Element.ALIGN_RIGHT);
         table.addCell(cM);
+    }
+
+    private static class HeuresMois {
+        int totalHeures;
+        int heuresMatin;
+        int heuresAprem;
+        int joursTravailles;
+
+        HeuresMois(int totalHeures, int heuresMatin, int heuresAprem, int joursTravailles) {
+            this.totalHeures = totalHeures;
+            this.heuresMatin = heuresMatin;
+            this.heuresAprem = heuresAprem;
+            this.joursTravailles = joursTravailles;
+        }
     }
 }
