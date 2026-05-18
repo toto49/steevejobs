@@ -26,12 +26,12 @@ public class FichePayeService {
      * Génère une fiche de paie en détectant automatiquement
      * les congés depuis le planning du mois concerné.
      */
-    public FichePaye genererFichePaye(User employe, LocalDateTime mois,
+    public FichePaye genererFichePaye(User employe, LocalDateTime date,
                                       double salaireBase, double tauxCotisations)
             throws SQLException {
 
         // Vérifier doublon
-        FichePaye existante = fichePayeDAO.findByEmployeIdAndMois(employe.getId(), mois);
+        FichePaye existante = fichePayeDAO.findByEmployeIdAndDate(employe.getId(), date);
         if (existante != null) {
             throw new IllegalStateException(
                     "Une fiche existe déjà pour " + employe.getPrenom() +
@@ -42,10 +42,10 @@ public class FichePayeService {
         validerMontants(salaireBase, tauxCotisations);
 
         // Détecter les congés depuis le planning A REVOIR EN FONCTION DU SYSTEME DE PLANNING
-        long joursConge = compterJoursConge(employe.getId(), mois);
+        long joursConge = compterJoursConge(employe.getId(), date);
 
         // Créer en BDD
-        FichePaye fiche = new FichePaye(0, mois, "", employe);
+        FichePaye fiche = new FichePaye(0, date, "", employe);
         fichePayeDAO.createFichePaye(fiche);
 
         //Générer le PDF (avec les congés)
@@ -70,11 +70,11 @@ public class FichePayeService {
      * pour le mois donné. Chaque entrée PLANNING de type "Conge"
      * est comptée en jours entiers (jour_fin - jour_debut).
      */
-    private long compterJoursConge(int employeId, LocalDateTime mois) throws SQLException {
+    private long compterJoursConge(int employeId, LocalDateTime date) throws SQLException {
         List<Planning> plannings = planningDAO.findByUserId(employeId);
 
-        int annee      = mois.getYear();
-        int moisValeur = mois.getMonthValue();
+        int annee = date.getYear();
+        int moisValeur = date.getMonthValue();
 
         return plannings.stream()
                 .filter(p -> "Conge".equalsIgnoreCase(p.getType()))
