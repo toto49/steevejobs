@@ -7,6 +7,7 @@ import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.HeuresTravailService;
 import com.eseo.steevejobs.service.PlanningService;
 import com.eseo.steevejobs.service.SessionService;
+import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -18,9 +19,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 
 import java.sql.SQLException;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -95,7 +98,6 @@ public class CalendrierController {
         Button[] boutonsHeures = {lundiHeuresBtn, mardiHeuresBtn, mercrediHeuresBtn, jeudiHeuresBtn, vendrediHeuresBtn, samediHeuresBtn, dimancheHeuresBtn};
 
         LocalDate aujourdhui = LocalDate.now();
-        LocalDate dateLimite = aujourdhui.minusDays(7); // Bloqué si plus vieux que 7 jours
 
         for (int i = 0; i < 7; i++) {
             LocalDate dateJour = dateDebutSemaineAffichee.plusDays(i);
@@ -139,75 +141,161 @@ public class CalendrierController {
         dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
 
         // 1. récupération BDD
-        HeuresTravail heuresExistantes = null;
+        HeuresTravail hr = null;
         try {
-            heuresExistantes = heuresTravailService.getHeuresParDate(utilisateur.getId(), dateCible);
+            hr = heuresTravailService.getHeuresParDate(utilisateur.getId(), dateCible);
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        boolean aDejaSaisi = (heuresExistantes != null);
-        int heuresMatinExistantes = aDejaSaisi ? heuresExistantes.getHeuresMatin() : 0;
-        int heuresApremExistantes = aDejaSaisi ? heuresExistantes.getHeuresAprem() : 0;
+        boolean aDejaSaisi = (hr != null);
 
-        // 2. Création et paramétrage des champs
-        ComboBox<Integer> cbMatin = new ComboBox<>();
-        cbMatin.getItems().addAll(0, 1, 2, 3, 4, 5, 6, 7, 8);
-        cbMatin.setValue(heuresMatinExistantes);
-        cbMatin.setDisable(isReadOnly);
+        // 2. Création des ComboBox horaires (tranches de 15 min)
+        ComboBox<String> cbDebutM = creerComboBoxTemps("matin");
+        ComboBox<String> cbFinM = creerComboBoxTemps("matin");
+        ComboBox<String> cbDebutA = creerComboBoxTemps("aprem");
+        ComboBox<String> cbFinA = creerComboBoxTemps("aprem");
 
-        ComboBox<Integer> cbAprem = new ComboBox<>();
-        cbAprem.getItems().addAll(0, 1, 2, 3, 4, 5, 6, 7, 8);
-        cbAprem.setValue(heuresApremExistantes);
-        cbAprem.setDisable(isReadOnly);
+        cbDebutM.setValue(aDejaSaisi && hr.getDebutMatin() != null ? hr.getDebutMatin().toString() : "08:00");
+        cbFinM.setValue(aDejaSaisi && hr.getFinMatin() != null ? hr.getFinMatin().toString() : "12:00");
+        cbDebutA.setValue(aDejaSaisi && hr.getDebutAprem() != null ? hr.getDebutAprem().toString() : "13:30");
+        cbFinA.setValue(aDejaSaisi && hr.getFinAprem() != null ? hr.getFinAprem().toString() : "17:30");
 
+        if (isReadOnly) {
+            cbDebutM.setDisable(true); cbFinM.setDisable(true);
+            cbDebutA.setDisable(true); cbFinA.setDisable(true);
+        }
+
+        // 3. Création des Labels totaux avec des styles forts pour assurer la visibilité
+        Label lblTotalMatin = new Label("0 h 00");
+        lblTotalMatin.setStyle("-fx-font-weight: bold; -fx-text-fill: #2ecc71; -fx-font-size: 13px;"); // Vert
+
+        Label lblTotalAprem = new Label("0 h 00");
+        lblTotalAprem.setStyle("-fx-font-weight: bold; -fx-text-fill: #2ecc71; -fx-font-size: 13px;"); // Vert
+
+        Label lblTotalJour = new Label("0 h 00");
+        lblTotalJour.setStyle("-fx-font-weight: bold; -fx-text-fill: #6588d9; -fx-font-size: 15px;"); // Bleu
+
+        // Calcul dynamique
+        ChangeListener<String> calculListener = (obs, oldV, newV) -> {
+            long minMatin = calculerDureeMinutes(cbDebutM.getValue(), cbFinM.getValue());
+            long minAprem = calculerDureeMinutes(cbDebutA.getValue(), cbFinA.getValue());
+
+            lblTotalMatin.setText((minMatin / 60) + " h " + String.format("%02d", minMatin % 60));
+            lblTotalAprem.setText((minAprem / 60) + " h " + String.format("%02d", minAprem % 60));
+            lblTotalJour.setText(((minMatin + minAprem) / 60) + " h " + String.format("%02d", (minMatin + minAprem) % 60));
+        };
+
+        cbDebutM.valueProperty().addListener(calculListener);
+        cbFinM.valueProperty().addListener(calculListener);
+        cbDebutA.valueProperty().addListener(calculListener);
+        cbFinA.valueProperty().addListener(calculListener);
+        calculListener.changed(null, null, null); // Premier calcul
+
+        // 4. Interface Grid
         GridPane grid = new GridPane();
-        grid.setHgap(15);
-        grid.setVgap(15);
+        grid.setHgap(15); grid.setVgap(12);
+        grid.setPrefWidth(450);
 
-        // Ajout style CSS sur les labels
-        Label lblMatin = new Label("Heures travaillées (Matin) :");
-        lblMatin.getStyleClass().add("label-style");
-        Label lblAprem = new Label("Heures travaillées (Après-midi) :");
-        lblAprem.getStyleClass().add("label-style");
+        // Section MATIN
+        grid.add(new Label("MATIN :"), 0, 0, 6, 1);
+        grid.add(cbDebutM, 0, 1);
+        grid.add(new Label("à"), 1, 1);
+        grid.add(cbFinM, 2, 1);
+        grid.add(new Label("="), 3, 1);
+        grid.add(lblTotalMatin, 4, 1);
 
-        grid.add(lblMatin, 0, 0);
-        grid.add(cbMatin, 1, 0);
-        grid.add(lblAprem, 0, 1);
-        grid.add(cbAprem, 1, 1);
+        // Section APRÈS-MIDI
+        grid.add(new Label("APRÈS-MIDI :"), 0, 2, 6, 1);
+        grid.add(cbDebutA, 0, 3);
+        grid.add(new Label("à"), 1, 3);
+        grid.add(cbFinA, 2, 3);
+        grid.add(new Label("="), 3, 3);
+        grid.add(lblTotalAprem, 4, 3);
+
+        // Section TOTAL
+        grid.add(new Label("TOTAL JOURNÉE :"), 0, 4, 6, 1);
+        grid.add(lblTotalJour, 0, 5, 6, 1);
+
+        // Application du style "label-style" SAUF pour nos labels de totaux pour ne pas écraser leurs couleurs
+        grid.getChildren().filtered(n -> n instanceof Label && n != lblTotalMatin && n != lblTotalAprem && n != lblTotalJour)
+                .forEach(n -> n.getStyleClass().add("label-style"));
 
         dp.setContent(grid);
 
-        // 3. Gestion dynamique des boutons du pop-up
+        // 5. Boutons
         Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
         if (btnOk != null) {
             btnOk.getStyleClass().add("button-ok");
-            if (isReadOnly) {
-                btnOk.setText("Fermer");
-            } else {
-                btnOk.setText(aDejaSaisi ? "Modifier" : "Enregistrer");
-            }
+            btnOk.setText(isReadOnly ? "Fermer" : (aDejaSaisi ? "Modifier" : "Enregistrer"));
         }
 
         Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
         if (btnCancel != null) {
             btnCancel.getStyleClass().add("button-cancel");
             btnCancel.setText("Annuler");
-            if (isReadOnly) {
-                btnCancel.setVisible(false);
-            }
+            if (isReadOnly) btnCancel.setVisible(false);
         }
 
-        // 4. Enregistrement BDD
         dialog.showAndWait().ifPresent(res -> {
             if (res == ButtonType.OK && !isReadOnly) {
                 try {
-                    heuresTravailService.sauvegarderHeures(utilisateur.getId(), dateCible, cbMatin.getValue(), cbAprem.getValue());
-                } catch (SQLException e) {
+                    LocalTime tDebutM = LocalTime.parse(cbDebutM.getValue());
+                    LocalTime tFinM = LocalTime.parse(cbFinM.getValue());
+                    LocalTime tDebutA = LocalTime.parse(cbDebutA.getValue());
+                    LocalTime tFinA = LocalTime.parse(cbFinA.getValue());
+
+                    // --- NOUVEAU : Calcul du temps total ---
+                    long minMatin = calculerDureeMinutes(cbDebutM.getValue(), cbFinM.getValue());
+                    long minAprem = calculerDureeMinutes(cbDebutA.getValue(), cbFinA.getValue());
+                    long totalMinutes = minMatin + minAprem;
+
+                    // Conversion du total en LocalTime (Heures, Minutes)
+                    LocalTime tTotal = LocalTime.of((int) (totalMinutes / 60), (int) (totalMinutes % 60));
+
+                    // N'oublie pas d'ajouter tTotal dans les paramètres de ta méthode Service et DAO !
+                    heuresTravailService.sauvegarderHeures(utilisateur.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         });
+    }
+
+    // --- CORRECTION : Tranches de 15 minutes ---
+    private ComboBox<String> creerComboBoxTemps(String moment) {
+        ComboBox<String> cb = new ComboBox<>();
+        if (moment == "matin"){
+            for (int h = 6; h <= 14; h++) {
+                cb.getItems().add(String.format("%02d:00", h));
+                cb.getItems().add(String.format("%02d:15", h));
+                cb.getItems().add(String.format("%02d:30", h));
+                cb.getItems().add(String.format("%02d:45", h));
+            }
+        } else {
+            for (int h = 14; h <= 20; h++) {
+                cb.getItems().add(String.format("%02d:00", h));
+                cb.getItems().add(String.format("%02d:15", h));
+                cb.getItems().add(String.format("%02d:30", h));
+                cb.getItems().add(String.format("%02d:45", h));
+            }
+        }
+
+
+        cb.setEditable(true);
+        cb.setPrefWidth(100);
+        return cb;
+    }
+
+    private long calculerDureeMinutes(String debut, String fin) {
+        try {
+            LocalTime tDebut = LocalTime.parse(debut);
+            LocalTime tFin = LocalTime.parse(fin);
+            if (tFin.isBefore(tDebut)) return 0;
+            return Duration.between(tDebut, tFin).toMinutes();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     // ==========================================
@@ -253,12 +341,7 @@ public class CalendrierController {
         box.setPadding(new Insets(4));
         box.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        String color = switch (event.getType()) {
-            case "Vacances" -> "#5cb85c";
-            case "Réunion" -> "#7298E0";
-            default -> "#ffcc00";
-        };
-
+        String color = (event.getCouleur() != null && !event.getCouleur().isEmpty()) ? event.getCouleur() : "#ffcc00";
         box.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 5;");
 
         Label lblType = new Label(event.getType());
@@ -271,11 +354,11 @@ public class CalendrierController {
 
         if (afficherBoutons) {
             Button btnEdit = new Button("✎");
-            btnEdit.setStyle("-fx-background-color: #4a90e2; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnEdit.setStyle("-fx-background-color: rgba(255, 255, 255, 0.4); -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
             btnEdit.setOnAction(e -> modifierEvenement(event));
 
             Button btnSuppr = new Button("X");
-            btnSuppr.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnSuppr.setStyle("-fx-background-color: rgba(255, 0, 0, 0.6); -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
             btnSuppr.setOnAction(e -> supprimerEvenement(event));
 
             HBox actionsBox = new HBox(4, btnEdit, btnSuppr);
@@ -327,6 +410,8 @@ public class CalendrierController {
         typeBox.getItems().addAll("Cours", "Réunion", "Vacances", "Autre");
         typeBox.setMaxWidth(Double.MAX_VALUE);
 
+        ColorPicker colorPicker = new ColorPicker();
+
         TextField descField = new TextField();
         DatePicker dDP = new DatePicker();
         TextField hDF = new TextField(); hDF.setPrefWidth(80);
@@ -340,8 +425,13 @@ public class CalendrierController {
             hDF.setText(eventToEdit.getJourDebut().format(DateTimeFormatter.ofPattern("HH:mm")));
             dFP.setValue(eventToEdit.getJourFin().toLocalDate());
             hFF.setText(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
+
+            if (eventToEdit.getCouleur() != null) {
+                colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
+            }
         } else {
             typeBox.setValue("Réunion");
+            colorPicker.setValue(Color.web("#7298E0"));
             dDP.setValue(LocalDate.now());
             hDF.setText("08:00");
             dFP.setValue(LocalDate.now());
@@ -352,6 +442,7 @@ public class CalendrierController {
         ajouterLigneForm(grid, "DESCRIPTION :", descField, 1);
         ajouterLigneForm(grid, "DÉBUT :", new HBox(10, dDP, hDF), 2);
         ajouterLigneForm(grid, "FIN :", new HBox(10, dFP, hFF), 3);
+        ajouterLigneForm(grid, "COULEUR :", colorPicker, 4);
 
         dp.setContent(grid);
 
@@ -360,7 +451,10 @@ public class CalendrierController {
                 try {
                     LocalDateTime start = LocalDateTime.of(dDP.getValue(), LocalTime.parse(hDF.getText()));
                     LocalDateTime end = LocalDateTime.of(dFP.getValue(), LocalTime.parse(hFF.getText()));
-                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), isEdit ? eventToEdit.getId() : -1);
+
+                    String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
+
+                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor, isEdit ? eventToEdit.getId() : -1);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -375,42 +469,15 @@ public class CalendrierController {
         g.add(field, 1, row);
     }
 
-    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, int idToDelete) throws SQLException {
+    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, String couleur, int idToDelete) throws SQLException {
         if (idToDelete != -1) {
             planningService.deletePlanning(idToDelete);
         }
 
-        List<Planning> conflits = new ArrayList<>();
-        for (Planning p : events) {
-            if (p.getId() != idToDelete && start.isBefore(p.getJourFin()) && !end.isBefore(p.getJourDebut())) {
-                conflits.add(p);
-            }
-        }
+        PlanningDAO dao = new PlanningDAO();
+        Planning newEvent = new Planning(0, start, end, type, desc, couleur, utilisateur);
+        dao.createPlanning(newEvent);
 
-        if (!conflits.isEmpty()) {
-            Alert a = new Alert(Alert.AlertType.CONFIRMATION, "Ce créneau est déjà occupé. Voulez-vous remplacer l'existant ?", ButtonType.YES, ButtonType.NO);
-            appliquerStyleAlert(a);
-            if (a.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
-                events = initEvent();
-                rafraichirCalendrier();
-                return;
-            }
-
-            for (Planning p : conflits) {
-                planningService.deletePlanning(p.getId());
-                if (p.getJourDebut().isBefore(start)) {
-                    planningService.ajouterPlanning(new Planning(0, p.getJourDebut(), start, p.getType(), p.getDescription(), utilisateur));
-                }
-                if (p.getJourFin().isAfter(end)) {
-                    LocalDateTime r = end.getHour() >= 20 ? end.toLocalDate().plusDays(1).atTime(8,0) : end;
-                    if (r.isBefore(p.getJourFin())) {
-                        planningService.ajouterPlanning(new Planning(0, r, p.getJourFin(), p.getType(), p.getDescription(), utilisateur));
-                    }
-                }
-            }
-        }
-
-        planningService.ajouterPlanning(new Planning(0, start, end, type, desc, utilisateur));
         events = initEvent();
         rafraichirCalendrier();
     }
@@ -422,7 +489,8 @@ public class CalendrierController {
         a.showAndWait().ifPresent(res -> {
             if (res == ButtonType.YES) {
                 try {
-                    planningService.deletePlanning(event.getId());
+                    PlanningDAO dao = new PlanningDAO();
+                    dao.deletePlanning(event.getId());
                     events = initEvent();
                     rafraichirCalendrier();
                 } catch (SQLException e) { e.printStackTrace(); }
