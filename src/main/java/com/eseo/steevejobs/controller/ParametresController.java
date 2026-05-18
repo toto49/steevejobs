@@ -58,9 +58,11 @@ public class ParametresController {
             System.err.println("Aucun utilisateur n'est connecté en mémoire !");
             showAlert(Alert.AlertType.ERROR, "Erreur", "Aucun utilisateur connecté.");
         }
+
         prefs = Preferences.userNodeForPackage(getClass());
         boolean isPushSaved = prefs.getBoolean("push_enabled", false);
         pushNotificationsToggle.setSelected(isPushSaved);
+
         boolean isConnexionSaved = sessionService.hasEmailSauvegarde();
         ConnexionCheck.setSelected(isConnexionSaved);
     }
@@ -70,6 +72,8 @@ public class ParametresController {
         if (user != null) {
             mailField.setText(user.getEmail() != null ? user.getEmail() : "");
             nomField.setText(user.getNom() != null ? user.getNom() : "");
+            prenomField.setText(user.getPrenom() != null ? user.getPrenom() : "");
+            telField.setText(user.getTel() != null ? user.getTel() : "");
         }
     }
 
@@ -95,10 +99,13 @@ public class ParametresController {
                 showAlert(Alert.AlertType.WARNING, "Attention", "L'email et le nom sont obligatoires.");
                 return;
             }
-
             currentUser.setEmail(nouvelEmail);
             currentUser.setNom(nomField.getText().trim());
+            currentUser.setPrenom(prenomField.getText().trim());
+            currentUser.setTel(telField.getText().trim());
             userService.updateUser(currentUser);
+            SessionService.setUtilisateurConnecte(currentUser);
+
             if (ConnexionCheck.isSelected()) {
                 sessionService.sauvegarderEmail(nouvelEmail);
             }
@@ -110,8 +117,9 @@ public class ParametresController {
                             "Cordialement,\n" +
                             "Le support technique";
 
-            MailService.EnvoyerMail(nouvelEmail, "changement de vos informations", contenuemail);
+            MailService.EnvoyerMail(nouvelEmail, "Changement de vos informations", contenuemail);
             showAlert(Alert.AlertType.INFORMATION, "Succès", "Vos informations ont été mises à jour avec succès.");
+
         } catch (IllegalArgumentException e) {
             showAlert(Alert.AlertType.WARNING, "Validation", e.getMessage());
         } catch (SQLException e) {
@@ -136,6 +144,7 @@ public class ParametresController {
             showAlert(Alert.AlertType.ERROR, "Erreur", "Le nouveau mot de passe et la confirmation ne correspondent pas.");
             return;
         }
+
         String hashedAncien = userService.hashPassword(ancienMdp);
         if (!hashedAncien.equals(currentUser.getPasswordHash())) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "L'ancien mot de passe est incorrect.");
@@ -150,10 +159,12 @@ public class ParametresController {
                             "Cordialement,\n" +
                             "Le support technique";
 
-            MailService.EnvoyerMail(currentUser.getEmail(), "changement de vos informations de connexion", contenuemail);
+            MailService.EnvoyerMail(currentUser.getEmail(), "Changement de vos informations de connexion", contenuemail);
+
             String hashedNouveau = userService.hashPassword(nouveauMdp);
             userService.updateUserPassword(currentUser.getId(), hashedNouveau);
             currentUser.setPasswordHash(hashedNouveau);
+            SessionService.setUtilisateurConnecte(currentUser);
             ancienMdpField.clear();
             nouveauMdpField.clear();
             confirmerMdpField.clear();
@@ -196,7 +207,6 @@ public class ParametresController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/bienvenue-view.fxml"));
             Parent loginRoot = loader.load();
 
-            // 2. On utilise VOTRE méthode pour remplacer la vue tout en gardant le header !
             HelloApplication.changerPageGlobale(loginRoot, "Connexion");
 
         } catch (IOException e) {
