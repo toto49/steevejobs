@@ -334,10 +334,14 @@ public class DocumentController implements Initializable {
     }
 
     private void afficherErreur(String msg) {
-        new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
+        Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
+        alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        alert.showAndWait();
     }
 
     private void afficherSucces(String msg) {
-        new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
+        Alert alert = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
+        alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        alert.showAndWait();
     }
 }
