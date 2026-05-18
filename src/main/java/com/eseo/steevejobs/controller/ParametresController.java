@@ -168,7 +168,11 @@ public class ParametresController {
     void testpush(ActionEvent event) {
         boolean isPushEnabled = pushNotificationsToggle.isSelected();
         prefs.putBoolean("push_enabled", isPushEnabled);
-        SystemNotificationService.send("test", "coucou");
+        if (isPushEnabled) {
+            SystemNotificationService.send("SteeveJobs - Test", "Les notifications push sont bien activées !");
+        } else {
+            showAlert(Alert.AlertType.INFORMATION, "Notifications désactivées", "Vous avez désactivé les notifications push, aucun test n'a été envoyé.");
+        }
     }
 
     @FXML
