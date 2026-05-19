@@ -18,6 +18,7 @@ import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -103,17 +104,18 @@ public class PdfGeneratorService {
         LocalDate debutMois = LocalDate.of(annee, moisValeur, 1);
         LocalDate finMois = debutMois.plusMonths(1).minusDays(1);
 
-        int totalHeuresMatin = 0;
-        int totalHeuresAprem = 0;
+        int totalHeures = 0;
         int joursTravailles = 0;
 
         LocalDate dateCourante = debutMois;
         while (!dateCourante.isAfter(finMois)) {
             try {
                 HeuresTravail heures = heuresTravailService.getHeuresParDate(userId, dateCourante);
-                if (heures != null) {
-                    totalHeuresMatin += heures.getHeuresMatin();
-                    totalHeuresAprem += heures.getHeuresAprem();
+                if (heures != null && heures.getHeurestotal() != null) {
+                    // Convertir LocalTime en nombre d'heures décimal
+                    LocalTime ht = heures.getHeurestotal();
+                    double heuresJour = ht.getHour() + ht.getMinute() / 60.0;
+                    totalHeures += heuresJour;
                     joursTravailles++;
                 }
             } catch (SQLException e) {
@@ -122,9 +124,7 @@ public class PdfGeneratorService {
             dateCourante = dateCourante.plusDays(1);
         }
 
-        int totalHeures = totalHeuresMatin + totalHeuresAprem;
-
-        return new HeuresMois(totalHeures, totalHeuresMatin, totalHeuresAprem, joursTravailles);
+        return new HeuresMois(totalHeures, totalHeures, 0, joursTravailles);
     }
 
     private Image chargerLogo() {

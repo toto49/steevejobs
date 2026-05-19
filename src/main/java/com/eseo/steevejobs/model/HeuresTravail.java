@@ -14,15 +14,17 @@ public class HeuresTravail {
     private LocalTime finMatin;
     private LocalTime debutAprem;
     private LocalTime finAprem;
+    private LocalTime heurestotal;
     private User user;
 
-    public HeuresTravail(int idHeures, LocalDate dateJour, LocalTime debutMatin, LocalTime finMatin, LocalTime debutAprem, LocalTime finAprem, User user) {
+    public HeuresTravail(int idHeures, LocalDate dateJour, LocalTime debutMatin, LocalTime finMatin, LocalTime debutAprem, LocalTime finAprem, LocalTime heurestotal, User user) {
         this.idHeures = idHeures;
         this.dateJour = dateJour;
         this.debutMatin = debutMatin;
         this.finMatin = finMatin;
         this.debutAprem = debutAprem;
         this.finAprem = finAprem;
+        this.heurestotal = heurestotal;
         this.user = user;
     }
 
@@ -81,4 +83,9 @@ public class HeuresTravail {
     public void setUser(User user) {
         this.user = user;
     }
+
+    public LocalTime getHeurestotal() {
+        return heurestotal;
+    }
+    public void setHeurestotal(LocalTime heurestotal) {this.heurestotal = heurestotal;}
 }
