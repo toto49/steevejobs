@@ -23,33 +23,43 @@ public class FichePayeService {
     }
 
     /**
-     * Génère une fiche de paie en détectant automatiquement
-     * les congés depuis le planning du mois concerné.
+     * Génère une fiche de paie à partir des heures travaillées et du taux horaire.
+     *
+     * @param employe l'employé concerné
+     * @param mois la date du mois concerné
+     * @param salaireBrut le salaire brut calculé (heures × taux horaire)
+     * @param tauxCotisationsPatronales taux des cotisations patronales (ex: 0.45 = 45%)
+     * @param heuresTravaillees nombre d'heures travaillées dans le mois
+     * @param tauxHoraire taux horaire de l'employé (€/h)
+     * @return la fiche de paie créée
+     * @throws SQLException erreur base de données
      */
-    public FichePaye genererFichePaye(User employe, LocalDateTime date,
-                                      double salaireBase, double tauxCotisations)
+    public FichePaye genererFichePaye(User employe, LocalDateTime mois,
+                                      double salaireBrut, double tauxCotisationsPatronales,
+                                      double heuresTravaillees, double tauxHoraire)
             throws SQLException {
 
         // Vérifier doublon
-        FichePaye existante = fichePayeDAO.findByEmployeIdAndDate(employe.getId(), date);
+        FichePaye existante = fichePayeDAO.findByEmployeIdAndDate(employe.getId(), mois);
         if (existante != null) {
             throw new IllegalStateException(
                     "Une fiche existe déjà pour " + employe.getPrenom() +
                             " " + employe.getNom() + " sur ce mois.");
         }
 
-        // Valider montants
-        validerMontants(salaireBase, tauxCotisations);
+        // Valider les montants
+        validerMontants(salaireBrut, tauxCotisationsPatronales, heuresTravaillees, tauxHoraire);
 
-        // Détecter les congés depuis le planning A REVOIR EN FONCTION DU SYSTEME DE PLANNING
-        long joursConge = compterJoursConge(employe.getId(), date);
+        // Détecter les congés depuis le planning
+        long joursConge = compterJoursConge(employe.getId(), mois);
 
         // Créer en BDD
-        FichePaye fiche = new FichePaye(0, date, "", employe);
+        FichePaye fiche = new FichePaye(0, mois, "", employe);
         fichePayeDAO.createFichePaye(fiche);
 
-        //Générer le PDF (avec les congés)
-        String url = pdfService.genererFichePaye(fiche, salaireBase, tauxCotisations, joursConge);
+        // Générer le PDF avec les nouvelles informations
+        String url = pdfService.genererFichePaye(fiche, salaireBrut, tauxCotisationsPatronales,
+                joursConge, heuresTravaillees, tauxHoraire);
 
         // Mettre à jour l'URL
         fichePayeDAO.updateUrl(fiche.getId(), url);
@@ -58,35 +68,59 @@ public class FichePayeService {
         return fiche;
     }
 
-    public List<FichePaye> findAll()                        throws SQLException { return fichePayeDAO.findAll(); }
-    public List<FichePaye> findByEmployeId(int id)          throws SQLException { return fichePayeDAO.findByEmployeId(id); }
-    public List<FichePaye> findByAnnee(int annee)           throws SQLException { return fichePayeDAO.findByAnnee(annee); }
-    public boolean         supprimer(int id)                throws SQLException { return fichePayeDAO.deleteFichePaye(id); }
+    /**
+     * Version simplifiée pour la compatibilité (si appelé sans heures)
+     * Calcule automatiquement les heures à partir du salaire brut et du taux horaire
+     */
+    public FichePaye genererFichePaye(User employe, LocalDateTime mois,
+                                      double salaireBrut, double tauxCotisationsPatronales)
+            throws SQLException {
+        // Utiliser 151.67h comme base légale si non spécifié
+        double heuresTravaillees = 151.67;
+        double tauxHoraire = salaireBrut / heuresTravaillees;
+        return genererFichePaye(employe, mois, salaireBrut, tauxCotisationsPatronales,
+                heuresTravaillees, tauxHoraire);
+    }
 
+    // Méthodes existantes (inchangées)
+    public List<FichePaye> findAll() throws SQLException {
+        return fichePayeDAO.findAll();
+    }
+
+    public List<FichePaye> findByEmployeId(int id) throws SQLException {
+        return fichePayeDAO.findByEmployeId(id);
+    }
+
+    public List<FichePaye> findByAnnee(int annee) throws SQLException {
+        return fichePayeDAO.findByAnnee(annee);
+    }
+
+    public boolean supprimer(int id) throws SQLException {
+        return fichePayeDAO.deleteFichePaye(id);
+    }
+
+    // -------------------------------------------------------
+    // Méthodes privées
     // -------------------------------------------------------
 
     /**
      * Compte les jours de type "Conge" dans le planning de l'employé
-     * pour le mois donné. Chaque entrée PLANNING de type "Conge"
-     * est comptée en jours entiers (jour_fin - jour_debut).
      */
-    private long compterJoursConge(int employeId, LocalDateTime date) throws SQLException {
+    private long compterJoursConge(int employeId, LocalDateTime mois) throws SQLException {
         List<Planning> plannings = planningDAO.findByUserId(employeId);
 
-        int annee = date.getYear();
-        int moisValeur = date.getMonthValue();
+        int annee      = mois.getYear();
+        int moisValeur = mois.getMonthValue();
 
         return plannings.stream()
                 .filter(p -> "Conge".equalsIgnoreCase(p.getType()))
                 .filter(p -> {
-                    // Garder uniquement les entrées qui chevauchent le mois concerné
                     LocalDateTime debutMois = LocalDateTime.of(annee, moisValeur, 1, 0, 0);
                     LocalDateTime finMois   = debutMois.plusMonths(1);
                     return p.getJourDebut().isBefore(finMois) &&
                             p.getJourFin().isAfter(debutMois);
                 })
                 .mapToLong(p -> {
-                    // Borner au mois concerné pour ne pas déborder sur un autre mois
                     LocalDateTime debutMois = LocalDateTime.of(annee, moisValeur, 1, 0, 0);
                     LocalDateTime finMois   = debutMois.plusMonths(1);
                     LocalDateTime debut = p.getJourDebut().isBefore(debutMois) ? debutMois : p.getJourDebut();
@@ -96,10 +130,19 @@ public class FichePayeService {
                 .sum();
     }
 
-    private void validerMontants(double salaireBase, double tauxCotisations) {
-        if (salaireBase <= 0)
+    private void validerMontants(double salaireBrut, double tauxCotisationsPatronales,
+                                 double heuresTravaillees, double tauxHoraire) {
+        if (salaireBrut <= 0) {
             throw new IllegalArgumentException("Le salaire brut doit être supérieur à 0.");
-        if (tauxCotisations < 0 || tauxCotisations >= 1)
-            throw new IllegalArgumentException("Le taux de cotisations doit être entre 0 et 1.");
+        }
+        if (tauxCotisationsPatronales < 0 || tauxCotisationsPatronales >= 1) {
+            throw new IllegalArgumentException("Le taux de cotisations patronales doit être entre 0 et 1.");
+        }
+        if (heuresTravaillees <= 0) {
+            throw new IllegalArgumentException("Les heures travaillées doivent être supérieures à 0.");
+        }
+        if (tauxHoraire <= 0) {
+            throw new IllegalArgumentException("Le taux horaire doit être supérieur à 0.");
+        }
     }
 }

@@ -73,8 +73,9 @@ public class PdfGeneratorService {
         return chemin;
     }
 
-    public String genererFichePaye(FichePaye fiche, double salaireBase,
-                                   double tauxCotisations, long joursConge) {
+    public String genererFichePaye(FichePaye fiche, double salaireBrut,
+                                   double tauxCotisationsPatronales, long joursConge,
+                                   double heuresTravaillees, double tauxHoraire) {
         creerDossier();
         String nomFichier = String.format("fiche_%d_%d_%02d.pdf",
                 fiche.getEmploye().getId(),
@@ -86,10 +87,8 @@ public class PdfGeneratorService {
             com.lowagie.text.Document doc = new com.lowagie.text.Document(PageSize.A4, 55, 55, 60, 60);
             PdfWriter.getInstance(doc, fos);
             doc.open();
-
-            HeuresMois heuresMois = calculerHeuresTravaillees(fiche.getEmploye().getId(), fiche.getDate());
-
-            ajouterContenuFichePaye(doc, fiche, salaireBase, tauxCotisations, joursConge, heuresMois);
+            ajouterContenuFichePaye(doc, fiche, salaireBrut, tauxCotisationsPatronales,
+                    joursConge, heuresTravaillees, tauxHoraire);
             doc.close();
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF fiche de paie : " + e.getMessage(), e);
@@ -274,19 +273,19 @@ public class PdfGeneratorService {
         doc.add(new Paragraph(" "));
 
         Paragraph footer = new Paragraph(
-                "Document généré par SteevéJobs — " +
+                "Document généré par SteeveJobs — " +
                         LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
         footer.setAlignment(Element.ALIGN_CENTER);
         doc.add(footer);
     }
 
     // -------------------------------------------------------
-    // CONTENU — FICHE DE PAIE (version corrigée)
+    // CONTENU — FICHE DE PAIE
     // -------------------------------------------------------
 
     private void ajouterContenuFichePaye(com.lowagie.text.Document doc, FichePaye fiche,
-                                         double salaireBase, double tauxCotisations,
-                                         long joursConge, HeuresMois heuresMois) throws DocumentException {
+                                         double salaireBrut, double tauxCotisationsPatronales,
+                                         long joursConge, double heuresTravaillees, double tauxHoraire) throws DocumentException {
 
         Image logo = chargerLogo();
         if (logo != null) {
@@ -295,7 +294,6 @@ public class PdfGeneratorService {
             doc.add(logo);
         }
 
-        // Polices avec texte bien visible
         Font fontTitre   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COULEUR_PRINCIPALE);
         Font fontSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COULEUR_PRINCIPALE);
         Font fontNormal  = FontFactory.getFont(FontFactory.HELVETICA, 11, COULEUR_TEXTE);
@@ -337,81 +335,23 @@ public class PdfGeneratorService {
         ajouterSeparateur(doc);
         doc.add(new Paragraph(" "));
 
-        // RÉCAPITULATIF DES HEURES (simplifié avec nombre de jours)
-        doc.add(new Paragraph("RÉCAPITULATIF DES HEURES TRAVAILLÉES", fontSection));
-        doc.add(new Paragraph(" "));
-
-        PdfPTable tableRecap = new PdfPTable(2);
-        tableRecap.setWidthPercentage(60);
-        tableRecap.setWidths(new float[]{2, 1.5f});
-        tableRecap.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-        // En-têtes
-        String[] entetes = {"Libellé", "Valeur"};
-        for (String entete : entetes) {
-            PdfPCell cell = new PdfPCell(new Phrase(entete, fontBold));
-            cell.setBackgroundColor(COULEUR_FOND_LIGNE);
-            cell.setPadding(8);
-            cell.setBorderColor(COULEUR_BORDURE);
-            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            tableRecap.addCell(cell);
-        }
-
-        // Total heures
-        PdfPCell cLibHeures = new PdfPCell(new Phrase("Total heures travaillées", fontNormal));
-        cLibHeures.setPadding(8);
-        cLibHeures.setBorderColor(COULEUR_BORDURE);
-        tableRecap.addCell(cLibHeures);
-
-        PdfPCell cTotalHeures = new PdfPCell(new Phrase(String.valueOf(heuresMois.totalHeures) + " h", fontBold));
-        cTotalHeures.setPadding(8);
-        cTotalHeures.setBorderColor(COULEUR_BORDURE);
-        cTotalHeures.setHorizontalAlignment(Element.ALIGN_CENTER);
-        tableRecap.addCell(cTotalHeures);
-
-        // Jours travaillés
-        PdfPCell cLibJours = new PdfPCell(new Phrase("Jours travaillés", fontNormal));
-        cLibJours.setPadding(8);
-        cLibJours.setBorderColor(COULEUR_BORDURE);
-        tableRecap.addCell(cLibJours);
-
-        PdfPCell cTotalJours = new PdfPCell(new Phrase(String.valueOf(heuresMois.joursTravailles), fontBold));
-        cTotalJours.setPadding(8);
-        cTotalJours.setBorderColor(COULEUR_BORDURE);
-        cTotalJours.setHorizontalAlignment(Element.ALIGN_CENTER);
-        tableRecap.addCell(cTotalJours);
-
-        doc.add(tableRecap);
-        doc.add(new Paragraph(" "));
-        ajouterSeparateur(doc);
-        doc.add(new Paragraph(" "));
-
         // DÉTAIL DE LA RÉMUNÉRATION
         doc.add(new Paragraph("DÉTAIL DE LA RÉMUNÉRATION", fontSection));
         doc.add(new Paragraph(" "));
 
-        double salaireHoraire = salaireBase / (NB_JOURS_OUVRES_MOIS * 7.0);
-        double salaireBrutAjuste;
+        // Calculs
+        double deductionConges = 0;
+        double salaireBrutAjuste = salaireBrut;
 
-        if (heuresMois.totalHeures > 0) {
-            salaireBrutAjuste = salaireHoraire * heuresMois.totalHeures;
-        } else {
-            double tauxJournalier = salaireBase / NB_JOURS_OUVRES_MOIS;
-            double deductionConges = joursConge > 0 ? tauxJournalier * joursConge : 0;
-            salaireBrutAjuste = salaireBase - deductionConges;
+        if (joursConge > 0) {
+            double tauxJournalier = salaireBrut / 22.0;
+            deductionConges = tauxJournalier * joursConge;
+            salaireBrutAjuste = salaireBrut - deductionConges;
         }
 
-        double cotisations = salaireBrutAjuste * tauxCotisations;
-        double impotRevenu = salaireBrutAjuste * TAUX_IMPOT_FICTIF;
-
-        double mutuelle = MUTUELLE_MENSUELLE;
-        if (heuresMois.joursTravailles > 0 && heuresMois.joursTravailles < NB_JOURS_OUVRES_MOIS) {
-            mutuelle = MUTUELLE_MENSUELLE * heuresMois.joursTravailles / NB_JOURS_OUVRES_MOIS;
-        }
-
-        int nbJoursPourTickets = heuresMois.joursTravailles > 0 ? heuresMois.joursTravailles : NB_JOURS_OUVRES_MOIS;
-        double ticketResto = PRIX_TICKET_RESTO * nbJoursPourTickets;
-        double totalCharges = cotisations + impotRevenu + mutuelle + ticketResto;
+        double cotisationsPatronales = salaireBrutAjuste * tauxCotisationsPatronales;
+        double cotisationsRetraite = salaireBrutAjuste * 0.03;
+        double totalCharges = cotisationsPatronales + cotisationsRetraite;
         double netAPayer = salaireBrutAjuste - totalCharges;
 
         PdfPTable tableMontants = new PdfPTable(3);
@@ -426,45 +366,38 @@ public class PdfGeneratorService {
             tableMontants.addCell(cell);
         }
 
-        ajouterLigneMontant(tableMontants, "Salaire de base mensuel", "",
-                String.format("%.2f €", salaireBase), fontNormal, false);
+        // Salaire brut (heures × taux horaire)
+        ajouterLigneMontant(tableMontants, "Salaire brut",
+                String.format("%.2f h × %.2f €/h", heuresTravaillees, tauxHoraire),
+                String.format("%.2f €", salaireBrut), fontNormal, false);
 
-        if (heuresMois.totalHeures > 0) {
-            ajouterLigneMontant(tableMontants,
-                    "Heures travaillées (" + heuresMois.totalHeures + "h)",
-                    String.format("%.2f € / h", salaireHoraire),
-                    String.format("%.2f €", salaireBrutAjuste),
-                    fontNormal, true);
+        // Congés (si applicable)
+        if (joursConge > 0) {
+            ajouterLigneMontant(tableMontants, "Congés (" + joursConge + " jour(s))",
+                    String.format("%.2f € / jour", salaireBrut / 22.0),
+                    String.format("- %.2f €", deductionConges), fontNormal, true);
         }
 
-        if (joursConge > 0 && heuresMois.totalHeures == 0) {
-            double tauxJournalier = salaireBase / NB_JOURS_OUVRES_MOIS;
-            double deductionConges = tauxJournalier * joursConge;
-            ajouterLigneMontant(tableMontants,
-                    "Congés (" + joursConge + "j)",
-                    String.format("%.2f € / j", tauxJournalier),
-                    String.format("- %.2f €", deductionConges),
-                    fontNormal, true);
+        // Salaire brut après congés
+        if (joursConge > 0) {
+            ajouterLigneMontant(tableMontants, "Salaire brut après congés", "",
+                    String.format("%.2f €", salaireBrutAjuste), fontNormal, false);
         }
 
-        ajouterLigneMontant(tableMontants, "Salaire brut", "",
-                String.format("%.2f €", salaireBrutAjuste), fontNormal, false);
-        ajouterLigneMontant(tableMontants, "Cotisations salariales",
-                String.format("%.1f %%", tauxCotisations * 100),
-                String.format("- %.2f €", cotisations), fontNormal, true);
-        ajouterLigneMontant(tableMontants, "Impôt sur le revenu",
-                String.format("%.0f %%", TAUX_IMPOT_FICTIF * 100),
-                String.format("- %.2f €", impotRevenu), fontNormal, true);
-        ajouterLigneMontant(tableMontants, "Mutuelle",
-                (heuresMois.joursTravailles > 0 && heuresMois.joursTravailles < NB_JOURS_OUVRES_MOIS) ? "Pro-ratisé" : "Forfait",
-                String.format("- %.2f €", mutuelle), fontNormal, true);
-        ajouterLigneMontant(tableMontants, "Ticket restaurant",
-                String.format("%d j x %.2f€", nbJoursPourTickets, PRIX_TICKET_RESTO),
-                String.format("- %.2f €", ticketResto), fontNormal, true);
+        // Cotisations patronales
+        ajouterLigneMontant(tableMontants, "Cotisations patronales",
+                String.format("%.1f %%", tauxCotisationsPatronales * 100),
+                String.format("- %.2f €", cotisationsPatronales), fontNormal, true);
+
+        // Cotisations retraite (3%)
+        ajouterLigneMontant(tableMontants, "Cotisations retraite", "3%",
+                String.format("- %.2f €", cotisationsRetraite), fontNormal, true);
+
+        // Total des charges
         ajouterLigneMontant(tableMontants, "Total des charges", "",
                 String.format("- %.2f €", totalCharges), fontNormal, true);
 
-        // NET À PAYER (mise en évidence)
+        // NET À PAYER
         PdfPCell cLib = new PdfPCell(new Phrase("NET À PAYER", fontNet));
         cLib.setBorder(Rectangle.TOP);
         cLib.setPadding(10);
@@ -489,30 +422,22 @@ public class PdfGeneratorService {
         // Notes
         doc.add(new Paragraph(" "));
         Paragraph note = new Paragraph(
-                "ⓘ  Cotisations " + String.format("%.0f", tauxCotisations * 100) +
-                        "%, Impôt " + String.format("%.0f", TAUX_IMPOT_FICTIF * 100) +
-                        "%, Mutuelle " + String.format("%.2f€", MUTUELLE_MENSUELLE) +
-                        ", Tickets restaurant " + String.format("%.2f€", PRIX_TICKET_RESTO) + "/j",
+                "ⓘ  Cotisations patronales " + String.format("%.0f", tauxCotisationsPatronales * 100) +
+                        "% | Retraite 3% | Net = Brut - charges",
                 fontGris);
         note.setAlignment(Element.ALIGN_CENTER);
         doc.add(note);
 
-        if (heuresMois.totalHeures > 0) {
-            doc.add(new Paragraph(" "));
-            doc.add(new Paragraph("ⓘ  " + heuresMois.totalHeures + " heure(s) travaillée(s) enregistrée(s)", fontGris));
-        }
-        if (heuresMois.joursTravailles > 0) {
-            doc.add(new Paragraph("ⓘ  " + heuresMois.joursTravailles + " jour(s) travaillé(s) sur le mois", fontGris));
-        }
         if (joursConge > 0) {
-            doc.add(new Paragraph("ⓘ  " + joursConge + " jour(s) de congé détecté(s)", fontGris));
+            doc.add(new Paragraph(" "));
+            doc.add(new Paragraph("ⓘ  " + joursConge + " jour(s) de congé détecté(s) automatiquement depuis le planning.", fontGris));
         }
 
         doc.add(new Paragraph(" "));
         ajouterSeparateur(doc);
 
         Paragraph footer = new Paragraph(
-                "Document généré automatiquement par SteevéJobs — " +
+                "Document généré automatiquement par SteeveJobs — " +
                         LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), fontGris);
         footer.setAlignment(Element.ALIGN_CENTER);
         doc.add(footer);
