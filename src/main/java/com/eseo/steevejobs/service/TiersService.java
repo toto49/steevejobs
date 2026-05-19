@@ -12,8 +12,8 @@ public class TiersService {
 
     private TiersDAO tiersDAO;
 
-    public TiersService() {
-        this.tiersDAO = new TiersDAO();
+    public TiersService(TiersDAO TiersDAO) {
+        this.tiersDAO = TiersDAO;
     }
 
     // --------------------------------------------------------
