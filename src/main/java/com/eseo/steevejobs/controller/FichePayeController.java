@@ -51,7 +51,6 @@ public class FichePayeController implements Initializable {
 
     private final FichePayeService fichePayeService = new FichePayeService();
     private final UserDAO userDAO = new UserDAO();
-    private final ObservableList<FichePaye> toutesLesFiches = FXCollections.observableArrayList();
 
     private static final DateTimeFormatter FMT_MOIS = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH);
 
@@ -109,11 +108,6 @@ public class FichePayeController implements Initializable {
                 setGraphic(empty ? null : box);
             }
         });
-        // FORCER LA LARGEUR DES COLONNES POUR ÉVITER LES COLONNES FANTÔMES
-        colEmploye.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.40));
-        colMois.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.25));
-        colPoste.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.25));
-        colActions.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.10));
     }
 
     private void chargerFiltreEmployes() {
@@ -476,10 +470,8 @@ public class FichePayeController implements Initializable {
 
     private void chargerToutesFiches() {
         try {
-            List<FichePaye> fiches = fichePayeService.findAll();
-            toutesLesFiches.setAll(fiches);
-            tableFiches.setItems(toutesLesFiches);
-            lblNbFiches.setText(fiches.size() + " fiche(s)");
+            tableFiches.setItems(FXCollections.observableArrayList(fichePayeService.findAll()));
+            lblNbFiches.setText(fichePayeService.findAll().size() + " fiche(s)");
         } catch (SQLException e) {
             afficherErreur("Impossible de charger les fiches : " + e.getMessage());
         }

@@ -88,7 +88,7 @@ public class FichePayeDAO {
      * @throws SQLException exception SQL
      */
     public FichePaye getById(int id) throws SQLException {
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "WHERE f.id_paye = ?";
@@ -101,6 +101,7 @@ public class FichePayeDAO {
                 if (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -111,7 +112,6 @@ public class FichePayeDAO {
                             rs.getString("poste"),
                             rs.getBoolean("actif")
                     );
-                    // Conversion Date → LocalDateTime (on met à minuit)
                     return new FichePaye(
                             rs.getInt("id_paye"),
                             rs.getDate("date").toLocalDate().atStartOfDay(),
@@ -132,7 +132,7 @@ public class FichePayeDAO {
      */
     public List<FichePaye> findByEmployeId(int employeId) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "WHERE f.id_user = ? " +
@@ -146,6 +146,7 @@ public class FichePayeDAO {
                 while (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -176,7 +177,7 @@ public class FichePayeDAO {
      * @throws SQLException exception SQL
      */
     public FichePaye findByEmployeIdAndDate(int employeId, LocalDateTime date) throws SQLException {
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "WHERE f.id_user = ? AND YEAR(f.date) = ? AND MONTH(f.date) = ?";
@@ -191,6 +192,7 @@ public class FichePayeDAO {
                 if (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -220,7 +222,7 @@ public class FichePayeDAO {
      */
     public List<FichePaye> findAll() throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "ORDER BY f.date DESC";
@@ -232,6 +234,7 @@ public class FichePayeDAO {
             while (rs.next()) {
                 User employe = new User(
                         rs.getInt("id_user"),
+                        rs.getInt("taux"),
                         rs.getString("nom"),
                         rs.getString("prenom"),
                         rs.getString("email"),
@@ -261,7 +264,7 @@ public class FichePayeDAO {
      */
     public List<FichePaye> findByAnnee(int annee) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "WHERE YEAR(f.date) = ? " +
@@ -275,6 +278,7 @@ public class FichePayeDAO {
                 while (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),

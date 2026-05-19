@@ -68,37 +68,6 @@ public class FichePayeService {
         return fiche;
     }
 
-    /**
-     * Version simplifiée pour la compatibilité (si appelé sans heures)
-     * Calcule automatiquement les heures à partir du salaire brut et du taux horaire
-     */
-    public FichePaye genererFichePaye(User employe, LocalDateTime mois,
-                                      double salaireBrut, double tauxCotisationsPatronales)
-            throws SQLException {
-        // Utiliser 151.67h comme base légale si non spécifié
-        double heuresTravaillees = 151.67;
-        double tauxHoraire = salaireBrut / heuresTravaillees;
-        return genererFichePaye(employe, mois, salaireBrut, tauxCotisationsPatronales,
-                heuresTravaillees, tauxHoraire);
-    }
-
-    // Méthodes existantes (inchangées)
-    public List<FichePaye> findAll() throws SQLException {
-        return fichePayeDAO.findAll();
-    }
-
-    public List<FichePaye> findByEmployeId(int id) throws SQLException {
-        return fichePayeDAO.findByEmployeId(id);
-    }
-
-    public List<FichePaye> findByAnnee(int annee) throws SQLException {
-        return fichePayeDAO.findByAnnee(annee);
-    }
-
-    public boolean supprimer(int id) throws SQLException {
-        return fichePayeDAO.deleteFichePaye(id);
-    }
-
     // -------------------------------------------------------
     // Méthodes privées
     // -------------------------------------------------------
@@ -144,5 +113,25 @@ public class FichePayeService {
         if (tauxHoraire <= 0) {
             throw new IllegalArgumentException("Le taux horaire doit être supérieur à 0.");
         }
+    }
+
+    // ==========================================
+    // Méthodes publiques
+    // ==========================================
+
+    public List<FichePaye> findAll() throws SQLException {
+        return fichePayeDAO.findAll();
+    }
+
+    public List<FichePaye> findByEmployeId(int id) throws SQLException {
+        return fichePayeDAO.findByEmployeId(id);
+    }
+
+    public List<FichePaye> findByAnnee(int annee) throws SQLException {
+        return fichePayeDAO.findByAnnee(annee);
+    }
+
+    public boolean supprimer(int id) throws SQLException {
+        return fichePayeDAO.deleteFichePaye(id);
     }
 }

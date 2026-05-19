@@ -17,7 +17,7 @@ public class FichePaye {
     /** Identifiant unique de la fiche de paie */
     private int id;
 
-    /** Mois concerné par la paie (ex : janvier 2026) */
+    /** date concerné par la paie (ex : janvier 2026) */
     private LocalDateTime date;
 
     /** URL ou chemin du fichier de la fiche de paie */
@@ -32,7 +32,7 @@ public class FichePaye {
      * toutes les propriétés d'une fiche de paie.
      *
      * @param id       identifiant unique
-     * @param date     mois correspondant à la paie
+     * @param date     date correspondant à la paie
      * @param url      lien vers le fichier de la fiche de paie
      * @param employe  employé concerné par la fiche
      */
@@ -54,8 +54,7 @@ public class FichePaye {
     public LocalDateTime getDate() {
         return date;
     }
-
-    public void setMois(LocalDateTime mois) {
+    public void setDate(LocalDateTime date) {
         this.date = date;
     }
     public String getUrl() {

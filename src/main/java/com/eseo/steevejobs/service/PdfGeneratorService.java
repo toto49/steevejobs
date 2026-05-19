@@ -2,7 +2,6 @@ package com.eseo.steevejobs.service;
 
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.FichePaye;
-import com.eseo.steevejobs.model.HeuresTravail;
 import com.eseo.steevejobs.model.User;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -15,10 +14,8 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -28,27 +25,11 @@ public class PdfGeneratorService {
 
     private static final String OUTPUT_DIR = "documents/";
 
-    // Constantes pour les calculs de la fiche de paie
-    private static final double TAUX_IMPOT_FICTIF = 0.15;
-    private static final double MUTUELLE_MENSUELLE = 35.00;
-    private static final double PRIX_TICKET_RESTO = 8.50;
-    private static final int NB_JOURS_OUVRES_MOIS = 22;
-
     private static final Color COULEUR_PRINCIPALE = new Color(75, 120, 204);
     private static final Color COULEUR_GRIS       = new Color(107, 114, 128);
     private static final Color COULEUR_FOND_LIGNE = new Color(244, 245, 247);
     private static final Color COULEUR_BORDURE    = new Color(209, 213, 219);
-    private static final Color COULEUR_TEXTE      = new Color(50, 50, 50);  // Texte plus visible
-
-    private HeuresTravailService heuresTravailService;
-
-    public PdfGeneratorService() {
-        this.heuresTravailService = new HeuresTravailService();
-    }
-
-    // -------------------------------------------------------
-    // PDF GENERER PAR OPEN PDF
-    // -------------------------------------------------------
+    private static final Color COULEUR_TEXTE      = new Color(50, 50, 50);
 
     public String genererDocument(com.eseo.steevejobs.model.Document document, List<Composer> lignes) {
         creerDossier();
@@ -56,11 +37,6 @@ public class PdfGeneratorService {
                 document.getType().getValeur().replace(" ", "_"),
                 document.getId());
         String chemin = OUTPUT_DIR + nomFichier;
-
-        System.out.println("=== GÉNÉRATION PDF ===");
-        System.out.println("Type: " + document.getType().getValeur());
-        System.out.println("Nom fichier: " + nomFichier);
-        System.out.println("Chemin complet: " + new File(chemin).getAbsolutePath());
 
         try (FileOutputStream fos = new FileOutputStream(chemin)) {
             com.lowagie.text.Document doc = new com.lowagie.text.Document(PageSize.A4, 55, 55, 60, 60);
@@ -97,42 +73,10 @@ public class PdfGeneratorService {
         return chemin;
     }
 
-    private HeuresMois calculerHeuresTravaillees(int userId, LocalDateTime date) {
-        int annee = date.getYear();
-        int moisValeur = date.getMonthValue();
-
-        LocalDate debutMois = LocalDate.of(annee, moisValeur, 1);
-        LocalDate finMois = debutMois.plusMonths(1).minusDays(1);
-
-        int totalHeures = 0;
-        int joursTravailles = 0;
-
-        LocalDate dateCourante = debutMois;
-        while (!dateCourante.isAfter(finMois)) {
-            try {
-                HeuresTravail heures = heuresTravailService.getHeuresParDate(userId, dateCourante);
-                if (heures != null && heures.getHeurestotal() != null) {
-                    // Convertir LocalTime en nombre d'heures décimal
-                    LocalTime ht = heures.getHeurestotal();
-                    double heuresJour = ht.getHour() + ht.getMinute() / 60.0;
-                    totalHeures += heuresJour;
-                    joursTravailles++;
-                }
-            } catch (SQLException e) {
-                System.err.println("Erreur récupération heures pour " + dateCourante);
-            }
-            dateCourante = dateCourante.plusDays(1);
-        }
-
-        return new HeuresMois(totalHeures, totalHeures, 0, joursTravailles);
-    }
-
     private Image chargerLogo() {
         try {
             InputStream is = getClass().getResourceAsStream("/images/logo.png");
-            if (is == null) {
-                return null;
-            }
+            if (is == null) return null;
             Image logo = Image.getInstance(is.readAllBytes());
             logo.scaleToFit(80, 80);
             return logo;
@@ -525,19 +469,5 @@ public class PdfGeneratorService {
         cM.setBorderColor(COULEUR_BORDURE);
         cM.setHorizontalAlignment(Element.ALIGN_RIGHT);
         table.addCell(cM);
-    }
-
-    private static class HeuresMois {
-        int totalHeures;
-        int heuresMatin;
-        int heuresAprem;
-        int joursTravailles;
-
-        HeuresMois(int totalHeures, int heuresMatin, int heuresAprem, int joursTravailles) {
-            this.totalHeures = totalHeures;
-            this.heuresMatin = heuresMatin;
-            this.heuresAprem = heuresAprem;
-            this.joursTravailles = joursTravailles;
-        }
     }
 }
