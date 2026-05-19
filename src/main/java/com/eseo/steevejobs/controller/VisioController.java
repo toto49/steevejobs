@@ -1,23 +1,57 @@
 package com.eseo.steevejobs.controller;
 
+import com.github.sarxos.webcam.Webcam;
+import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
+
+import java.awt.image.BufferedImage;
 
 public class VisioController {
 
     @FXML
-    private WebView webView;
+    private ImageView imageView;
+    private Webcam webcam;
+    private boolean isRunning = true;
 
     @FXML
     public void initialize() {
-        WebEngine webEngine = webView.getEngine();
+        // 1. Initialiser la caméra par défaut
+        webcam = Webcam.getDefault();
+        if (webcam != null) {
+            webcam.open();
 
-        // Autoriser le JavaScript et les accès multimédia
-        webEngine.setJavaScriptEnabled(true);
+            // 2. Lancer un thread pour lire les images sans bloquer l'UI
+            Thread thread = new Thread(() -> {
+                while (isRunning) {
+                    BufferedImage image = webcam.getImage();
+                    if (image != null) {
+                        // 3. Convertir l'image AWT en image JavaFX
+                        WritableImage fxImage = SwingFXUtils.toFXImage(image, null);
 
-        // Chargement du fichier HTML
-        String url = getClass().getResource("/com/eseo/steevejobs/view/visio.html").toExternalForm();
-        webEngine.load(url);
+                        // 4. Mettre à jour l'UI sur le thread principal
+                        Platform.runLater(() -> imageView.setImage(fxImage));
+                        image.flush(); // Libère la mémoire
+                    }
+                    try {
+                        Thread.sleep(33);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            });
+            thread.setDaemon(true);
+            thread.start();
+        }
+    }
+
+    // Très important : ferme la caméra quand on quitte la vue !
+    public void stopPreview() {
+        isRunning = false;
+        if (webcam != null) {
+            webcam.close();
+        }
     }
 }
