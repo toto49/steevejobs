@@ -18,7 +18,7 @@ public class FichePaye {
     private int id;
 
     /** Mois concerné par la paie (ex : janvier 2026) */
-    private LocalDateTime mois;
+    private LocalDateTime date;
 
     /** URL ou chemin du fichier de la fiche de paie */
     private String url;
@@ -32,14 +32,14 @@ public class FichePaye {
      * toutes les propriétés d'une fiche de paie.
      *
      * @param id       identifiant unique
-     * @param mois     mois correspondant à la paie
+     * @param date     mois correspondant à la paie
      * @param url      lien vers le fichier de la fiche de paie
      * @param employe  employé concerné par la fiche
      */
 
-    public FichePaye(int id, LocalDateTime mois, String url, User employe) {
+    public FichePaye(int id, LocalDateTime date, String url, User employe) {
         this.id = id;
-        this.mois = mois;
+        this.date = date;
         this.url = url;
         this.employe = employe;
     }
@@ -50,11 +50,13 @@ public class FichePaye {
     public void setId(int id) {
         this.id = id;
     }
-    public LocalDateTime getMois() {
-        return mois;
+
+    public LocalDateTime getDate() {
+        return date;
     }
+
     public void setMois(LocalDateTime mois) {
-        this.mois = mois;
+        this.date = date;
     }
     public String getUrl() {
         return url;
