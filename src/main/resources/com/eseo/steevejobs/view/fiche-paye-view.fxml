@@ -15,12 +15,7 @@
             <Label text="GESTION DES FICHES DE PAIE" textFill="WHITE">
                 <font><Font name="System Bold" size="24.0"/></font>
             </Label>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="btnGenerer" onAction="#ouvrirFormulaireGeneration"
-                    text="+ Générer une fiche"
-                    style="-fx-background-color: white; -fx-text-fill: #4B78CC;
-                           -fx-font-weight: bold; -fx-background-radius: 20;
-                           -fx-cursor: hand; -fx-padding: 8 16;"/>
+
         </HBox>
     </top>
 
@@ -39,6 +34,13 @@
                               onAction="#filtrerParEmploye" style="-fx-background-radius: 20;"/>
                     <ComboBox fx:id="comboAnneeFiltre" promptText="Toutes les années" prefWidth="160.0"
                               onAction="#filtrerParEmploye" style="-fx-background-radius: 20;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnGenerer" onAction="#ouvrirFormulaireGeneration"
+                            text="+ Générer une fiche" prefWidth="220.0" prefHeight="50.0"
+                            style="-fx-background-color: white; -fx-text-fill: #4B78CC;
+               -fx-font-weight: bold; -fx-border-color: #d1d5db;
+               -fx-border-radius: 20; -fx-background-radius: 20;
+               -fx-cursor: hand; -fx-padding: 8 16;"/>
                 </HBox>
 
                 <!-- ESPACE ENTRE FILTRES ET TABLEAU -->
@@ -52,8 +54,8 @@
                         <TableColumn fx:id="colEmploye" text="EMPLOYÉ" prefWidth="350.0"/>
                         <TableColumn fx:id="colEmail" text="EMAIL" prefWidth="220.0"/>
                         <TableColumn fx:id="colService" text="SERVICE" prefWidth="150.0"/>
-                        <TableColumn fx:id="colMois" text="MOIS" prefWidth="250.0"/>
                         <TableColumn fx:id="colPoste" text="POSTE" prefWidth="250.0"/>
+                        <TableColumn fx:id="colMois" text="MOIS" prefWidth="250.0"/>
                         <TableColumn fx:id="colActions" text="" prefWidth="80.0"/>
                     </columns>
                     <placeholder>

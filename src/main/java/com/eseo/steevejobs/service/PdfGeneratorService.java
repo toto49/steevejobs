@@ -356,7 +356,7 @@ public class PdfGeneratorService {
 
         PdfPTable tableMontants = new PdfPTable(3);
         tableMontants.setWidthPercentage(100);
-        tableMontants.setWidths(new float[]{5, 2, 2});
+        tableMontants.setWidths(new float[]{4, 3.5f, 2.5f});
 
         for (String entete : new String[]{"Libellé", "Taux / Détail", "Montant"}) {
             PdfPCell cell = new PdfPCell(new Phrase(entete, fontBold));

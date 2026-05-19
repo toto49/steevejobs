@@ -240,7 +240,6 @@ public class DocumentController implements Initializable {
         confirm.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.OK) {
                 try {
-                    // La suppression du fichier sur le NAS est gérée directement dans DocumentService
                     documentService.supprimerDocument(documentSelectionne.getId());
                     viderDetail();
                     chargerTousDocuments();
@@ -266,12 +265,19 @@ public class DocumentController implements Initializable {
     }
 
     private void configurerColonnes() {
-        colType.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getType().name()));
+        // Supprime les underscores dans l'affichage du type et du statut
+        colType.setCellValueFactory(data -> {
+            String type = data.getValue().getType().name();
+            if ("BON_COMMANDE".equals(type)) {
+                return new SimpleStringProperty("BON DE COMMANDE");
+            }
+            return new SimpleStringProperty(type);
+        });
         colClient.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTiers().getNom()));
         colDate.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getDate().format(FMT_DATE)));
         colHT.setCellValueFactory(data -> new SimpleStringProperty(String.format("%.2f €", data.getValue().getPrixHt())));
         colTTC.setCellValueFactory(data -> new SimpleStringProperty(String.format("%.2f €", data.getValue().getPrixTtc())));
-        colStatut.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatut().name()));
+        colStatut.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatut().name().replace("_", " ")));
         tableDocuments.getColumns().setAll(colType, colClient, colDate, colHT, colTTC, colStatut, colActions);
     }
 
@@ -279,13 +285,18 @@ public class DocumentController implements Initializable {
         comboTypeFiltre.setItems(FXCollections.observableArrayList(DocumentType.values()));
         comboTypeFiltre.getItems().add(0, null);
         comboTypeFiltre.setConverter(new StringConverter<>() {
-            @Override public String toString(DocumentType t) { return t == null ? "Tous les types" : t.name(); }
+            @Override
+            public String toString(DocumentType t) {
+                if (t == null) return "Tous les types";
+                if (t == DocumentType.BON_COMMANDE) return "BON DE COMMANDE";
+                return t.name();
+            }
             @Override public DocumentType fromString(String s) { return null; }
         });
         comboStatutFiltre.setItems(FXCollections.observableArrayList(DocumentStatut.values()));
         comboStatutFiltre.getItems().add(0, null);
         comboStatutFiltre.setConverter(new StringConverter<>() {
-            @Override public String toString(DocumentStatut s) { return s == null ? "Tous les statuts" : s.name(); }
+            @Override public String toString(DocumentStatut s) { return s == null ? "Tous les statuts" : s.name().replace("_", " "); }
             @Override public DocumentStatut fromString(String s) { return null; }
         });
     }
@@ -318,7 +329,13 @@ public class DocumentController implements Initializable {
     }
 
     private void afficherDetail(Document doc) {
-        detailType.setText(doc.getType().name());
+        // Supprime les underscores dans l'affichage du type
+        String type = doc.getType().name();
+        if ("BON_COMMANDE".equals(type)) {
+            detailType.setText("BON DE COMMANDE");
+        } else {
+            detailType.setText(type);
+        }
 
         if (doc.getTiers() != null) {
             Tiers client = doc.getTiers();
@@ -336,7 +353,8 @@ public class DocumentController implements Initializable {
         detailDate.setText(doc.getDate().format(FMT_DATE));
         detailHT.setText(String.format("%.2f €", doc.getPrixHt()));
         detailTTC.setText(String.format("%.2f €", doc.getPrixTtc()));
-        detailStatut.setText(doc.getStatut().name());
+        // Supprime les underscores dans l'affichage du statut
+        detailStatut.setText(doc.getStatut().name().replace("_", " "));
         detailStatut.setStyle("-fx-text-fill: black; -fx-font-weight: bold;");
 
         lignesContainer.getChildren().clear();
