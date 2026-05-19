@@ -168,7 +168,7 @@ public class FichePayeController implements Initializable {
         ComboBox<User> comboEmploye = new ComboBox<>();
         ComboBox<String> comboMois = new ComboBox<>();
         ComboBox<Integer> comboAnnee = new ComboBox<>();
-        TextField txtHeuresTravaillees = new TextField();     // Heures travaillées (auto-calculé)
+        TextField txtHeuresTravaillees = new TextField();     // Heures travaillées (auto-calculé mais possibilité de modif)
         TextField txtTauxHoraire = new TextField();           // Taux horaire (€)
         TextField txtTauxCotisationsPatronales = new TextField();  // Taux patronal (%)
 
@@ -248,18 +248,44 @@ public class FichePayeController implements Initializable {
             if (employe != null) {
                 try {
                     User employeComplet = userDAO.getById(employe.getId());
-                    if (employeComplet != null && employeComplet.getTaux() > 0) {
-                        txtTauxHoraire.setText(String.valueOf(employeComplet.getTaux()));  // ← Charge dans txtTauxHoraire
-                    } else {
-                        txtTauxHoraire.setText("");
+                    if (employeComplet != null) {
+                        // Taux horaire
+                        if (employeComplet.getTaux() > 0) {
+                            txtTauxHoraire.setText(String.valueOf(employeComplet.getTaux()));
+                        } else {
+                            txtTauxHoraire.setText("");
+                        }
+                        // Taux patronal
+                        if (employeComplet.getTauxPatronal() > 0) {
+                            txtTauxCotisationsPatronales.setText(String.valueOf(employeComplet.getTauxPatronal()));
+                        } else {
+                            txtTauxCotisationsPatronales.setText("");
+                        }
                     }
                 } catch (SQLException ex) {
                     txtTauxHoraire.setText("");
+                    txtTauxCotisationsPatronales.setText("");
                 }
             } else {
                 txtTauxHoraire.setText("");
+                txtTauxCotisationsPatronales.setText("");
             }
             calculerHeures.run();
+        });
+
+// Sauvegarder le taux patronal quand le champ perd le focus
+        txtTauxCotisationsPatronales.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) {
+                User employe = comboEmploye.getValue();
+                if (employe != null && !txtTauxCotisationsPatronales.getText().isBlank()) {
+                    try {
+                        int tauxPatronal = Integer.parseInt(txtTauxCotisationsPatronales.getText().replace(",", "."));
+                        userDAO.updateTauxPatronal(employe.getId(), tauxPatronal);
+                    } catch (NumberFormatException | SQLException ex) {
+                        // Ignorer
+                    }
+                }
+            }
         });
 
 // Sauvegarder le taux horaire quand le champ perd le focus
@@ -311,7 +337,7 @@ public class FichePayeController implements Initializable {
         grid.add(lblExemple, 1, 6);
 
         dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().setPrefWidth(500);
+        dialog.getDialogPane().setPrefWidth(550);
 
         // Style des boutons
         Button btnOk = (Button) dialog.getDialogPane().lookupButton(btnGenerer);

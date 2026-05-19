@@ -24,7 +24,8 @@ public class UserDAO {
                 rs.getString("role"),
                 rs.getString("tel"),
                 rs.getString("poste"),
-                rs.getBoolean("actif")
+                rs.getBoolean("actif"),
+                rs.getInt("taux_patronal")
         );
 
         user.setTentativesEchouees(rs.getInt("tentatives_echouees"));
@@ -158,6 +159,16 @@ public class UserDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, taux);
+            stmt.setInt(2, userId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean updateTauxPatronal(int userId, int tauxPatronal) throws SQLException {
+        String sql = "UPDATE USER SET taux_patronal = ? WHERE id_user = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, tauxPatronal);
             stmt.setInt(2, userId);
             return stmt.executeUpdate() > 0;
         }
