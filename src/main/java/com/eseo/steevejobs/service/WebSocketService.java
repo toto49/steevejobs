@@ -1,9 +1,6 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.controller.HomeController;
-import com.eseo.steevejobs.controller.MenuController;
-import com.eseo.steevejobs.controller.TicketController;
-import com.eseo.steevejobs.controller.TicketsListController;
+import com.eseo.steevejobs.controller.*;
 import com.eseo.steevejobs.model.User;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.animation.PauseTransition;
@@ -195,6 +192,8 @@ public class WebSocketService {
             } else {
                 TicketsListController listeActive = TicketsListController.getActiveInstance();
                 if (listeActive != null) listeActive.rafraichirAffichage();
+                java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(ParametresController.class);
+                boolean pushEnabled = prefs.getBoolean("push_enabled", false);
 
                 for (String typeCible : pendingTypesToUpdate) {
                     HomeController.ajouterNotification(typeCible);
@@ -204,10 +203,13 @@ public class WebSocketService {
                         MenuController.getInstance().allumerBadge(typeCible, nombre);
                     }
 
-                    if ("AUTEUR".equals(typeCible)) {
-                        SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse reçue");
-                    } else if ("TECH".equals(typeCible)) {
-                        SystemNotificationService.send("SteeveJobs - Admin", "Nouveau message à traiter !");
+
+                    if (pushEnabled) {
+                        if ("AUTEUR".equals(typeCible)) {
+                            SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse reçue");
+                        } else if ("TECH".equals(typeCible)) {
+                            SystemNotificationService.send("SteeveJobs - Admin", "Nouveau message à traiter !");
+                        }
                     }
                 }
                 pendingTypesToUpdate.clear();

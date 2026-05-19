@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 public class HeuresTravailService {
 
@@ -18,8 +19,8 @@ public class HeuresTravailService {
         this.heuresTravailDAO = new HeuresTravailDAO();
     }
 
-    public void sauvegarderHeures(int idUser, LocalDate dateJour, int heuresMatin, int heuresAprem) throws SQLException {
-        heuresTravailDAO.sauvegarder(idUser, dateJour, heuresMatin, heuresAprem);
+    public boolean sauvegarderHeures(int idUser, LocalDate dateJour, LocalTime debutM, LocalTime finM, LocalTime debutA, LocalTime finA, LocalTime tTotal) throws SQLException {
+        return heuresTravailDAO.sauvegarder(idUser, dateJour, debutM, finM, debutA, finA, tTotal);
     }
 
     public HeuresTravail getHeuresParDate(int idUser, LocalDate dateJour) throws SQLException {

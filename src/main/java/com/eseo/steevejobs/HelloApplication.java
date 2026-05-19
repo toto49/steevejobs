@@ -1,6 +1,6 @@
 package com.eseo.steevejobs;
 
-import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
 import com.eseo.steevejobs.service.WebSocketService;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -61,7 +61,7 @@ public class HelloApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         mainStage = stage;
-        Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
+        Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
         stage.initStyle(StageStyle.TRANSPARENT);
         headerGlobal = creerHeaderPersonnalise(stage);
 
