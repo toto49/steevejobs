@@ -77,6 +77,13 @@ public class UserService {
         userDAO.updateUser(user);
     }
 
+    public boolean updateTaux(int userId, int taux) throws SQLException {
+        if (taux < 0 || taux >= 100) {
+            throw new IllegalArgumentException("Le taux doit être entre 0 et 99.");
+        }
+        return userDAO.updateTaux(userId, taux);
+    }
+
     public boolean deleteUser(int id) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");

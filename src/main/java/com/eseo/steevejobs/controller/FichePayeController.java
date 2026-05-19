@@ -178,8 +178,8 @@ public class FichePayeController implements Initializable {
         TextField txtTauxHoraire = new TextField();           // Taux horaire (€)
         TextField txtTauxCotisationsPatronales = new TextField();  // Taux patronal (%)
 
-        // Heures travaillées : non modifiable, calculé automatiquement depuis la BDD
-        txtHeuresTravaillees.setEditable(false);
+        // Heures travaillées : est modifiable, calculé automatiquement depuis la BDD
+        txtHeuresTravaillees.setEditable(true);
         txtHeuresTravaillees.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #d1d5db; -fx-border-radius: 5; -fx-padding: 6; -fx-text-fill: black;");
 
         txtTauxHoraire.setPromptText("Ex : 15.50");
@@ -219,10 +219,11 @@ public class FichePayeController implements Initializable {
                 return u == null ? "" : u.getPrenom() + " " + u.getNom() + " — " + u.getPoste();
             }
             @Override public User fromString(String s) { return null; }
+
         });
 
         // ==========================================
-        // CALCUL AUTOMATIQUE DES HEURES DEPUIS LA BDD
+        // CALCUL DES HEURES
         // ==========================================
         HeuresTravailService heuresService = new HeuresTravailService();
 
@@ -243,9 +244,46 @@ public class FichePayeController implements Initializable {
                 txtHeuresTravaillees.setText("0,00");
             }
         };
+        // ==========================================
+        // GESTION DU TAUX PATRONAL
+        // ==========================================
 
-        // Recalculer quand on change employé/mois/année
-        comboEmploye.setOnAction(e -> calculerHeures.run());
+        // Charger le taux horaire quand on sélectionne un employé
+        comboEmploye.setOnAction(e -> {
+            User employe = comboEmploye.getValue();
+            if (employe != null) {
+                try {
+                    User employeComplet = userDAO.getById(employe.getId());
+                    if (employeComplet != null && employeComplet.getTaux() > 0) {
+                        txtTauxHoraire.setText(String.valueOf(employeComplet.getTaux()));  // ← Charge dans txtTauxHoraire
+                    } else {
+                        txtTauxHoraire.setText("");
+                    }
+                } catch (SQLException ex) {
+                    txtTauxHoraire.setText("");
+                }
+            } else {
+                txtTauxHoraire.setText("");
+            }
+            calculerHeures.run();
+        });
+
+// Sauvegarder le taux horaire quand le champ perd le focus
+        txtTauxHoraire.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) { // Perte du focus
+                User employe = comboEmploye.getValue();
+                if (employe != null && !txtTauxHoraire.getText().isBlank()) {
+                    try {
+                        int tauxHoraire = Integer.parseInt(txtTauxHoraire.getText().replace(",", "."));
+                        userDAO.updateTaux(employe.getId(), tauxHoraire);  // ← Sauvegarde dans taux
+                    } catch (NumberFormatException | SQLException ex) {
+                        // Ignorer
+                    }
+                }
+            }
+        });
+
+        // Recalculer quand on change mois/année
         comboMois.setOnAction(e -> calculerHeures.run());
         comboAnnee.setOnAction(e -> calculerHeures.run());
 
@@ -323,7 +361,6 @@ public class FichePayeController implements Initializable {
         LocalDateTime date = LocalDateTime.of(anneeValue, moisValue, 1, 0, 0);
 
         try {
-            // Appel du service avec les nouveaux paramètres
             FichePaye fiche = fichePayeService.genererFichePaye(employe, date, salaireBrut,
                     tauxCotisationsPatronales / 100, heuresTravaillees, tauxHoraire);
 
