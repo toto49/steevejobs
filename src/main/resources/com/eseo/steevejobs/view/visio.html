@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh;">
+<video autoplay id="video" playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+<script>
+    async function startCam() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+            document.getElementById('video').srcObject = stream;
+        } catch (err) {
+            console.error("Erreur caméra: " + err);
+        }
+    }
+
+    startCam();
+</script>
+</body>
+</html>

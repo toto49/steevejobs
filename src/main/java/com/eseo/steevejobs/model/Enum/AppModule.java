@@ -6,7 +6,8 @@ public enum AppModule {
     STOCKS("APP_STOCKS_VIEW", "GESTION\nDES STOCKS", "Inventaire, alertes", "adminuser", "steevestock.png", "#76B89A"),
     DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "test", "happy.png", "#F1CE6C"),
     TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "happy.png", "#92B4F2", "services"), // <-- Chemin mis à jour
-    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "test", "happy.png", "#FF99cc");
+    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "test", "happy.png", "#FF99cc"),
+    VISO("APP_VISO_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "visio", "happy.png", "#FF99cc");
 
     private final String codeAction;
     private final String title;
