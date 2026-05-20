@@ -6,301 +6,330 @@ import javafx.beans.property.*;
 import javafx.collections.*;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.*;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Optional;
 
 public class StockController {
 
+    // ── Barre du haut ──────────────────────────────────────────────
     @FXML private TextField searchField;
-    @FXML private Spinner<Integer> lowStockSpinner;
+    @FXML private Label     labelNbProduits;
 
-    @FXML private TableView<Produit> tableProduits;
+    // ── Tableau ────────────────────────────────────────────────────
+    @FXML private TableView<Produit>           tableProduits;
     @FXML private TableColumn<Produit, Number> colId;
     @FXML private TableColumn<Produit, String> colNom;
+    @FXML private TableColumn<Produit, String> colCategorie;
+    @FXML private TableColumn<Produit, String> colReference;
     @FXML private TableColumn<Produit, Number> colQuantite;
-    @FXML private TableColumn<Produit, BigDecimal> colPoids;
-    @FXML private TableColumn<Produit, BigDecimal> colPrix;
-    @FXML private TableColumn<Produit, BigDecimal> colTva;
-    @FXML private TableColumn<Produit, Boolean> colActif;
+    @FXML private TableColumn<Produit, String> colStatut;
 
-    // ✅ Colonne actions (boutons dans la ligne)
-    @FXML private TableColumn<Produit, Void> colActions;
+    // ── Fiche produit ──────────────────────────────────────────────
+    @FXML private Label  ficheNom;
+    @FXML private Label  fichePrix;
+    @FXML private Label  ficheTva;
+    @FXML private Label  ficheQte;
+    @FXML private Label  fichePoids;
+    @FXML private Label  ficheSeuilAlerte;
+    @FXML private Label  ficheStatut;
+    @FXML private Button btnFicheEntree;
+    @FXML private Button btnFicheSortie;
+    @FXML private Button btnFicheAjuster;
 
-    private final ProduitService produitService = new ProduitService();
-    private final ObservableList<Produit> data = FXCollections.observableArrayList();
+    // ── Données ────────────────────────────────────────────────────
+    private final ProduitService          produitService     = new ProduitService();
+    private final ObservableList<Produit> data               = FXCollections.observableArrayList();
+    private       Produit                 produitSelectionne = null;
 
+    // ──────────────────────────────────────────────────────────────
     @FXML
     public void initialize() {
-        lowStockSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 10_000, 5));
 
+        tableProduits.getStyleClass().add("stock-table");
+
+        // Colonnes
         colId.setCellValueFactory(c -> new SimpleIntegerProperty(c.getValue().getId()));
         colNom.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getNom()));
+        colCategorie.setCellValueFactory(c -> new SimpleStringProperty("—"));
+        colReference.setCellValueFactory(c -> new SimpleStringProperty("—"));
 
-        // Affichage intelligent : si produit vrac (poids != null), on affiche "-" en quantité
+        // Quantité : poids si vrac, sinon quantité unitaire
         colQuantite.setCellValueFactory(c -> new SimpleIntegerProperty(c.getValue().getQuantite()));
         colQuantite.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Number value, boolean empty) {
-                super.updateItem(value, empty);
+            @Override protected void updateItem(Number val, boolean empty) {
+                super.updateItem(val, empty);
                 if (empty) { setText(null); return; }
                 Produit p = getTableView().getItems().get(getIndex());
-                if (p.getPoid() != null) {
-                    setText("-");
-                } else {
-                    setText(value == null ? "0" : value.toString());
-                }
+                setText(p.getPoid() != null
+                        ? p.getPoid() + " kg"
+                        : (val == null ? "0" : val.toString()));
             }
         });
 
-        // Affichage intelligent : si produit unitaire (poids == null), on affiche "-" en poids
-        colPoids.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getPoid()));
-        colPoids.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(BigDecimal value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty) { setText(null); return; }
-                setText(value == null ? "-" : value.toString());
+        // Badge statut — basé sur seuilAlerte du produit
+        colStatut.setCellValueFactory(c -> new SimpleStringProperty(calculerStatut(c.getValue())));
+        colStatut.setCellFactory(col -> new TableCell<>() {
+            private final Label badge = new Label();
+            @Override protected void updateItem(String statut, boolean empty) {
+                super.updateItem(statut, empty);
+                if (empty || statut == null) { setGraphic(null); return; }
+                badge.setText(statut);
+                badge.getStyleClass().setAll(cssBadge(statut));
+                setGraphic(badge);
+                setText(null);
             }
         });
-
-        colPrix.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getPrix()));
-        colTva.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getTauxTva()));
-        colActif.setCellValueFactory(c -> new SimpleBooleanProperty(c.getValue().isActif()));
-
-        // ✅ Boutons "Entrée (+) / Sortie (-) / Ajusté (=)" dans chaque ligne
-        installerBoutonsParLigne();
 
         tableProduits.setItems(data);
+
+        // Sélection → fiche produit
+        tableProduits.getSelectionModel().selectedItemProperty().addListener(
+                (obs, ancien, nouveau) -> afficherFiche(nouveau));
+
+        // Recherche sur touche Entrée
+        searchField.setOnAction(e -> onSearch());
+
+        rafraichirFiche(null);
         refreshTable();
     }
 
-    /**
-     * ✅ Ajoute les boutons dans chaque ligne (colActions)
-     * - Sans couleurs forcées
-     * - Avec libellés complets : Entrée (+), Sortie (-), Ajusté (=)
-     */
-    private void installerBoutonsParLigne() {
-        colActions.setCellFactory(col -> new TableCell<>() {
+    // ─────────────────────────────────────────────────────────────
+    // Recherche temps réel
+    // ─────────────────────────────────────────────────────────────
 
-            private final Button btnEntree = new Button("Entrée (+)");
-            private final Button btnSortie = new Button("Sortie (-)");
-            private final Button btnAjuster = new Button("Ajusté (=)");
-
-            {
-                // ✅ Évite le focus au clic (plus agréable en tableau)
-                btnEntree.setFocusTraversable(false);
-                btnSortie.setFocusTraversable(false);
-                btnAjuster.setFocusTraversable(false);
-
-                // ✅ Largeurs homogènes (évite l’effet "carré")
-                btnEntree.setPrefWidth(95);
-                btnSortie.setPrefWidth(95);
-                btnAjuster.setPrefWidth(95);
-
-                // ✅ Hauteur cohérente
-                btnEntree.setPrefHeight(26);
-                btnSortie.setPrefHeight(26);
-                btnAjuster.setPrefHeight(26);
-
-                // ✅ Actions : on réutilise tes méthodes existantes
-                btnEntree.setOnAction(e -> entreeDepuisLigne(getProduitLigne()));
-                btnSortie.setOnAction(e -> sortieDepuisLigne(getProduitLigne()));
-                btnAjuster.setOnAction(e -> ajusterDepuisLigne(getProduitLigne()));
-            }
-
-            private Produit getProduitLigne() {
-                return getTableView().getItems().get(getIndex());
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                } else {
-                    setGraphic(new HBox(6, btnEntree, btnSortie, btnAjuster));
-                }
-            }
-        });
+    @FXML
+    private void onSearchRealTime(KeyEvent event) {
+        onSearch();
     }
 
-    // ----------------------------
-    // Actions depuis la ligne
-    // ----------------------------
+    // ─────────────────────────────────────────────────────────────
+    // Calcul statut — basé sur seuilAlerte propre au produit
+    // ─────────────────────────────────────────────────────────────
+
+    private String calculerStatut(Produit p) {
+        if (!p.isActif()) return "Inactif";
+
+        int seuil = p.getSeuilAlerte(); // seuil défini sur le produit lui-même
+
+        if (p.getPoid() != null) {
+            BigDecimal poids = p.getPoid();
+            if (poids.compareTo(BigDecimal.ZERO) <= 0)
+                return "Rupture";
+            if (poids.compareTo(new BigDecimal(seuil)) <= 0)
+                return "A recommander";
+            return "En stock";
+        } else {
+            int qte = p.getQuantite();
+            if (qte <= 0)     return "Rupture";
+            if (qte <= seuil) return "A recommander";
+            return "En stock";
+        }
+    }
+
+    private String cssBadge(String statut) {
+        return switch (statut) {
+            case "En stock"      -> "badge-en-stock";
+            case "A recommander" -> "badge-a-recommander";
+            default              -> "badge-rupture";
+        };
+    }
+
+    private String couleurStatut(String statut) {
+        return switch (statut) {
+            case "En stock"      -> "#27ae60";
+            case "A recommander" -> "#f39c12";
+            default              -> "#e74c3c";
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Fiche produit
+    // ─────────────────────────────────────────────────────────────
+
+    private void afficherFiche(Produit p) {
+        produitSelectionne = p;
+        rafraichirFiche(p);
+    }
+
+    private void rafraichirFiche(Produit p) {
+        boolean actif = (p != null);
+        btnFicheEntree.setDisable(!actif);
+        btnFicheSortie.setDisable(!actif);
+        btnFicheAjuster.setDisable(!actif);
+
+        if (!actif) {
+            ficheNom.setText("Aucun produit sélectionné");
+            fichePrix.setText("—");
+            ficheTva.setText("—");
+            ficheQte.setText("—");
+            fichePoids.setText("—");
+            ficheSeuilAlerte.setText("—");
+            ficheStatut.setText("—");
+            ficheStatut.setStyle(
+                    "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2d3450;");
+            return;
+        }
+
+        ficheNom.setText(p.getNom());
+        fichePrix.setText(p.getPrix() != null ? p.getPrix() + " €" : "—");
+        ficheTva.setText(p.getTauxTva() != null ? p.getTauxTva() + " %" : "—");
+        ficheQte.setText(p.getPoid() != null ? "—" : String.valueOf(p.getQuantite()));
+        fichePoids.setText(p.getPoid() != null ? p.getPoid() + " kg" : "—");
+        ficheSeuilAlerte.setText(String.valueOf(p.getSeuilAlerte()));
+
+        String statut = calculerStatut(p);
+        ficheStatut.setText(statut);
+        ficheStatut.setStyle(
+                "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: "
+                        + couleurStatut(statut) + ";");
+    }
+
+    @FXML private void onFicheEntree()  { if (produitSelectionne != null) entreeDepuisLigne(produitSelectionne); }
+    @FXML private void onFicheSortie()  { if (produitSelectionne != null) sortieDepuisLigne(produitSelectionne); }
+    @FXML private void onFicheAjuster() { if (produitSelectionne != null) ajusterDepuisLigne(produitSelectionne); }
+
+    // ─────────────────────────────────────────────────────────────
+    // Actions stock
+    // ─────────────────────────────────────────────────────────────
 
     private void entreeDepuisLigne(Produit p) {
         if (p == null) return;
         try {
             if (p.getPoid() != null) {
-                // VRAC -> entrée poids
                 BigDecimal val = askPositiveBigDecimal("Entrée (vrac)", "Poids à ajouter (ex: 2.5) :");
                 if (val == null) return;
                 produitService.mettreAJourStockAuto(p.getId(), null, val);
             } else {
-                // UNITAIRE -> entrée quantité
                 Integer qte = askPositiveInt("Entrée", "Quantité à ajouter :");
                 if (qte == null) return;
                 produitService.mettreAJourStockAuto(p.getId(), qte, null);
             }
             refreshTable();
-        } catch (Exception e) {
-            showError("Entrée impossible", e.getMessage());
-        }
+            rechargerFicheApresAction(p.getId());
+        } catch (Exception e) { showError("Entrée impossible", e.getMessage()); }
     }
 
     private void sortieDepuisLigne(Produit p) {
         if (p == null) return;
         try {
             if (p.getPoid() != null) {
-                // VRAC -> sortie poids
                 BigDecimal val = askPositiveBigDecimal("Sortie (vrac)", "Poids à retirer (ex: 2.5) :");
                 if (val == null) return;
                 produitService.mettreAJourStockAuto(p.getId(), null, val.negate());
             } else {
-                // UNITAIRE -> sortie quantité
                 Integer qte = askPositiveInt("Sortie", "Quantité à retirer :");
                 if (qte == null) return;
                 produitService.mettreAJourStockAuto(p.getId(), -qte, null);
             }
             refreshTable();
-        } catch (Exception e) {
-            showError("Sortie impossible", e.getMessage());
-        }
+            rechargerFicheApresAction(p.getId());
+        } catch (Exception e) { showError("Sortie impossible", e.getMessage()); }
     }
 
     private void ajusterDepuisLigne(Produit p) {
         if (p == null) return;
         try {
             if (p.getPoid() != null) {
-                // VRAC -> ajuster poids (valeur finale)
-                BigDecimal newWeight = askPositiveBigDecimal("Ajuster (vrac)", "Nouveau poids (ex: 2.5) :");
-                if (newWeight == null) return;
-
-                BigDecimal variationPoids = newWeight.subtract(p.getPoid());
-                produitService.mettreAJourStockAuto(p.getId(), null, variationPoids);
+                BigDecimal nv = askPositiveBigDecimal("Ajuster (vrac)", "Nouveau poids (ex: 2.5) :");
+                if (nv == null) return;
+                produitService.mettreAJourStockAuto(p.getId(), null, nv.subtract(p.getPoid()));
             } else {
-                // UNITAIRE -> ajuster quantité (valeur finale)
-                Integer newValue = askPositiveInt("Ajuster", "Nouvelle quantité :");
-                if (newValue == null) return;
-
-                int variationQuantite = newValue - p.getQuantite();
-                produitService.mettreAJourStockAuto(p.getId(), variationQuantite, null);
+                Integer nv = askPositiveInt("Ajuster", "Nouvelle quantité :");
+                if (nv == null) return;
+                produitService.mettreAJourStockAuto(p.getId(), nv - p.getQuantite(), null);
             }
             refreshTable();
-        } catch (Exception e) {
-            showError("Ajustement impossible", e.getMessage());
+            rechargerFicheApresAction(p.getId());
+        } catch (Exception e) { showError("Ajustement impossible", e.getMessage()); }
+    }
+
+    private void rechargerFicheApresAction(int id) {
+        if (produitSelectionne != null && produitSelectionne.getId() == id) {
+            try { rafraichirFiche(produitService.obtenirProduitParId(id)); }
+            catch (SQLException ignored) {}
         }
     }
 
-    // ----------------------------
-    // Barre du haut : recherche / filtre / refresh
-    // ----------------------------
+    // ─────────────────────────────────────────────────────────────
+    // Barre du haut
+    // ─────────────────────────────────────────────────────────────
 
     @FXML
     private void onRefresh() {
+        searchField.clear();   // ← vide la barre de recherche
         refreshTable();
     }
 
-    @FXML
     private void onSearch() {
-        String term = (searchField.getText() == null) ? "" : searchField.getText().trim();
-        if (term.isEmpty()) {
-            refreshTable();
-            return;
-        }
-        try {
-            data.setAll(produitService.rechercherProduitsParNom(term));
-        } catch (SQLException e) {
-            showError("Erreur SQL", e.getMessage());
-        }
+        String term = searchField.getText() == null ? "" : searchField.getText().trim();
+        if (term.isEmpty()) { refreshTable(); return; }
+        try { data.setAll(produitService.rechercherProduitsParNom(term)); }
+        catch (SQLException e) { showError("Erreur SQL", e.getMessage()); }
+        updateCompteur();
     }
 
-    @FXML
-    private void onLowStock() {
-        int seuil = lowStockSpinner.getValue();
-        try {
-            data.setAll(produitService.obtenirProduitsStockBas(seuil));
-        } catch (SQLException e) {
-            showError("Erreur SQL", e.getMessage());
-        }
+    @FXML private void onNouveauProduit() {
+        showInfo("Nouveau produit", "Fonctionnalité à implémenter.");
     }
 
-    // ----------------------------
-    // Chargement table
-    // ----------------------------
+    // ─────────────────────────────────────────────────────────────
+    // Chargement
+    // ─────────────────────────────────────────────────────────────
 
     private void refreshTable() {
-        try {
-            List<Produit> produits = produitService.obtenirTousLesProduits();
-            data.setAll(produits);
-        } catch (SQLException e) {
-            showError("Erreur SQL", e.getMessage());
-        }
+        try { data.setAll(produitService.obtenirTousLesProduits()); }
+        catch (SQLException e) { showError("Erreur SQL", e.getMessage()); }
+        updateCompteur();
     }
 
-    // ----------------------------
+    private void updateCompteur() {
+        if (labelNbProduits != null)
+            labelNbProduits.setText(data.size() + " produit(s)");
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Dialogs
-    // ----------------------------
+    // ─────────────────────────────────────────────────────────────
 
     private Integer askPositiveInt(String title, String msg) {
         TextInputDialog d = new TextInputDialog();
-        d.setTitle(title);
-        d.setHeaderText(null);
-        d.setContentText(msg);
-
+        d.setTitle(title); d.setHeaderText(null); d.setContentText(msg);
         Optional<String> r = d.showAndWait();
         if (r.isEmpty()) return null;
-
         try {
             int v = Integer.parseInt(r.get().trim());
             if (v < 0) throw new NumberFormatException();
             return v;
         } catch (NumberFormatException ex) {
-            showError("Valeur invalide", "Entre un entier positif.");
-            return null;
+            showError("Valeur invalide", "Entre un entier positif."); return null;
         }
     }
 
     private BigDecimal askPositiveBigDecimal(String title, String msg) {
         TextInputDialog d = new TextInputDialog();
-        d.setTitle(title);
-        d.setHeaderText(null);
-        d.setContentText(msg);
-
+        d.setTitle(title); d.setHeaderText(null); d.setContentText(msg);
         Optional<String> r = d.showAndWait();
         if (r.isEmpty()) return null;
-
         try {
             BigDecimal v = new BigDecimal(r.get().trim().replace(',', '.'));
             if (v.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
             return v;
         } catch (Exception ex) {
-            showError("Valeur invalide", "Entre un nombre positif (ex: 2.5).");
-            return null;
+            showError("Valeur invalide", "Entre un nombre positif (ex: 2.5)."); return null;
         }
     }
 
-    // ----------------------------
-    // Alerts
-    // ----------------------------
-
     private void showError(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.ERROR);
-        a.setTitle(title);
-        a.setHeaderText(null);
-        a.setContentText(msg);
-        a.showAndWait();
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
 
     private void showInfo(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle(title);
-        a.setHeaderText(null);
-        a.setContentText(msg);
-        a.showAndWait();
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
 }

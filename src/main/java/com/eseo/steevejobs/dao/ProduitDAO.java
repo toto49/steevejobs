@@ -37,8 +37,8 @@ public class ProduitDAO {
      * @throws SQLException en cas d'erreur SQL
      */
     public boolean createProduit(Produit produit) throws SQLException {
-        String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif, seuil_alerte) " +
+                "VALUES (?, ?, ?, ?, ?, ?,?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -50,6 +50,7 @@ public class ProduitDAO {
             stmt.setInt(4, produit.getQuantite());
             stmt.setBigDecimal(5, produit.getPoid());
             stmt.setBoolean(6, produit.isActif());
+            stmt.setInt(7, produit.getSeuilAlerte());
 
             int rows = stmt.executeUpdate();
 
@@ -73,7 +74,7 @@ public class ProduitDAO {
      */
     public boolean updateProduit(Produit produit) throws SQLException {
         String sql =
-                "UPDATE PRODUITS SET nom = ?, prix_unitaire = ?, taux_tva = ?, quantite = ?, poids = ?, actif = ? " +
+                "UPDATE PRODUITS SET nom = ?, prix_unitaire = ?, taux_tva = ?, quantite = ?, poids = ?, actif = ?, seuil_alerte = ? " +
                         "WHERE id_produits = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -85,7 +86,8 @@ public class ProduitDAO {
             stmt.setInt(4, produit.getQuantite());
             stmt.setBigDecimal(5, produit.getPoid());
             stmt.setBoolean(6, produit.isActif());
-            stmt.setInt(7, produit.getId());
+            stmt.setInt(7, produit.getSeuilAlerte());
+            stmt.setInt(8, produit.getId());
 
             return stmt.executeUpdate() > 0;
         }
@@ -320,7 +322,8 @@ public class ProduitDAO {
                 rs.getBigDecimal("taux_tva"),
                 rs.getInt("quantite"),
                 rs.getBigDecimal("poids"),
-                rs.getBoolean("actif")
+                rs.getBoolean("actif"),
+                rs.getInt("seuil_alerte")
         );
     }
 }
