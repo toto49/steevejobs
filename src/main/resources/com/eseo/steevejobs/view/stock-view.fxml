@@ -19,15 +19,8 @@
                   style="-fx-background-color: #82A9F1;">
                 <padding><Insets left="20.0" right="20.0"/></padding>
                 <Label style="-fx-font-size: 24px; -fx-font-weight: bold;
-                              -fx-font-family: 'Comic Sans MS';"
+                  -fx-font-family: 'Comic Sans MS';"
                        text="&lt; STOCKS" textFill="WHITE"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button text="+ Nouveau Produit"
-                        onAction="#onNouveauProduit"
-                        style="-fx-background-color: white; -fx-text-fill: #5584D5;
-                               -fx-font-weight: bold; -fx-background-radius: 8;
-                               -fx-border-radius: 8; -fx-border-color: white;
-                               -fx-padding: 8 16; -fx-cursor: hand;"/>
             </HBox>
 
             <!-- CORPS -->

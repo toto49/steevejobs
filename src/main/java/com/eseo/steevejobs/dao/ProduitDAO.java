@@ -191,7 +191,8 @@ public class ProduitDAO {
                         rs.getBigDecimal("taux_tva"),
                         rs.getInt("quantite"),
                         rs.getBigDecimal("poids"),
-                        rs.getBoolean("actif")
+                        rs.getBoolean("actif"),
+                        rs.getInt("seuil_alerte")
                 ));
             }
         }

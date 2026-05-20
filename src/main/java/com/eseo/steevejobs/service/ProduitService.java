@@ -11,9 +11,14 @@ public class ProduitService {
 
     private final ProduitDAO produitDAO;
 
-    // Constructeur par défaut
-    public ProduitService(ProduitDAO ProduitDAO) {
-        this.produitDAO = ProduitDAO;
+    // Constructeur par défaut (utilisé par les controllers)
+    public ProduitService() {
+        this.produitDAO = new ProduitDAO();
+    }
+
+    // Constructeur avec injection (utilisé pour les tests)
+    public ProduitService(ProduitDAO produitDAO) {
+        this.produitDAO = produitDAO;
     }
 
     public void ajouterProduit(Produit produit) throws IllegalArgumentException, SQLException {
@@ -73,6 +78,7 @@ public class ProduitService {
             throw new RuntimeException("Erreur de mise à jour du stock.");
         }
     }
+
     public void mettreAJourStockAuto(
             int idProduit,
             Integer variationQuantite,
@@ -142,7 +148,7 @@ public class ProduitService {
         return produitDAO.searchByNom(term.trim());
     }
 
-    /** Liste des produits dont le stock ← seuil (bouton/filtre "stock bas") */
+    /** Liste des produits dont le stock ≤ seuil */
     public List<Produit> obtenirProduitsStockBas(int seuil) throws SQLException {
         if (seuil < 0) {
             throw new IllegalArgumentException("Le seuil ne peut pas être négatif.");
