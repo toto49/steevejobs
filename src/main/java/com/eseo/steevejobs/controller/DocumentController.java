@@ -165,6 +165,7 @@ public class DocumentController implements Initializable {
         String nomFichier = String.format("%s_%d.pdf",
                 documentSelectionne.getType().getValeur().replace(" ", "_"),
                 documentSelectionne.getId());
+        System.out.println("DEBUG - Le Java cherche ce fichier sur le NAS : " + nomFichier);
         String cheminLocal = System.getProperty("user.home") + File.separator + "Downloads" + File.separator + nomFichier;
         File f = new File(cheminLocal);
 

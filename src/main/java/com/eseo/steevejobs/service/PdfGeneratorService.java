@@ -4,10 +4,15 @@ import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
 import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
+import com.lowagie.text.Font;
 import com.lowagie.text.Image;
+import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 
-import java.awt.Color;
+import java.awt.*;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +26,8 @@ import java.util.Locale;
 
 public class PdfGeneratorService {
 
-    private static final String OUTPUT_DIR = "documents/";
+    // CORRECTION : On pointe directement vers le dossier "Downloads" du PC
+    private static final String OUTPUT_DIR = System.getProperty("user.home") + File.separator + "Downloads" + File.separator;
 
     private static final Color COULEUR_PRINCIPALE = new Color(75, 120, 204);
     private static final Color COULEUR_GRIS       = new Color(107, 114, 128);
