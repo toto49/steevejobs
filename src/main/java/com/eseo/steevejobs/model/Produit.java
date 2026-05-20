@@ -31,6 +31,8 @@ public class Produit {
     /** Indique si le produit est actif dans le catalogue */
     private boolean actif;
 
+    private int seuilAlerte;
+
     /**
      * Constructeur complet permettant d'initialiser toutes les propriétés du produit.
      *
@@ -43,7 +45,7 @@ public class Produit {
      * @param actif         statut actif/inactif
      */
 
-    public Produit(int id, String nom, BigDecimal prixUnitaire, BigDecimal tauxTva, int quantite, BigDecimal poids, boolean actif) {
+    public Produit(int id, String nom, BigDecimal prixUnitaire, BigDecimal tauxTva, int quantite, BigDecimal poids, boolean actif, int seuilAlerte) {
         this.id = id;
         this.nom = nom;
         this.prixUnitaire = prixUnitaire;
@@ -51,6 +53,7 @@ public class Produit {
         this.quantite = quantite;
         this.poids = poids;
         this.actif = actif;
+        this.seuilAlerte = seuilAlerte;
     }
 
     /** --- Getters & Setters classiques --- */
@@ -97,4 +100,8 @@ public class Produit {
     public void setActif(boolean actif) {
         this.actif = actif;
     }
+    public int getSeuilAlerte(){
+        return seuilAlerte;
+    }
+    public void setSeuilAlerte(int seuilAlerte){this.seuilAlerte = seuilAlerte;}
 }
