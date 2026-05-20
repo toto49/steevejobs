@@ -1,8 +1,8 @@
 package com.eseo.steevejobs.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 //Commentaires géré par IA
 
 /**
@@ -21,6 +21,8 @@ import java.util.List;
     private String nom;
     private String prenom;
     private String email;
+    private int taux;
+    private int tauxPatronal;
 
     /** Mot de passe chiffré */
     private String passwordHash;
@@ -41,10 +43,14 @@ import java.util.List;
     private boolean actif;
 
     /** Liste des plannings et fiches de paye associés à cet utilisateur */
-    private List<Planning> plannings;
+    private final List<Planning> plannings;
 
-    private List<FichePaye> fichesPaye;
+    private final List<FichePaye> fichesPaye;
 
+    private int tentativesEchouees;
+    private LocalDateTime bloqueJusqua;
+
+    private LocalDateTime dateDernierEchec;
     /**
      * Constructeur par défaut.
      *
@@ -75,7 +81,7 @@ import java.util.List;
      * @param actif         état du compte utilisateur
      */
 
-    public User( int id, String nom, String prenom, String email, String passwordHash, String adresse, String role, String tel, String poste, boolean actif) {
+    public User( int id, int taux, String nom, String prenom, String email, String passwordHash, String adresse, String role, String tel, String poste, boolean actif, int tauxPatronal) {
         this.id = id;
         this.nom = nom;
         this.prenom = prenom;
@@ -86,7 +92,29 @@ import java.util.List;
         this.tel = tel;
         this.poste = poste;
         this.actif = actif;
+        this.taux = taux;
+        this.tauxPatronal = tauxPatronal;
 
+        this.plannings = new ArrayList<>();
+        this.fichesPaye = new ArrayList<>();
+    }
+    /**
+     * Constructeur simplifié (sans taux) pour les tickets et messages
+     */
+    public User(int id, String nom, String prenom, String email, String passwordHash,
+                String adresse, String role, String tel, String poste, boolean actif) {
+        this.id = id;
+        this.nom = nom;
+        this.prenom = prenom;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.adresse = adresse;
+        this.role = role;
+        this.tel = tel;
+        this.poste = poste;
+        this.actif = actif;
+        this.taux = 0;  // Valeur par défaut
+        this.tauxPatronal = 0; // valeur par defaut
         this.plannings = new ArrayList<>();
         this.fichesPaye = new ArrayList<>();
     }
@@ -172,4 +200,33 @@ import java.util.List;
         this.fichesPaye.remove(fichePaye);
     }
 
+    public int getTentativesEchouees() {
+        return tentativesEchouees;
+    }
+
+    public void setTentativesEchouees(int tentativesEchouees) {
+        this.tentativesEchouees = tentativesEchouees;
+    }
+
+    public LocalDateTime getBloqueJusqua() {
+        return bloqueJusqua;
+    }
+
+    public void setBloqueJusqua(LocalDateTime bloqueJusqua) {
+        this.bloqueJusqua = bloqueJusqua;
+    }
+
+    public LocalDateTime getDateDernierEchec() {
+        return dateDernierEchec;
+    }
+
+    public void setDateDernierEchec(LocalDateTime dateDernierEchec) {
+        this.dateDernierEchec = dateDernierEchec;
+    }
+
+    public int getTaux() {return taux;}
+    public void setTaux(int taux) {this.taux = taux;}
+
+    public int getTauxPatronal() { return tauxPatronal; }
+    public void setTauxPatronal(int tauxPatronal) { this.tauxPatronal = tauxPatronal; }
 }

@@ -4,7 +4,6 @@ import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +23,12 @@ public class FichePayeDAO {
      * @throws SQLException exception SQL
      */
     public void createFichePaye(FichePaye fichePaye) throws SQLException {
-        String sql = "INSERT INTO FICHE_PAYE (mois, url, id_user) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO FICHE_PAYE (date, url, id_user) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setDate(1, java.sql.Date.valueOf(fichePaye.getMois().toLocalDate()));
+            stmt.setDate(1, java.sql.Date.valueOf(fichePaye.getDate().toLocalDate()));
             stmt.setString(2, fichePaye.getUrl());
             stmt.setInt(3, fichePaye.getEmploye().getId());
 
@@ -49,12 +48,12 @@ public class FichePayeDAO {
      * @throws SQLException exception SQL
      */
     public void updateFichePaye(FichePaye fichePaye) throws SQLException {
-        String sql = "UPDATE FICHE_PAYE SET mois = ?, url = ?, id_user = ? WHERE id_paye = ?";
+        String sql = "UPDATE FICHE_PAYE SET date = ?, url = ?, id_user = ? WHERE id_paye = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setDate(1, java.sql.Date.valueOf(fichePaye.getMois().toLocalDate()));
+            stmt.setDate(1, java.sql.Date.valueOf(fichePaye.getDate().toLocalDate()));
             stmt.setString(2, fichePaye.getUrl());
             stmt.setInt(3, fichePaye.getEmploye().getId());
             stmt.setInt(4, fichePaye.getId());
@@ -89,7 +88,7 @@ public class FichePayeDAO {
      * @throws SQLException exception SQL
      */
     public FichePaye getById(int id) throws SQLException {
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "WHERE f.id_paye = ?";
@@ -102,6 +101,7 @@ public class FichePayeDAO {
                 if (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -110,12 +110,12 @@ public class FichePayeDAO {
                             rs.getString("role"),
                             rs.getString("tel"),
                             rs.getString("poste"),
-                            rs.getBoolean("actif")
+                            rs.getBoolean("actif"),
+                            rs.getInt("taux_patronal")
                     );
-                    // Conversion Date → LocalDateTime (on met à minuit)
                     return new FichePaye(
                             rs.getInt("id_paye"),
-                            rs.getDate("mois").toLocalDate().atStartOfDay(),
+                            rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getString("url"),
                             employe
                     );
@@ -133,11 +133,11 @@ public class FichePayeDAO {
      */
     public List<FichePaye> findByEmployeId(int employeId) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
                 "WHERE f.id_user = ? " +
-                "ORDER BY f.mois DESC";
+                "ORDER BY f.date DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -147,6 +147,7 @@ public class FichePayeDAO {
                 while (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -155,11 +156,12 @@ public class FichePayeDAO {
                             rs.getString("role"),
                             rs.getString("tel"),
                             rs.getString("poste"),
-                            rs.getBoolean("actif")
+                            rs.getBoolean("actif"),
+                            rs.getInt("taux_patronal")
                     );
                     fichesPaye.add(new FichePaye(
                             rs.getInt("id_paye"),
-                            rs.getDate("mois").toLocalDate().atStartOfDay(),
+                            rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getString("url"),
                             employe
                     ));
@@ -172,26 +174,27 @@ public class FichePayeDAO {
     /**
      * Récupérer la fiche de paie d'un employé pour un mois spécifique
      * @param employeId l'ID de l'employé
-     * @param mois      le mois recherché (LocalDateTime)
+     * @param date      le mois recherché (LocalDateTime)
      * @return la fiche de paie trouvée, null sinon
      * @throws SQLException exception SQL
      */
-    public FichePaye findByEmployeIdAndMois(int employeId, LocalDateTime mois) throws SQLException {
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+    public FichePaye findByEmployeIdAndDate(int employeId, LocalDateTime date) throws SQLException {
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
-                "WHERE f.id_user = ? AND YEAR(f.mois) = ? AND MONTH(f.mois) = ?";
+                "WHERE f.id_user = ? AND YEAR(f.date) = ? AND MONTH(f.date) = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, employeId);
-            stmt.setInt(2, mois.getYear());
-            stmt.setInt(3, mois.getMonthValue());
+            stmt.setInt(2, date.getYear());
+            stmt.setInt(3, date.getMonthValue());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -200,11 +203,12 @@ public class FichePayeDAO {
                             rs.getString("role"),
                             rs.getString("tel"),
                             rs.getString("poste"),
-                            rs.getBoolean("actif")
+                            rs.getBoolean("actif"),
+                            rs.getInt("taux_patronal")
                     );
                     return new FichePaye(
                             rs.getInt("id_paye"),
-                            rs.getDate("mois").toLocalDate().atStartOfDay(),
+                            rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getString("url"),
                             employe
                     );
@@ -221,10 +225,10 @@ public class FichePayeDAO {
      */
     public List<FichePaye> findAll() throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
-                "ORDER BY f.mois DESC";
+                "ORDER BY f.date DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -233,6 +237,7 @@ public class FichePayeDAO {
             while (rs.next()) {
                 User employe = new User(
                         rs.getInt("id_user"),
+                        rs.getInt("taux"),
                         rs.getString("nom"),
                         rs.getString("prenom"),
                         rs.getString("email"),
@@ -241,11 +246,12 @@ public class FichePayeDAO {
                         rs.getString("role"),
                         rs.getString("tel"),
                         rs.getString("poste"),
-                        rs.getBoolean("actif")
+                        rs.getBoolean("actif"),
+                        rs.getInt("taux_patronal")
                 );
                 fichesPaye.add(new FichePaye(
                         rs.getInt("id_paye"),
-                        rs.getDate("mois").toLocalDate().atStartOfDay(),
+                        rs.getDate("date").toLocalDate().atStartOfDay(),
                         rs.getString("url"),
                         employe
                 ));
@@ -262,11 +268,11 @@ public class FichePayeDAO {
      */
     public List<FichePaye> findByAnnee(int annee) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
-        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
+        String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
-                "WHERE YEAR(f.mois) = ? " +
-                "ORDER BY f.mois DESC";
+                "WHERE YEAR(f.date) = ? " +
+                "ORDER BY f.date DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -276,6 +282,7 @@ public class FichePayeDAO {
                 while (rs.next()) {
                     User employe = new User(
                             rs.getInt("id_user"),
+                            rs.getInt("taux"),
                             rs.getString("nom"),
                             rs.getString("prenom"),
                             rs.getString("email"),
@@ -284,11 +291,12 @@ public class FichePayeDAO {
                             rs.getString("role"),
                             rs.getString("tel"),
                             rs.getString("poste"),
-                            rs.getBoolean("actif")
+                            rs.getBoolean("actif"),
+                            rs.getInt("taux_patronal")
                     );
                     fichesPaye.add(new FichePaye(
                             rs.getInt("id_paye"),
-                            rs.getDate("mois").toLocalDate().atStartOfDay(),
+                            rs.getDate("date").toLocalDate().atStartOfDay(),
                             rs.getString("url"),
                             employe
                     ));

@@ -1,6 +1,7 @@
 package com.eseo.steevejobs;
 
-import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
+import com.eseo.steevejobs.service.WebSocketService;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -60,7 +61,7 @@ public class HelloApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         mainStage = stage;
-        Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
+        Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
         stage.initStyle(StageStyle.TRANSPARENT);
         headerGlobal = creerHeaderPersonnalise(stage);
 
@@ -177,7 +178,11 @@ public class HelloApplication extends Application {
 
         String svgFermer = "M 1,0 L 5,4 L 9,0 L 10,1 L 6,5 L 10,9 L 9,10 L 5,6 L 1,10 L 0,9 L 4,5 L 0,1 Z";
         Button btnFermer = creerBoutonHeader(svgFermer, "#e81123", "#ffffff", true);
-        btnFermer.setOnAction(e -> Platform.exit());
+        btnFermer.setOnAction(e -> {
+            WebSocketService.getInstance().deconnecter(() -> {
+                Platform.exit();
+            });
+        });
 
 
         header.setOnMousePressed(event -> {

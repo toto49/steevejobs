@@ -4,9 +4,10 @@ public enum AppModule {
     ADMINPANEL("APP_ADMINPANEL_VIEW", "GESTION\nPERMISSION", "Gestion, permissions", "adminpermission", "happy.png", "#D67C72"),
     ADMINUSER("APP_ADMINUSER_VIEW", "GESTION\nUTILISATEURS", "Gestion, utilisateur", "adminuser", "happy.png", "#D67C72"),
     STOCKS("APP_STOCKS_VIEW", "GESTION\nDES STOCKS", "Inventaire, alertes", "stock", "steevestock.png", "#76B89A"),
-    DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "test", "happy.png", "#F1CE6C"),
-    TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "happy.png", "#92B4F2", "services"), // <-- Chemin mis à jour
-    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "test", "happy.png", "#FF99cc");
+    DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "document", "happy.png", "#F1CE6C"),
+    TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "happy.png", "#92B4F2", "services"),
+    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "fiche-paye", "happy.png", "#FF99cc");
+
 
     private final String codeAction;
     private final String title;

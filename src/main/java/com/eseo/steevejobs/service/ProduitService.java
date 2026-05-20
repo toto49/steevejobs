@@ -12,8 +12,8 @@ public class ProduitService {
     private final ProduitDAO produitDAO;
 
     // Constructeur par défaut
-    public ProduitService() {
-        this.produitDAO = new ProduitDAO();
+    public ProduitService(ProduitDAO ProduitDAO) {
+        this.produitDAO = ProduitDAO;
     }
 
     public void ajouterProduit(Produit produit) throws IllegalArgumentException, SQLException {
