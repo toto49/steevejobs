@@ -49,7 +49,6 @@ public class DocumentController implements Initializable {
     // Labels du panneau détail
     @FXML private Label detailType, detailClient, detailDate, detailHT, detailTTC, detailStatut;
     @FXML private Label detailEmail, detailTel, detailAdresse;
-    @FXML private VBox lignesContainer;
     @FXML private Button btnExporterPdf, btnOuvrirPdf, btnModifier, btnChanger, btnSupprimer;
 
     private final DocumentService documentService = new DocumentService(new DocumentDAO());
@@ -330,7 +329,7 @@ public class DocumentController implements Initializable {
     }
 
     private void afficherDetail(Document doc) {
-        // Supprime les underscores dans l'affichage du type
+        // Type
         String type = doc.getType().name();
         if ("BON_COMMANDE".equals(type)) {
             detailType.setText("BON DE COMMANDE");
@@ -338,6 +337,7 @@ public class DocumentController implements Initializable {
             detailType.setText(type);
         }
 
+        // Informations client
         if (doc.getTiers() != null) {
             Tiers client = doc.getTiers();
             detailClient.setText((client.getNom() != null ? client.getNom() : "") + " " + (client.getPrenom() != null ? client.getPrenom() : ""));
@@ -351,38 +351,13 @@ public class DocumentController implements Initializable {
             detailAdresse.setText("Non renseigné");
         }
 
+        // Informations document
         detailDate.setText(doc.getDate().format(FMT_DATE));
         detailHT.setText(String.format("%.2f €", doc.getPrixHt()));
         detailTTC.setText(String.format("%.2f €", doc.getPrixTtc()));
-        // Supprime les underscores dans l'affichage du statut
         detailStatut.setText(doc.getStatut().name().replace("_", " "));
         detailStatut.setStyle("-fx-text-fill: black; -fx-font-weight: bold;");
 
-        lignesContainer.getChildren().clear();
-
-        try {
-            for (Composer ligne : documentService.getLignes(doc.getId())) {
-                Produit produit = ligne.getProduit();
-                BigDecimal quantite = ligne.getQuantite();
-                String unite = (produit.getPoid() != null && produit.getPoid().compareTo(BigDecimal.ZERO) > 0) ? "kg" : "unité(s)";
-
-                Label lbl = new Label(
-                        "• " + produit.getNom() + " : " + quantite.stripTrailingZeros().toPlainString() + " " + unite +
-                                " → " + String.format("%.2f €", ligne.getPrixVente().multiply(quantite))
-                );
-                lbl.setStyle("-fx-text-fill: #4b5563; -fx-font-size: 12px;");
-                lignesContainer.getChildren().add(lbl);
-            }
-            if (lignesContainer.getChildren().isEmpty()) {
-                Label lbl = new Label("Aucune ligne produit");
-                lbl.setStyle("-fx-text-fill: #9ca3af;");
-                lignesContainer.getChildren().add(lbl);
-            }
-        } catch (SQLException e) {
-            Label lbl = new Label("Erreur chargement lignes");
-            lbl.setStyle("-fx-text-fill: #E81123;");
-            lignesContainer.getChildren().add(lbl);
-        }
     }
 
     private void viderDetail() {
@@ -396,7 +371,6 @@ public class DocumentController implements Initializable {
         detailHT.setText("");
         detailTTC.setText("");
         detailStatut.setText("");
-        lignesContainer.getChildren().clear();
         btnExporterPdf.setDisable(true);
         btnOuvrirPdf.setDisable(true);
         btnModifier.setDisable(true);
