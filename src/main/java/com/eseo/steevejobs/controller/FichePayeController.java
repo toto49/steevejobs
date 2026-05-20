@@ -150,7 +150,7 @@ public class FichePayeController implements Initializable {
     @FXML
     private void ouvrirFormulaireGeneration() {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Générer une fiche de paie");
+        dialog.setTitle("Générer");
         dialog.setHeaderText("Générer une fiche de paie");
         dialog.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
 
