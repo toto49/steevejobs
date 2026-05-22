@@ -30,16 +30,16 @@ public class FichePayeService {
                                       double salaireBase, double tauxCotisations)
             throws SQLException {
 
-        // Vérifier doublon
+        // 1. Valider les montants d'abord (pour intercepter les erreurs de test)
+        validerMontants(salaireBase, tauxCotisations);
+
+        // 2. Vérifier doublon en BDD
         FichePaye existante = fichePayeDAO.findByEmployeIdAndMois(employe.getId(), mois);
         if (existante != null) {
             throw new IllegalStateException(
                     "Une fiche existe déjà pour " + employe.getPrenom() +
                             " " + employe.getNom() + " sur ce mois.");
         }
-
-        // Valider montants
-        validerMontants(salaireBase, tauxCotisations);
 
         // Détecter les congés depuis le planning A REVOIR EN FONCTION DU SYSTEME DE PLANNING
         long joursConge = compterJoursConge(employe.getId(), mois);
