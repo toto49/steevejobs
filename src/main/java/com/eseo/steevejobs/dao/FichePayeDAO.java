@@ -11,17 +11,11 @@ import java.util.List;
 
 /**
  * Data Access Object dédié aux opérations sur la table des fiches de paie.
- * <p>
- * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- * et sauvegarder les objets {@link com.eseo.steevejobs.model.FichePaye} en base de données.
- * </p>
  */
 public class FichePayeDAO {
 
     /**
      * Créer une nouvelle fiche de paie
-     * @param fichePaye la fiche de paie à créer
-     * @throws SQLException exception SQL
      */
     public void createFichePaye(FichePaye fichePaye) throws SQLException {
         String sql = "INSERT INTO FICHE_PAYE (mois, url, id_user) VALUES (?, ?, ?)";
@@ -45,8 +39,6 @@ public class FichePayeDAO {
 
     /**
      * Mettre à jour une fiche de paie existante
-     * @param fichePaye la fiche de paie à mettre à jour
-     * @throws SQLException exception SQL
      */
     public void updateFichePaye(FichePaye fichePaye) throws SQLException {
         String sql = "UPDATE FICHE_PAYE SET mois = ?, url = ?, id_user = ? WHERE id_paye = ?";
@@ -65,9 +57,6 @@ public class FichePayeDAO {
 
     /**
      * Supprimer une fiche de paie par son ID
-     * @param id l'ID de la fiche de paie
-     * @return true si supprimé, false sinon
-     * @throws SQLException exception SQL
      */
     public boolean deleteFichePaye(int id) throws SQLException {
         String sql = "DELETE FROM FICHE_PAYE WHERE id_paye = ?";
@@ -84,9 +73,6 @@ public class FichePayeDAO {
 
     /**
      * Récupérer une fiche de paie par son ID
-     * @param id l'ID de la fiche de paie
-     * @return la fiche de paie trouvée, null sinon
-     * @throws SQLException exception SQL
      */
     public FichePaye getById(int id) throws SQLException {
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
@@ -112,7 +98,6 @@ public class FichePayeDAO {
                             rs.getString("poste"),
                             rs.getBoolean("actif")
                     );
-                    // Conversion Date → LocalDateTime (on met à minuit)
                     return new FichePaye(
                             rs.getInt("id_paye"),
                             rs.getDate("mois").toLocalDate().atStartOfDay(),
@@ -127,9 +112,6 @@ public class FichePayeDAO {
 
     /**
      * Récupérer toutes les fiches de paie d'un employé
-     * @param employeId l'ID de l'employé
-     * @return la liste des fiches de paie de l'employé
-     * @throws SQLException exception SQL
      */
     public List<FichePaye> findByEmployeId(int employeId) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
@@ -171,16 +153,12 @@ public class FichePayeDAO {
 
     /**
      * Récupérer la fiche de paie d'un employé pour un mois spécifique
-     * @param employeId l'ID de l'employé
-     * @param mois      le mois recherché (LocalDateTime)
-     * @return la fiche de paie trouvée, null sinon
-     * @throws SQLException exception SQL
      */
     public FichePaye findByEmployeIdAndMois(int employeId, LocalDateTime mois) throws SQLException {
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
-                "WHERE f.id_user = ? AND YEAR(f.mois) = ? AND MONTH(f.mois) = ?";
+                "WHERE f.id_user = ? AND YEAR(mois) = ? AND MONTH(mois) = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -216,8 +194,6 @@ public class FichePayeDAO {
 
     /**
      * Récupérer toutes les fiches de paie
-     * @return la liste de toutes les fiches de paie
-     * @throws SQLException exception SQL
      */
     public List<FichePaye> findAll() throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
@@ -227,8 +203,8 @@ public class FichePayeDAO {
                 "ORDER BY f.mois DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 User employe = new User(
@@ -256,17 +232,14 @@ public class FichePayeDAO {
 
     /**
      * Récupérer les fiches de paie d'une année spécifique
-     * @param annee l'année recherchée
-     * @return la liste des fiches de paie de l'année
-     * @throws SQLException exception SQL
      */
     public List<FichePaye> findByAnnee(int annee) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
                 "FROM FICHE_PAYE f " +
                 "INNER JOIN USER u ON f.id_user = u.id_user " +
-                "WHERE YEAR(f.mois) = ? " +
-                "ORDER BY f.mois DESC";
+                "WHERE YEAR(mois) = ? " +
+                "ORDER BY mois DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -300,10 +273,6 @@ public class FichePayeDAO {
 
     /**
      * Mettre à jour l'URL d'une fiche de paie
-     * @param id  l'ID de la fiche de paie
-     * @param url la nouvelle URL
-     * @return true si mis à jour, false sinon
-     * @throws SQLException exception SQL
      */
     public boolean updateUrl(int id, String url) throws SQLException {
         String sql = "UPDATE FICHE_PAYE SET url = ? WHERE id_paye = ?";
@@ -321,15 +290,13 @@ public class FichePayeDAO {
 
     /**
      * Compter le nombre total de fiches de paie
-     * @return le nombre total de fiches de paie
-     * @throws SQLException exception SQL
      */
     public int countFichesPaye() throws SQLException {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);
@@ -340,9 +307,6 @@ public class FichePayeDAO {
 
     /**
      * Compter le nombre de fiches de paie par employé
-     * @param employeId l'ID de l'employé
-     * @return le nombre de fiches de paie de l'employé
-     * @throws SQLException exception SQL
      */
     public int countByEmployeId(int employeId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE WHERE id_user = ?";

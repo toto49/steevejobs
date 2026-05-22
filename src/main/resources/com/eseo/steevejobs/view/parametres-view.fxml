@@ -3,24 +3,21 @@
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="768.0" prefWidth="1024.0" styleClass="root-pane"
-            stylesheets="@../../../../style/style.css" xmlns="http://javafx.com/javafx/17.0.12"
-            fx:controller="com.eseo.steevejobs.controller.ParametresController">
+<VBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="768.0" prefWidth="1024.0" styleClass="root-pane"
+      stylesheets="@../../../../style/style.css" xmlns="http://javafx.com/javafx/17.0.12"
+      fx:controller="com.eseo.steevejobs.controller.ParametresController" style="-fx-background-color: #DDE8FF;">
 
-    <center>
+
         <VBox style="-fx-background-color: #DDE8FF;" BorderPane.alignment="CENTER">
             <children>
-                <HBox alignment="CENTER_LEFT" prefHeight="80.0" style="-fx-background-color: #82A9F1;">
+                <HBox alignment="CENTER_LEFT" prefHeight="80.0"
+                      style="-fx-background-color: #7A9FE0; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
                     <padding>
-                        <Insets left="20.0" right="20.0"/>
+                        <Insets left="40.0" right="40.0"/>
                     </padding>
                     <children>
-                        <Button mnemonicParsing="false" onAction="#handleRetour"
-                                style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
-                                text="&lt; RETOUR"/>
-                        <Label alignment="CENTER" maxWidth="1.7976931348623157E308"
-                               style="-fx-font-size: 24px; -fx-font-weight: bold;" text="PARAMÈTRES DE L'APPLICATION"
-                               textFill="WHITE" HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="titlepageticket" text="PARAMÈTRES"
+                               style="-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold;"/>
                     </children>
                 </HBox>
                 <ScrollPane fitToWidth="true" fitToHeight="true"
@@ -232,5 +229,5 @@
                 </ScrollPane>
             </children>
         </VBox>
-    </center>
-</BorderPane>
+
+</VBox>

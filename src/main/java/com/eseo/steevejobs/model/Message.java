@@ -43,6 +43,8 @@ public class Message {
      * @param ticket       ticket associé
      */
 
+    public Message() {
+    }
     public Message(int id, String contenu, String pieceJointe, LocalDateTime dateEnvoi, User auteur, Ticket ticket) {
         this.id = id;
         this.contenu = contenu;

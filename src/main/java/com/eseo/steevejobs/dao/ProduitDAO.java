@@ -166,6 +166,28 @@ public class ProduitDAO {
         String sql = "SELECT * FROM PRODUITS ORDER BY nom";
 
         try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                produits.add(new Produit(
+                        rs.getInt("id_produits"),
+                        rs.getString("nom"),
+                        rs.getBigDecimal("prix_unitaire"),
+                        rs.getBigDecimal("taux_tva"),
+                        rs.getInt("quantite"),
+                        rs.getBigDecimal("poids"),
+                        rs.getBoolean("actif")
+                ));
+            }
+        }
+        return produits;
+    }
+    public List<Produit> findAllActive() throws SQLException {
+        List<Produit> produits = new ArrayList<>();
+        String sql = "SELECT * FROM PRODUITS WHERE actif = 1 ORDER BY nom";
+
+        try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
@@ -183,7 +205,6 @@ public class ProduitDAO {
         }
         return produits;
     }
-
     /**
      * Récupérer les produits avec un stock inférieur au seuil
      * @param threshold le seuil de stock
@@ -276,8 +297,8 @@ public class ProduitDAO {
         String sql = "SELECT COUNT(*) FROM PRODUITS";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
                 return rs.getInt(1);

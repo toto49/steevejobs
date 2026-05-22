@@ -6,5 +6,5 @@ public enum StatutTicket {
 
     EN_ATTENTE,
 
-    FERMÉ
+    FERME
 }
