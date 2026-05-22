@@ -25,6 +25,10 @@ public class Planning {
         this.user = user;
     }
 
+    public Planning() {
+
+    }
+
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
 
