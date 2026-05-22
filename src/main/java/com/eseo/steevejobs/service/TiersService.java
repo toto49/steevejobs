@@ -1,19 +1,22 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.dao.ProduitDAO;
 import com.eseo.steevejobs.dao.TiersDAO;
-import com.eseo.steevejobs.model.Produit;
 import com.eseo.steevejobs.model.Tiers;
+import com.eseo.steevejobs.model.Enum.TiersType;
 
 import java.sql.SQLException;
 import java.util.List;
 
 public class TiersService {
 
-    private TiersDAO tiersDAO;
+    private final TiersDAO tiersDAO;
 
-    public TiersService(TiersDAO TiersDAO) {
-        this.tiersDAO = TiersDAO;
+    public TiersService() {
+        this.tiersDAO = new TiersDAO();
+    }
+
+    public TiersService(TiersDAO tiersDAO) {
+        this.tiersDAO = tiersDAO;
     }
 
     // --------------------------------------------------------
@@ -21,50 +24,88 @@ public class TiersService {
     // --------------------------------------------------------
 
     public void ajouterTiers(Tiers tiers) throws IllegalArgumentException, SQLException {
-        // 1. On vérifie les règles métier
         validerTiers(tiers);
 
-        // 2. On envoie au DAO
+        if (tiersDAO.emailExists(tiers.getEmail())) {
+            throw new IllegalArgumentException("Un tiers avec cet email existe déjà.");
+        }
+
+        if (tiers.getSiret() != null && !tiers.getSiret().trim().isEmpty()
+                && tiersDAO.siretExists(tiers.getSiret())) {
+            throw new IllegalArgumentException("Un tiers avec ce numéro SIRET existe déjà.");
+        }
+
         boolean success = tiersDAO.createTiers(tiers);
         if (!success) {
             throw new RuntimeException("Erreur BDD : Impossible d'ajouter le tiers.");
         }
-
     }
 
     public void modifierTiers(Tiers tiers) throws IllegalArgumentException, SQLException {
-        // 1. L'ID doit exister pour une modification
         if (tiers.getId() <= 0) {
-            throw new IllegalArgumentException("L'ID du tiers est invalide.");
+            throw new IllegalArgumentException("L'ID du tiers est invalide pour une modification.");
         }
 
-        // 2. On vérifie les règles métier
         validerTiers(tiers);
 
-        // 3. On envoie au DAO
+        // Vérifier l'unicité de l'email sans compter le tiers lui-même
+        Tiers tiersAvecEmail = tiersDAO.getByEmail(tiers.getEmail());
+        if (tiersAvecEmail != null && tiersAvecEmail.getId() != tiers.getId()) {
+            throw new IllegalArgumentException("Cet email est déjà utilisé par un autre tiers.");
+        }
+
         boolean success = tiersDAO.updateTiers(tiers);
         if (!success) {
-            throw new RuntimeException("Erreur BDD : Impossible de mettre à jour le tiers.");
+            throw new RuntimeException("Erreur BDD : Impossible de mettre à jour ce tiers.");
         }
     }
 
-    public void supprimerTiers(int idTiers) throws SQLException {
+    public void supprimerTiers(int idTiers) throws IllegalArgumentException, SQLException {
         if (idTiers <= 0) {
             throw new IllegalArgumentException("L'ID du tiers est invalide.");
         }
 
         boolean success = tiersDAO.deleteTiers(idTiers);
         if (!success) {
-            throw new RuntimeException("Erreur BDD : Impossible de supprimer ce tiers. Il est peut-être lié à d'autres données.");
+            throw new RuntimeException(
+                    "Erreur BDD : Impossible de supprimer ce tiers. Il est peut-être lié à des documents.");
         }
     }
 
+    public Tiers getTiersById(int id) throws IllegalArgumentException, SQLException {
+        if (id <= 0) {
+            throw new IllegalArgumentException("L'ID du tiers est invalide.");
+        }
+        return tiersDAO.getById(id);
+    }
+
     public List<Tiers> obtenirTousLesTiers() throws SQLException {
-         return tiersDAO.findAll();
+        return tiersDAO.findAll();
+    }
+
+    public List<Tiers> obtenirTiersParType(TiersType type) throws IllegalArgumentException, SQLException {
+        if (type == null) {
+            throw new IllegalArgumentException("Le type de tiers est obligatoire.");
+        }
+        return tiersDAO.findByType(type);
+    }
+
+    public boolean activerTiers(int id) throws IllegalArgumentException, SQLException {
+        if (id <= 0) {
+            throw new IllegalArgumentException("L'ID du tiers est invalide.");
+        }
+        return tiersDAO.activateTiers(id);
+    }
+
+    public boolean desactiverTiers(int id) throws IllegalArgumentException, SQLException {
+        if (id <= 0) {
+            throw new IllegalArgumentException("L'ID du tiers est invalide.");
+        }
+        return tiersDAO.deactivateTiers(id);
     }
 
     // --------------------------------------------------------
-    // MÉTHODES PRIVÉES
+    // MÉTHODES PRIVÉES (Logique métier interne)
     // --------------------------------------------------------
 
     private void validerTiers(Tiers tiers) throws IllegalArgumentException {
@@ -72,22 +113,37 @@ public class TiersService {
             throw new IllegalArgumentException("Les données du tiers sont vides.");
         }
 
-        // Règle 1 : Le nom est obligatoire
         if (tiers.getNom() == null || tiers.getNom().trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom du tiers est obligatoire.");
         }
 
-        // Règle 2 : Format de l'email (vérification basique)
-        if (tiers.getEmail() != null && !tiers.getEmail().trim().isEmpty()) {
-            if (!tiers.getEmail().contains("@") || !tiers.getEmail().contains(".")) {
-                throw new IllegalArgumentException("Le format de l'adresse email est invalide.");
+        if (tiers.getNom().trim().length() > 255) {
+            throw new IllegalArgumentException("Le nom du tiers ne peut pas dépasser 255 caractères.");
+        }
+
+        if (tiers.getType() == null) {
+            throw new IllegalArgumentException("Le type du tiers (CLIENT ou FOURNISSEUR) est obligatoire.");
+        }
+
+        if (tiers.getEmail() == null || tiers.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("L'email du tiers est obligatoire.");
+        }
+
+        if (!tiers.getEmail().matches("^[\\w.+-]+@[\\w-]+\\.[\\w.]+$")) {
+            throw new IllegalArgumentException("Le format de l'adresse email est invalide.");
+        }
+
+        if (tiers.getSiret() != null && !tiers.getSiret().trim().isEmpty()) {
+            if (!tiers.getSiret().matches("\\d{14}")) {
+                throw new IllegalArgumentException("Le SIRET doit contenir exactement 14 chiffres.");
             }
         }
 
-        // Règle 3 : Format du SIRET (14 chiffres en France)
-        if (tiers.getSiret() != null && !tiers.getSiret().trim().isEmpty()) {
-            if (tiers.getSiret().length() != 14 || !tiers.getSiret().matches("\\d+")) {
-                throw new IllegalArgumentException("Le SIRET doit contenir exactement 14 chiffres.");
+        if (tiers.getNum_tva() != null && !tiers.getNum_tva().trim().isEmpty()) {
+            // Format TVA intracommunautaire : 2 lettres + 2 chiffres + 9 chiffres (France : FR + clé + SIREN)
+            if (!tiers.getNum_tva().matches("^[A-Z]{2}[0-9A-Z]{2}[0-9]{9}$")) {
+                throw new IllegalArgumentException(
+                        "Le numéro de TVA intracommunautaire est invalide (ex : FR12345678901).");
             }
         }
     }

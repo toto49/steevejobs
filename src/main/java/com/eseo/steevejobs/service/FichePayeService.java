@@ -16,11 +16,28 @@ public class FichePayeService {
     private final PlanningDAO        planningDAO;
     private final PdfGeneratorService pdfService;
 
+    // Constantes métier
+    private static final double SALAIRE_MINIMUM_LEGAL = 1766.92; // SMIC mensuel brut 2025
+    private static final double SALAIRE_MAXIMUM       = 100_000.0;
+    private static final double TAUX_COTISATIONS_MIN  = 0.0;
+    private static final double TAUX_COTISATIONS_MAX  = 0.99;
+
     public FichePayeService() {
         this.fichePayeDAO = new FichePayeDAO();
         this.planningDAO  = new PlanningDAO();
         this.pdfService   = new PdfGeneratorService();
     }
+
+    public FichePayeService(FichePayeDAO fichePayeDAO, PlanningDAO planningDAO,
+                            PdfGeneratorService pdfService) {
+        this.fichePayeDAO = fichePayeDAO;
+        this.planningDAO  = planningDAO;
+        this.pdfService   = pdfService;
+    }
+
+    // --------------------------------------------------------
+    // MÉTHODES PUBLIQUES
+    // --------------------------------------------------------
 
     /**
      * Génère une fiche de paie en détectant automatiquement
@@ -28,65 +45,122 @@ public class FichePayeService {
      */
     public FichePaye genererFichePaye(User employe, LocalDateTime mois,
                                       double salaireBase, double tauxCotisations)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
 
-        // 1. Valider les montants d'abord (pour intercepter les erreurs de test)
-        validerMontants(salaireBase, tauxCotisations);
+        validerParametresGeneration(employe, mois, salaireBase, tauxCotisations);
 
-        // 2. Vérifier doublon en BDD
+        // Vérifier qu'aucune fiche n'existe déjà pour ce mois
         FichePaye existante = fichePayeDAO.findByEmployeIdAndMois(employe.getId(), mois);
         if (existante != null) {
             throw new IllegalStateException(
-                    "Une fiche existe déjà pour " + employe.getPrenom() +
-                            " " + employe.getNom() + " sur ce mois.");
+                    "Une fiche de paie existe déjà pour "
+                            + employe.getPrenom() + " " + employe.getNom()
+                            + " sur ce mois.");
         }
 
-        // Détecter les congés depuis le planning A REVOIR EN FONCTION DU SYSTEME DE PLANNING
         long joursConge = compterJoursConge(employe.getId(), mois);
 
-        // Créer en BDD
         FichePaye fiche = new FichePaye(0, mois, "", employe);
         fichePayeDAO.createFichePaye(fiche);
 
-        //Générer le PDF (avec les congés)
         String url = pdfService.genererFichePaye(fiche, salaireBase, tauxCotisations, joursConge);
-
-        // Mettre à jour l'URL
         fichePayeDAO.updateUrl(fiche.getId(), url);
         fiche.setUrl(url);
 
         return fiche;
     }
 
-    public List<FichePaye> findAll()                        throws SQLException { return fichePayeDAO.findAll(); }
-    public List<FichePaye> findByEmployeId(int id)          throws SQLException { return fichePayeDAO.findByEmployeId(id); }
-    public List<FichePaye> findByAnnee(int annee)           throws SQLException { return fichePayeDAO.findByAnnee(annee); }
-    public boolean         supprimer(int id)                throws SQLException { return fichePayeDAO.deleteFichePaye(id); }
+    public boolean supprimerFiche(int id) throws IllegalArgumentException, SQLException {
+        if (id <= 0) {
+            throw new IllegalArgumentException("L'ID de la fiche de paie est invalide.");
+        }
+        return fichePayeDAO.deleteFichePaye(id);
+    }
 
-    // -------------------------------------------------------
+    public List<FichePaye> obtenirToutesLesFiches() throws SQLException {
+        return fichePayeDAO.findAll();
+    }
 
-    /**
-     * Compte les jours de type "Conge" dans le planning de l'employé
-     * pour le mois donné. Chaque entrée PLANNING de type "Conge"
-     * est comptée en jours entiers (jour_fin - jour_debut).
-     */
+    public List<FichePaye> obtenirFichesParEmploye(int employeId)
+            throws IllegalArgumentException, SQLException {
+        if (employeId <= 0) {
+            throw new IllegalArgumentException("L'ID de l'employé est invalide.");
+        }
+        return fichePayeDAO.findByEmployeId(employeId);
+    }
+
+    public List<FichePaye> obtenirFichesParAnnee(int annee)
+            throws IllegalArgumentException, SQLException {
+        int anneeActuelle = LocalDateTime.now().getYear();
+        if (annee < 2000 || annee > anneeActuelle) {
+            throw new IllegalArgumentException(
+                    "L'année doit être comprise entre 2000 et " + anneeActuelle + ".");
+        }
+        return fichePayeDAO.findByAnnee(annee);
+    }
+
+    // Méthodes conservées pour rétrocompatibilité
+    public List<FichePaye> findAll()               throws SQLException { return fichePayeDAO.findAll(); }
+    public List<FichePaye> findByEmployeId(int id) throws SQLException { return fichePayeDAO.findByEmployeId(id); }
+    public List<FichePaye> findByAnnee(int annee)  throws SQLException { return fichePayeDAO.findByAnnee(annee); }
+    public boolean         supprimer(int id)        throws SQLException { return fichePayeDAO.deleteFichePaye(id); }
+
+    // --------------------------------------------------------
+    // MÉTHODES PRIVÉES (Logique métier interne)
+    // --------------------------------------------------------
+
+    private void validerParametresGeneration(User employe, LocalDateTime mois,
+                                             double salaireBase,
+                                             double tauxCotisations)
+            throws IllegalArgumentException {
+
+        if (employe == null) {
+            throw new IllegalArgumentException("L'employé est obligatoire.");
+        }
+        if (employe.getId() <= 0) {
+            throw new IllegalArgumentException("L'ID de l'employé est invalide.");
+        }
+
+        if (mois == null) {
+            throw new IllegalArgumentException("Le mois de la fiche est obligatoire.");
+        }
+        if (mois.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException(
+                    "Impossible de générer une fiche de paie pour un mois futur.");
+        }
+
+        if (salaireBase <= 0) {
+            throw new IllegalArgumentException("Le salaire brut doit être supérieur à 0.");
+        }
+        if (salaireBase < SALAIRE_MINIMUM_LEGAL) {
+            throw new IllegalArgumentException(
+                    String.format("Le salaire brut ne peut pas être inférieur au SMIC (%.2f €).",
+                            SALAIRE_MINIMUM_LEGAL));
+        }
+        if (salaireBase > SALAIRE_MAXIMUM) {
+            throw new IllegalArgumentException(
+                    String.format("Le salaire brut ne peut pas dépasser %.0f €.", SALAIRE_MAXIMUM));
+        }
+
+        if (tauxCotisations < TAUX_COTISATIONS_MIN || tauxCotisations >= TAUX_COTISATIONS_MAX) {
+            throw new IllegalArgumentException(
+                    "Le taux de cotisations doit être compris entre 0 et 0.99 (ex : 0.22 = 22%).");
+        }
+    }
+
     private long compterJoursConge(int employeId, LocalDateTime mois) throws SQLException {
         List<Planning> plannings = planningDAO.findByUserId(employeId);
-
         int annee      = mois.getYear();
         int moisValeur = mois.getMonthValue();
 
         return plannings.stream()
                 .filter(p -> "Conge".equalsIgnoreCase(p.getType()))
                 .filter(p -> {
-                    // Garder uniquement les entrées qui chevauchent le mois concerné
                     LocalDateTime debutMois = LocalDateTime.of(annee, moisValeur, 1, 0, 0);
                     LocalDateTime finMois   = debutMois.plusMonths(1);
-                    return p.getJourDebut().isBefore(finMois) &&
-                            p.getJourFin().isAfter(debutMois);
+                    return p.getJourDebut().isBefore(finMois) && p.getJourFin().isAfter(debutMois);
                 })
                 .mapToLong(p -> {
-                    // Borner au mois concerné pour ne pas déborder sur un autre mois
                     LocalDateTime debutMois = LocalDateTime.of(annee, moisValeur, 1, 0, 0);
                     LocalDateTime finMois   = debutMois.plusMonths(1);
                     LocalDateTime debut = p.getJourDebut().isBefore(debutMois) ? debutMois : p.getJourDebut();
@@ -94,12 +168,5 @@ public class FichePayeService {
                     return java.time.Duration.between(debut, fin).toDays();
                 })
                 .sum();
-    }
-
-    private void validerMontants(double salaireBase, double tauxCotisations) {
-        if (salaireBase <= 0)
-            throw new IllegalArgumentException("Le salaire brut doit être supérieur à 0.");
-        if (tauxCotisations < 0 || tauxCotisations >= 1)
-            throw new IllegalArgumentException("Le taux de cotisations doit être entre 0 et 1.");
     }
 }

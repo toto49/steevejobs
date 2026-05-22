@@ -253,7 +253,7 @@ class PlanningServiceTest {
 
         // Act
         assertDoesNotThrow(
-                () -> planningService.deletePlanning(idASupprimer),
+                () -> planningService.supprimerPlanning(idASupprimer),
                 "La suppression d'un planning existant ne doit pas lever d'exception"
         );
 
@@ -281,7 +281,7 @@ class PlanningServiceTest {
     @DisplayName("Cas nominal - Récupérer les plannings d'un user doit retourner une liste non-null")
     void findByUserId_utilisateurExistant_doitRetournerListeNonNull() throws SQLException {
         // Act
-        List<Planning> plannings = planningService.findByUserId(utilisateurTest.getId());
+        List<Planning> plannings = planningService.obtenirPlanningsParUtilisateur(utilisateurTest.getId());
 
         // Assert
         assertNotNull(plannings,
