@@ -1,0 +1,10 @@
+version: '4'
+services:
+  ws-server:
+    build: .
+    container_name: steevejobs-websocket
+    ports:
+      - "8887:8887"
+    volumes:
+      - ./.env:/app/.env
+    restart: unless-stopped
