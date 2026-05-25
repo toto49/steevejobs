@@ -97,6 +97,110 @@
     -fx-font-family: 'Arial';
 }
 
+.spinner-stock .text-field {
+    -fx-background-color: white;
+    -fx-border-color: #CCCCCC;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.spinner-stock .increment-arrow-button,
+.spinner-stock .decrement-arrow-button {
+    -fx-background-color: white;
+    -fx-border-color: #CCCCCC;
+}
+
+/* ===========================
+   PAGE STOCK — TABLEAU
+=========================== */
+.stock-table {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-table-header-border-color: transparent;
+}
+
+.stock-table .column-header-background {
+    -fx-background-color: #f5f7fd;
+    -fx-border-color: transparent;
+}
+
+.stock-table .filler {
+    -fx-background-color: #f5f7fd;
+    -fx-border-color: transparent;
+}
+
+.stock-table .column-header {
+    -fx-background-color: #f5f7fd;
+    -fx-border-color: transparent transparent #DDE8FF transparent;
+    -fx-padding: 10 8 10 8;
+}
+
+.stock-table .column-header .label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #7a849e;
+    -fx-font-size: 12px;
+}
+
+.stock-table .table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent #f0f2f8 transparent;
+    -fx-cell-size: 50px;
+}
+
+.stock-table .table-row-cell:hover {
+    -fx-background-color: #eef2fb;
+}
+
+.stock-table .table-row-cell:selected {
+    -fx-background-color: #dde8ff;
+}
+
+.stock-table .table-row-cell:selected .label {
+    -fx-text-fill: #1e2545;
+}
+
+.stock-table .table-cell {
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 8 0 8;
+    -fx-font-size: 13px;
+    -fx-text-fill: #2d3450;
+    -fx-border-color: transparent;
+}
+
+/* Cache la barre noire sous le header du tableau */
+.stock-table .column-resize-line {
+    -fx-background-color: transparent;
+}
+
+/* ===========================
+   BADGES STATUT
+=========================== */
+.badge-en-stock {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-background-radius: 20;
+    -fx-padding: 4 12 4 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.badge-a-recommander {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: white;
+    -fx-background-radius: 20;
+    -fx-padding: 4 12 4 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.badge-rupture {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-background-radius: 20;
+    -fx-padding: 4 12 4 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
 .textarea-form {
     -fx-background-radius: 25;
     -fx-border-radius: 25;
@@ -295,6 +399,8 @@
 .text-field:focused {
     -fx-border-color: #4B78CC;
 }
+
+
 
 /* ============================================
    STYLE POUR LES DIALOG (POPUP)

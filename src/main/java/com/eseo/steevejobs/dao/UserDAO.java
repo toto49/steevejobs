@@ -12,10 +12,10 @@ import java.util.List;
  */
 public class UserDAO {
 
-
     private User mapUser(ResultSet rs) throws SQLException {
         User user = new User(
                 rs.getInt("id_user"),
+                rs.getInt("taux"),
                 rs.getString("nom"),
                 rs.getString("prenom"),
                 rs.getString("email"),
@@ -24,7 +24,8 @@ public class UserDAO {
                 rs.getString("role"),
                 rs.getString("tel"),
                 rs.getString("poste"),
-                rs.getBoolean("actif")
+                rs.getBoolean("actif"),
+                rs.getInt("taux_patronal")
         );
 
         user.setTentativesEchouees(rs.getInt("tentatives_echouees"));
@@ -42,7 +43,7 @@ public class UserDAO {
     }
 
     public void createUser(User user) throws SQLException {
-        String sql = "INSERT INTO USER (nom, prenom, email, mdp, adresse, tel, role, poste, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO USER (nom, prenom, email, mdp, adresse, tel, role, poste, actif, taux) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -56,6 +57,7 @@ public class UserDAO {
             stmt.setString(7, user.getRole());
             stmt.setString(8, user.getPoste());
             stmt.setBoolean(9, user.isActif());
+            stmt.setInt(10, user.getTaux());
 
             stmt.executeUpdate();
 
@@ -68,7 +70,7 @@ public class UserDAO {
     }
 
     public void updateUser(User user) throws SQLException {
-        String sql = "UPDATE USER SET nom = ?, prenom = ?, email = ?, mdp = ?, adresse = ?, tel = ?, role = ?, poste = ?, actif = ? WHERE id_user = ?";
+        String sql = "UPDATE USER SET nom = ?, prenom = ?, email = ?, mdp = ?, adresse = ?, tel = ?, role = ?, poste = ?, actif = ?, taux = ? WHERE id_user = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -82,7 +84,8 @@ public class UserDAO {
             stmt.setString(7, user.getRole());
             stmt.setString(8, user.getPoste());
             stmt.setBoolean(9, user.isActif());
-            stmt.setInt(10, user.getId());
+            stmt.setInt(10, user.getTaux());
+            stmt.setInt(11, user.getId());
 
             stmt.executeUpdate();
         }
@@ -147,6 +150,26 @@ public class UserDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, newPasswordHash);
             stmt.setInt(2, id);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean updateTaux(int userId, int taux) throws SQLException {
+        String sql = "UPDATE USER SET taux = ? WHERE id_user = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, taux);
+            stmt.setInt(2, userId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean updateTauxPatronal(int userId, int tauxPatronal) throws SQLException {
+        String sql = "UPDATE USER SET taux_patronal = ? WHERE id_user = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, tauxPatronal);
+            stmt.setInt(2, userId);
             return stmt.executeUpdate() > 0;
         }
     }
@@ -269,7 +292,6 @@ public class UserDAO {
         return 0;
     }
 
-
     public void updateTentativesEtBlocage(int userId, int tentatives, LocalDateTime bloqueJusqua, LocalDateTime dateDernierEchec) throws SQLException {
         String query = "UPDATE USER SET tentatives_echouees = ?, bloque_jusqua = ?, date_dernier_echec = ? WHERE id_user = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -285,9 +307,7 @@ public class UserDAO {
             } else {
                 pstmt.setNull(3, java.sql.Types.TIMESTAMP);
             }
-
             pstmt.setInt(4, userId);
-
             pstmt.executeUpdate();
         }
     }

@@ -26,12 +26,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class HomeController {
 
     private static final Map<String, Image> IMAGE_CACHE = new HashMap<>();
     private User currentUser;
     private static List<String> cachedPermissions = null;
+    private static final long CACHE_TTL_MS = 30_000; // 30 secondes
+    private static long cacheTimestamp = -1;
 
     @FXML
     private FlowPane appsGrid;
@@ -46,7 +51,7 @@ public class HomeController {
     private static int cachedUserId = -1;
     private final PermissionService permissionService = new PermissionService();
     private List<String> currentUserPermissions;
-
+    private ScheduledExecutorService permissionScheduler;
     public static HomeController getActiveInstance() {
         return activeInstance;
     }
@@ -90,6 +95,17 @@ public class HomeController {
         });
     }
 
+    public static void invaliderCachePermissions() {
+        cachedPermissions = null;
+        cachedUserId = -1;
+        cacheTimestamp = -1;
+        if (activeInstance != null) {
+            Platform.runLater(() -> activeInstance.onUserLogin(
+                    SessionService.getUtilisateurConnecte().getId()
+            ));
+        }
+    }
+
     public void onUserLogin(int idUserConnecte) {
         CompletableFuture.supplyAsync(() -> {
             TicketService ticketService = new TicketServiceImpl();
@@ -123,16 +139,26 @@ public class HomeController {
             return null;
         });
 
-        if (cachedPermissions != null && cachedUserId == idUserConnecte) {
+        boolean cacheValide = cachedPermissions != null
+                && cachedUserId == idUserConnecte
+                && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS;
+
+        if (cacheValide) {
             this.currentUserPermissions = cachedPermissions;
             Platform.runLater(this::renderAppCenter);
         } else {
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(idUserConnecte))
                     .thenAcceptAsync(perms -> {
+                        boolean permissionsChangees = !perms.equals(cachedPermissions);
+
                         cachedPermissions = perms;
                         cachedUserId = idUserConnecte;
+                        cacheTimestamp = System.currentTimeMillis();
                         this.currentUserPermissions = perms;
-                        renderAppCenter();
+
+                        if (permissionsChangees) {
+                            renderAppCenter();
+                        }
                     }, Platform::runLater).exceptionally(ex -> {
                         ex.printStackTrace();
                         return null;
@@ -147,12 +173,43 @@ public class HomeController {
 
         if (this.currentUser != null) {
             onUserLogin(currentUser.getId());
+            demarrerSchedulerPermissions();
         } else {
             SessionService.setUtilisateurConnecte(null);
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/bienvenue-view.fxml"));
             Parent loginRoot = loader.load();
             HelloApplication.changerPageGlobale(loginRoot, "Connexion");
         }
+    }
+
+    private void demarrerSchedulerPermissions() {
+        if (permissionScheduler != null && !permissionScheduler.isShutdown()) {
+            permissionScheduler.shutdown();
+        }
+
+        permissionScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "permission-checker");
+            t.setDaemon(true);
+            return t;
+        });
+
+        permissionScheduler.scheduleAtFixedRate(() -> {
+            if (currentUser == null) return;
+
+            CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(currentUser.getId()))
+                    .thenAcceptAsync(perms -> {
+                        if (!perms.equals(cachedPermissions)) {
+                            cachedPermissions = perms;
+                            cacheTimestamp = System.currentTimeMillis();
+                            this.currentUserPermissions = perms;
+                            renderAppCenter();
+                        }
+                    }, Platform::runLater)
+                    .exceptionally(ex -> {
+                        ex.printStackTrace();
+                        return null;
+                    });
+        }, 30, 30, TimeUnit.SECONDS);
     }
 
     private void renderAppCenter() {
@@ -269,7 +326,6 @@ public class HomeController {
         card.setOnMouseEntered(e -> card.setOpacity(0.8));
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
-
             if (MenuController.getInstance() != null) {
                 if (parametreFacultatif != null) {
                     chargerPageAvecParametre(chemin, parametreFacultatif, title);
