@@ -10,18 +10,9 @@ import java.util.List;
 
 /**
  * Data Access Object dédié aux opérations sur la table des fiches de paie.
- * <p>
- * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- * et sauvegarder les objets {@link com.eseo.steevejobs.model.FichePaye} en base de données.
- * </p>
  */
 public class FichePayeDAO {
 
-    /**
-     * Créer une nouvelle fiche de paie
-     * @param fichePaye la fiche de paie à créer
-     * @throws SQLException exception SQL
-     */
     public void createFichePaye(FichePaye fichePaye) throws SQLException {
         String sql = "INSERT INTO FICHE_PAYE (date, url, id_user) VALUES (?, ?, ?)";
 
@@ -42,11 +33,6 @@ public class FichePayeDAO {
         }
     }
 
-    /**
-     * Mettre à jour une fiche de paie existante
-     * @param fichePaye la fiche de paie à mettre à jour
-     * @throws SQLException exception SQL
-     */
     public void updateFichePaye(FichePaye fichePaye) throws SQLException {
         String sql = "UPDATE FICHE_PAYE SET date = ?, url = ?, id_user = ? WHERE id_paye = ?";
 
@@ -62,12 +48,6 @@ public class FichePayeDAO {
         }
     }
 
-    /**
-     * Supprimer une fiche de paie par son ID
-     * @param id l'ID de la fiche de paie
-     * @return true si supprimé, false sinon
-     * @throws SQLException exception SQL
-     */
     public boolean deleteFichePaye(int id) throws SQLException {
         String sql = "DELETE FROM FICHE_PAYE WHERE id_paye = ?";
 
@@ -75,18 +55,10 @@ public class FichePayeDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
-
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
+            return stmt.executeUpdate() > 0;
         }
     }
 
-    /**
-     * Récupérer une fiche de paie par son ID
-     * @param id l'ID de la fiche de paie
-     * @return la fiche de paie trouvée, null sinon
-     * @throws SQLException exception SQL
-     */
     public FichePaye getById(int id) throws SQLException {
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
@@ -99,38 +71,13 @@ public class FichePayeDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    User employe = new User(
-                            rs.getInt("id_user"),
-                            rs.getInt("taux"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif"),
-                            rs.getInt("taux_patronal")
-                    );
-                    return new FichePaye(
-                            rs.getInt("id_paye"),
-                            rs.getDate("date").toLocalDate().atStartOfDay(),
-                            rs.getString("url"),
-                            employe
-                    );
+                    return mapFichePaye(rs);
                 }
                 return null;
             }
         }
     }
 
-    /**
-     * Récupérer toutes les fiches de paie d'un employé
-     * @param employeId l'ID de l'employé
-     * @return la liste des fiches de paie de l'employé
-     * @throws SQLException exception SQL
-     */
     public List<FichePaye> findByEmployeId(int employeId) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -145,26 +92,7 @@ public class FichePayeDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    User employe = new User(
-                            rs.getInt("id_user"),
-                            rs.getInt("taux"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif"),
-                            rs.getInt("taux_patronal")
-                    );
-                    fichesPaye.add(new FichePaye(
-                            rs.getInt("id_paye"),
-                            rs.getDate("date").toLocalDate().atStartOfDay(),
-                            rs.getString("url"),
-                            employe
-                    ));
+                    fichesPaye.add(mapFichePaye(rs));
                 }
             }
         }
@@ -172,11 +100,7 @@ public class FichePayeDAO {
     }
 
     /**
-     * Récupérer la fiche de paie d'un employé pour un mois spécifique
-     * @param employeId l'ID de l'employé
-     * @param date      le mois recherché (LocalDateTime)
-     * @return la fiche de paie trouvée, null sinon
-     * @throws SQLException exception SQL
+     * Récupérer la fiche de paie d'un employé pour un mois spécifique.
      */
     public FichePaye findByEmployeIdAndDate(int employeId, LocalDateTime date) throws SQLException {
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -192,37 +116,13 @@ public class FichePayeDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    User employe = new User(
-                            rs.getInt("id_user"),
-                            rs.getInt("taux"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif"),
-                            rs.getInt("taux_patronal")
-                    );
-                    return new FichePaye(
-                            rs.getInt("id_paye"),
-                            rs.getDate("date").toLocalDate().atStartOfDay(),
-                            rs.getString("url"),
-                            employe
-                    );
+                    return mapFichePaye(rs);
                 }
                 return null;
             }
         }
     }
 
-    /**
-     * Récupérer toutes les fiches de paie
-     * @return la liste de toutes les fiches de paie
-     * @throws SQLException exception SQL
-     */
     public List<FichePaye> findAll() throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -235,37 +135,12 @@ public class FichePayeDAO {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                User employe = new User(
-                        rs.getInt("id_user"),
-                        rs.getInt("taux"),
-                        rs.getString("nom"),
-                        rs.getString("prenom"),
-                        rs.getString("email"),
-                        rs.getString("mdp"),
-                        rs.getString("adresse"),
-                        rs.getString("role"),
-                        rs.getString("tel"),
-                        rs.getString("poste"),
-                        rs.getBoolean("actif"),
-                        rs.getInt("taux_patronal")
-                );
-                fichesPaye.add(new FichePaye(
-                        rs.getInt("id_paye"),
-                        rs.getDate("date").toLocalDate().atStartOfDay(),
-                        rs.getString("url"),
-                        employe
-                ));
+                fichesPaye.add(mapFichePaye(rs));
             }
         }
         return fichesPaye;
     }
 
-    /**
-     * Récupérer les fiches de paie d'une année spécifique
-     * @param annee l'année recherchée
-     * @return la liste des fiches de paie de l'année
-     * @throws SQLException exception SQL
-     */
     public List<FichePaye> findByAnnee(int annee) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -280,39 +155,13 @@ public class FichePayeDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    User employe = new User(
-                            rs.getInt("id_user"),
-                            rs.getInt("taux"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif"),
-                            rs.getInt("taux_patronal")
-                    );
-                    fichesPaye.add(new FichePaye(
-                            rs.getInt("id_paye"),
-                            rs.getDate("date").toLocalDate().atStartOfDay(),
-                            rs.getString("url"),
-                            employe
-                    ));
+                    fichesPaye.add(mapFichePaye(rs));
                 }
             }
         }
         return fichesPaye;
     }
 
-    /**
-     * Mettre à jour l'URL d'une fiche de paie
-     * @param id  l'ID de la fiche de paie
-     * @param url la nouvelle URL
-     * @return true si mis à jour, false sinon
-     * @throws SQLException exception SQL
-     */
     public boolean updateUrl(int id, String url) throws SQLException {
         String sql = "UPDATE FICHE_PAYE SET url = ? WHERE id_paye = ?";
 
@@ -321,17 +170,10 @@ public class FichePayeDAO {
 
             stmt.setString(1, url);
             stmt.setInt(2, id);
-
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
+            return stmt.executeUpdate() > 0;
         }
     }
 
-    /**
-     * Compter le nombre total de fiches de paie
-     * @return le nombre total de fiches de paie
-     * @throws SQLException exception SQL
-     */
     public int countFichesPaye() throws SQLException {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE";
 
@@ -346,12 +188,6 @@ public class FichePayeDAO {
         return 0;
     }
 
-    /**
-     * Compter le nombre de fiches de paie par employé
-     * @param employeId l'ID de l'employé
-     * @return le nombre de fiches de paie de l'employé
-     * @throws SQLException exception SQL
-     */
     public int countByEmployeId(int employeId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE WHERE id_user = ?";
 
@@ -367,5 +203,31 @@ public class FichePayeDAO {
             }
         }
         return 0;
+    }
+
+    private User mapUser(ResultSet rs) throws SQLException {
+        return new User(
+                rs.getInt("id_user"),
+                rs.getInt("taux"),
+                rs.getString("nom"),
+                rs.getString("prenom"),
+                rs.getString("email"),
+                rs.getString("mdp"),
+                rs.getString("adresse"),
+                rs.getString("role"),
+                rs.getString("tel"),
+                rs.getString("poste"),
+                rs.getBoolean("actif"),
+                rs.getInt("taux_patronal")
+        );
+    }
+
+    private FichePaye mapFichePaye(ResultSet rs) throws SQLException {
+        return new FichePaye(
+                rs.getInt("id_paye"),
+                rs.getDate("date").toLocalDate().atStartOfDay(),
+                rs.getString("url"),
+                mapUser(rs)
+        );
     }
 }

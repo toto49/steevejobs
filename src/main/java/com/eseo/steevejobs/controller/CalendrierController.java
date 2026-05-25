@@ -81,7 +81,7 @@ public class CalendrierController {
     }
 
     public List<Planning> initEvent() throws SQLException {
-        return planningService.findByUserId(utilisateur.getId());
+        return planningService.obtenirPlanningsParUtilisateur(utilisateur.getId());
     }
 
     public void nextWeek(ActionEvent e) throws SQLException {
@@ -471,7 +471,7 @@ public class CalendrierController {
 
     private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, String couleur, int idToDelete) throws SQLException {
         if (idToDelete != -1) {
-            planningService.deletePlanning(idToDelete);
+            planningService.supprimerPlanning(idToDelete);
         }
 
         PlanningDAO dao = new PlanningDAO();

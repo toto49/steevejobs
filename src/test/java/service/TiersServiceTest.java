@@ -1,38 +1,115 @@
 package service;
 
+import com.eseo.steevejobs.dao.TiersDAO;
+import com.eseo.steevejobs.model.Enum.TiersType;
 import com.eseo.steevejobs.model.Tiers;
 import com.eseo.steevejobs.service.TiersService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import service.support.MockitoJava25Support;
 
+import java.sql.SQLException;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class TiersServiceTest {
 
-    private final TiersService service = new TiersService();
+    static {
+        MockitoJava25Support.enable();
+    }
 
-    @Test
-    void ajouterTiers_siretMauvaisFormatTropCourt_doitLeverException() {
-        // SIRET à 5 chiffres au lieu de 14
-        Tiers t = new Tiers(0, "Apple", "Steve", null, "contact@apple.com", "Cupertino", "0102030405", "12345", "FR123");
-        assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(t));
+    @Mock
+    private TiersDAO tiersDAO;
+
+    private TiersService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new TiersService(tiersDAO);
+    }
+
+    private Tiers tiersValide() {
+        Tiers tiers = new Tiers();
+        tiers.setNom("Fournisseur A");
+        tiers.setType(TiersType.FOURNISSEUR);
+        tiers.setEmail("contact@fournisseur.fr");
+        tiers.setSiret("12345678901234");
+        return tiers;
     }
 
     @Test
-    void ajouterTiers_siretAvecLettres_doitLeverException() {
-        // SIRET avec des lettres (le service vérifie avec \d+)
-        Tiers t = new Tiers(0, "Apple", "Steve", null, "contact@apple.com", "Cupertino", "0102030405", "1234567890ABCD", "FR123");
-        assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(t));
+    void ajouterTiers_donneesValides_neDoitPasLeverException() throws SQLException {
+        Tiers tiers = tiersValide();
+        when(tiersDAO.emailExists(tiers.getEmail())).thenReturn(false);
+        when(tiersDAO.siretExists(tiers.getSiret())).thenReturn(false);
+        when(tiersDAO.createTiers(tiers)).thenReturn(true);
+
+        assertDoesNotThrow(() -> service.ajouterTiers(tiers));
+        verify(tiersDAO).createTiers(tiers);
     }
 
     @Test
-    void ajouterTiers_emailInvalide_doitLeverException() {
-        // Il manque le point et l'arobase
-        Tiers t = new Tiers(0, "Apple", "Steve", null, "contactapple", "Cupertino", "0102030405", "12345678901234", "FR123");
-        assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(t));
+    void ajouterTiers_tiersNull_doitLeverException() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(null));
+        assertEquals("Les données du tiers sont vides.", ex.getMessage());
     }
 
     @Test
-    void ajouterTiers_nomVide_doitLeverException() {
-        Tiers t = new Tiers(0, "", "Steve", null, "contact@apple.com", "Cupertino", "0102030405", "12345678901234", "FR123");
-        assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(t));
+    void validerTiers_emailInvalide_doitLeverException() {
+        Tiers tiers = tiersValide();
+        tiers.setEmail("contact-fournisseur.com");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(tiers));
+        assertEquals("Le format de l'adresse email est invalide.", ex.getMessage());
+    }
+
+    @Test
+    void validerTiers_siretInvalide_doitLeverException() {
+        Tiers tiers = tiersValide();
+        tiers.setSiret("1234567890123A");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(tiers));
+        assertEquals("Le SIRET doit contenir exactement 14 chiffres.", ex.getMessage());
+    }
+
+    @Test
+    void supprimerTiers_idInvalide_doitLeverException() throws SQLException {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.supprimerTiers(0));
+        assertEquals("L'ID du tiers est invalide.", ex.getMessage());
+        verify(tiersDAO, never()).deleteTiers(anyInt());
+    }
+
+    @Test
+    void modifierTiers_idInvalide_doitLeverException() {
+        Tiers tiers = tiersValide();
+        tiers.setId(0);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.modifierTiers(tiers));
+        assertEquals("L'ID du tiers est invalide pour une modification.", ex.getMessage());
+    }
+
+    @Test
+    void ajouterTiers_echecBdd_doitLeverRuntimeException() throws SQLException {
+        Tiers tiers = tiersValide();
+        when(tiersDAO.emailExists(tiers.getEmail())).thenReturn(false);
+        when(tiersDAO.siretExists(tiers.getSiret())).thenReturn(false);
+        when(tiersDAO.createTiers(tiers)).thenReturn(false);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.ajouterTiers(tiers));
+        assertTrue(ex.getMessage().contains("Impossible d'ajouter le tiers"));
+    }
+
+    @Test
+    void validerTiers_nomVide_doitLeverException() {
+        Tiers tiers = tiersValide();
+        tiers.setNom("  ");
+
+        assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(tiers));
     }
 }

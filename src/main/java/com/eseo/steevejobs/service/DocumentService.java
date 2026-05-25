@@ -6,7 +6,9 @@ import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.Document;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,36 +19,76 @@ public class DocumentService {
     private final PdfGeneratorService pdfService;
 
     public DocumentService(DocumentDAO documentDAO) {
-        this.documentDAO = documentDAO;
-        this.composerDAO = new ComposerDAO();
-        this.pdfService  = new PdfGeneratorService();
+        this(documentDAO, new ComposerDAO(), new PdfGeneratorService());
     }
 
-    /**
-     * Crée un document sans générer de PDF.
-     * @param document  le document à créer
-     * @param lignes    les lignes produits (peut être vide si saisie ultérieure)
-     */
-    public void ajouterDocument(Document document, List<Composer> lignes) throws SQLException {
+    public DocumentService(DocumentDAO documentDAO, ComposerDAO composerDAO,
+                           PdfGeneratorService pdfService) {
+        this.documentDAO = documentDAO;
+        this.composerDAO = composerDAO;
+        this.pdfService  = pdfService;
+    }
+
+    public void ajouterDocument(Document document, List<Composer> lignes)
+            throws IllegalArgumentException, SQLException {
+
         validerDocument(document);
+        validerLignes(lignes);
 
         documentDAO.createDocument(document);
 
-        // Sauvegarder les lignes produits
         for (Composer ligne : lignes) {
             ligne.setIdDocument(document.getId());
             composerDAO.createLigne(ligne);
         }
     }
 
-    /**
-     * Exporte un document en PDF (génère le PDF et met à jour l'URL).
-     * @param idDocument l'ID du document
-     * @return l'URL du PDF généré
-     */
-    public String exporterPdf(int idDocument) throws SQLException {
+    public void modifierDocument(Document document)
+            throws IllegalArgumentException, SQLException {
+
+        if (document.getId() <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide pour une modification.");
+        }
+
+        validerDocument(document);
+
+        boolean success = documentDAO.updateDocument(document);
+        if (!success) {
+            throw new RuntimeException("Erreur BDD : Impossible de mettre à jour ce document.");
+        }
+    }
+
+    public void supprimerDocument(int idDocument) throws IllegalArgumentException, SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+
+        Document doc = documentDAO.getById(idDocument);
+        if (doc == null) {
+            return;
+        }
+
+        String nomFichier = String.format("%s_%d.pdf",
+                doc.getType().getValeur().replace(" ", "_"), doc.getId());
+
+        boolean success = documentDAO.deleteDocument(idDocument);
+        if (!success) {
+            throw new RuntimeException("Erreur BDD : Impossible de supprimer ce document.");
+        }
+
+        CompletableFuture.runAsync(() ->
+                WebDavService.supprimerFichierDuNAS("documents_commerciaux", nomFichier));
+    }
+
+    public String exporterPdf(int idDocument) throws IllegalArgumentException, SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+
         Document document = documentDAO.getById(idDocument);
-        if (document == null) throw new IllegalArgumentException("Document introuvable.");
+        if (document == null) {
+            throw new IllegalArgumentException("Document introuvable pour l'ID : " + idDocument);
+        }
 
         List<Composer> lignes = composerDAO.findByDocumentId(idDocument);
         String url = pdfService.genererDocument(document, lignes);
@@ -56,39 +98,45 @@ public class DocumentService {
         return url;
     }
 
-    /**
-     * Régénère le PDF d'un document existant (après modification).
-     */
-    public void regenererPdf(int idDocument) throws SQLException {
-        exporterPdf(idDocument); // Réutilise la même méthode
+    public void regenererPdf(int idDocument) throws IllegalArgumentException, SQLException {
+        exporterPdf(idDocument);
     }
 
-    public void modifierDocument(Document document) throws SQLException {
-        validerDocument(document);
-        documentDAO.updateDocument(document);
-    }
+    public boolean changerStatut(int idDocument, DocumentStatut nouveauStatut)
+            throws IllegalArgumentException, SQLException {
 
-    public void supprimerDocument(int idDocument) throws SQLException {
-        Document doc = documentDAO.getById(idDocument);
-        if (doc == null) return;
-        String nomFichier = String.format("%s_%d.pdf", doc.getType().getValeur().replace(" ", "_"), doc.getId());
-
-        boolean success = documentDAO.deleteDocument(idDocument);
-
-        if (!success) {
-            throw new RuntimeException("Erreur BDD : Impossible de supprimer ce document.");
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+        if (nouveauStatut == null) {
+            throw new IllegalArgumentException("Le nouveau statut est obligatoire.");
         }
 
-        CompletableFuture.runAsync(() -> {
-            WebDavService.supprimerFichierDuNAS("documents_commerciaux", nomFichier);
-        });
+        return documentDAO.updateStatut(idDocument, nouveauStatut);
     }
 
-    public List<Document> getByTiersId(int tiersId) throws SQLException {
+    public Document getDocumentById(int id) throws IllegalArgumentException, SQLException {
+        if (id <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+        return documentDAO.getById(id);
+    }
+
+    public List<Document> obtenirTousLesDocuments() throws SQLException {
+        return documentDAO.findAll();
+    }
+
+    public List<Document> getByTiersId(int tiersId) throws IllegalArgumentException, SQLException {
+        if (tiersId <= 0) {
+            throw new IllegalArgumentException("L'ID du tiers est invalide.");
+        }
         return documentDAO.findByTiersId(tiersId);
     }
 
-    public List<Composer> getLignes(int idDocument) throws SQLException {
+    public List<Composer> getLignes(int idDocument) throws IllegalArgumentException, SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
         return composerDAO.findByDocumentId(idDocument);
     }
 
@@ -100,9 +148,61 @@ public class DocumentService {
         return documentDAO.updateStatut(id, statut);
     }
 
-    private void validerDocument(Document document) {
-        if (document.getType()   == null) throw new IllegalArgumentException("Le type est obligatoire.");
-        if (document.getTiers()  == null) throw new IllegalArgumentException("Le tiers est obligatoire.");
-        if (document.getDate()   == null) throw new IllegalArgumentException("La date est obligatoire.");
+    private void validerDocument(Document document) throws IllegalArgumentException {
+        if (document == null) {
+            throw new IllegalArgumentException("Les données du document sont vides.");
+        }
+        if (document.getType() == null) {
+            throw new IllegalArgumentException("Le type du document est obligatoire.");
+        }
+        if (document.getTiers() == null || document.getTiers().getId() <= 0) {
+            throw new IllegalArgumentException("Le tiers (client) associé au document est obligatoire.");
+        }
+        if (document.getDate() == null) {
+            throw new IllegalArgumentException("La date du document est obligatoire.");
+        }
+        if (document.getDate().isAfter(LocalDateTime.now().plusDays(1))) {
+            throw new IllegalArgumentException("La date du document ne peut pas être dans le futur.");
+        }
+        if (document.getStatut() == null) {
+            throw new IllegalArgumentException("Le statut du document est obligatoire.");
+        }
+        if (document.getPrixHt() == null) {
+            throw new IllegalArgumentException("Le montant HT est obligatoire.");
+        }
+        if (document.getPrixHt().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le montant HT ne peut pas être négatif.");
+        }
+        if (document.getPrixTtc() == null) {
+            throw new IllegalArgumentException("Le montant TTC est obligatoire.");
+        }
+        if (document.getPrixTtc().compareTo(document.getPrixHt()) < 0) {
+            throw new IllegalArgumentException("Le montant TTC ne peut pas être inférieur au montant HT.");
+        }
+    }
+
+    private void validerLignes(List<Composer> lignes) throws IllegalArgumentException {
+        if (lignes == null) {
+            throw new IllegalArgumentException("La liste des lignes produits est nulle.");
+        }
+
+        for (int i = 0; i < lignes.size(); i++) {
+            Composer ligne = lignes.get(i);
+
+            if (ligne.getProduit() == null || ligne.getProduit().getId() <= 0) {
+                throw new IllegalArgumentException(
+                        "La ligne " + (i + 1) + " ne contient pas de produit valide.");
+            }
+            if (ligne.getQuantite() == null
+                    || ligne.getQuantite().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException(
+                        "La quantité de la ligne " + (i + 1) + " doit être supérieure à 0.");
+            }
+            if (ligne.getPrixVente() == null
+                    || ligne.getPrixVente().compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException(
+                        "Le prix de vente de la ligne " + (i + 1) + " ne peut pas être négatif.");
+            }
+        }
     }
 }
