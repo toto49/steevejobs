@@ -50,9 +50,9 @@ class PermissionServiceTest {
 
     @Test
     void assignPermissionToRole_superAdmin_doitEchouer() {
-        boolean success = service.assignPermissionToRole("SuperAdmin", 5);
-
-        assertFalse(success);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.assignPermissionToRole("SuperAdmin", 5));
+        assertTrue(ex.getMessage().contains("SuperAdmin"));
         verify(permissionDao, never()).insertRolePermission(anyString(), anyInt());
     }
 
@@ -66,7 +66,9 @@ class PermissionServiceTest {
 
     @Test
     void assignPermissionToRole_idPermissionInvalide_doitEchouer() {
-        assertFalse(service.assignPermissionToRole("ADMIN", 0));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.assignPermissionToRole("ADMIN", 0));
+        assertEquals("L'ID de la permission est invalide.", ex.getMessage());
         verify(permissionDao, never()).insertRolePermission(anyString(), anyInt());
     }
 
@@ -86,7 +88,7 @@ class PermissionServiceTest {
 
     @Test
     void getPermissionIdsByRole_nomRoleVide_retourneListeVide() {
-        assertTrue(service.getPermissionIdsByRole("   ").isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> service.getPermissionIdsByRole("   "));
         verify(permissionDao, never()).getPermissionIdsByRole(anyString());
     }
 

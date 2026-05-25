@@ -48,9 +48,9 @@ class FichePayeServiceTest {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
         LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
 
-        when(fichePayeDAO.findByEmployeIdAndDate(1, mois)).thenReturn(null);
+        when(fichePayeDAO.findByEmployeIdAndMois(1, mois)).thenReturn(null);
         when(planningDAO.findByUserId(1)).thenReturn(Collections.emptyList());
-        when(pdfService.genererFichePaye(any(FichePaye.class), eq(2500.0), eq(0.45), eq(0L), eq(160.0), eq(15.0)))
+        when(pdfService.genererFichePaye(any(FichePaye.class), eq(2500.0), eq(0.45), eq(0L)))
                 .thenReturn("http://pdf.test/fiche_1.pdf");
         doAnswer(invocation -> {
             FichePaye fiche = invocation.getArgument(0);
@@ -58,7 +58,7 @@ class FichePayeServiceTest {
             return null;
         }).when(fichePayeDAO).createFichePaye(any(FichePaye.class));
 
-        FichePaye resultat = service.genererFichePaye(employe, mois, 2500, 0.45, 160, 15);
+        FichePaye resultat = service.genererFichePaye(employe, mois, 2500, 0.45);
 
         assertNotNull(resultat);
         assertEquals("http://pdf.test/fiche_1.pdf", resultat.getUrl());
@@ -69,43 +69,39 @@ class FichePayeServiceTest {
     void genererFichePaye_ficheExistante_doitLeverIllegalStateException() throws SQLException {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
         LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
-        when(fichePayeDAO.findByEmployeIdAndDate(1, mois)).thenReturn(new FichePaye(5, mois, "", employe));
+        when(fichePayeDAO.findByEmployeIdAndMois(1, mois)).thenReturn(new FichePaye(5, mois, "", employe));
 
         assertThrows(IllegalStateException.class,
-                () -> service.genererFichePaye(employe, mois, 2500, 0.45, 160, 15));
+                () -> service.genererFichePaye(employe, mois, 2500, 0.45));
     }
 
     @Test
-    void genererFichePaye_salaireBrutNegatif_doitLeverException() throws SQLException {
+    void genererFichePaye_salaireBrutNegatif_doitLeverException() {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
         LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
-        when(fichePayeDAO.findByEmployeIdAndDate(1, mois)).thenReturn(null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.genererFichePaye(employe, mois, 0, 0.45, 160, 15));
+                () -> service.genererFichePaye(employe, mois, 0, 0.45));
         assertEquals("Le salaire brut doit être supérieur à 0.", ex.getMessage());
     }
 
     @Test
-    void genererFichePaye_tauxPatronalInvalide_doitLeverException() throws SQLException {
+    void genererFichePaye_tauxPatronalInvalide_doitLeverException() {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
         LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
-        when(fichePayeDAO.findByEmployeIdAndDate(1, mois)).thenReturn(null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.genererFichePaye(employe, mois, 2500, 1.2, 160, 15));
-        assertEquals("Le taux de cotisations patronales doit être entre 0 et 1.", ex.getMessage());
+                () -> service.genererFichePaye(employe, mois, 2500, 1.2));
+        assertEquals("Le taux de cotisations doit être compris entre 0 et 0.99 (ex : 0.22 = 22%).", ex.getMessage());
     }
 
     @Test
-    void genererFichePaye_heuresInvalides_doitLeverException() throws SQLException {
+    void genererFichePaye_salaireInferieurAuSmic_doitLeverException() {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
         LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
-        when(fichePayeDAO.findByEmployeIdAndDate(1, mois)).thenReturn(null);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.genererFichePaye(employe, mois, 2500, 0.45, 0, 15));
-        assertEquals("Les heures travaillées doivent être supérieures à 0.", ex.getMessage());
+        assertThrows(IllegalArgumentException.class,
+                () -> service.genererFichePaye(employe, mois, 1000, 0.45));
     }
 
     @Test

@@ -56,7 +56,7 @@ class DocumentServiceTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> service.ajouterDocument(document, Collections.emptyList()));
-        assertEquals("Le tiers est obligatoire.", ex.getMessage());
+        assertEquals("Le tiers (client) associé au document est obligatoire.", ex.getMessage());
     }
 
     @Test
@@ -64,7 +64,7 @@ class DocumentServiceTest {
         when(documentDAO.getById(99)).thenReturn(null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.exporterPdf(99));
-        assertEquals("Document introuvable.", ex.getMessage());
+        assertEquals("Document introuvable pour l'ID : 99", ex.getMessage());
     }
 
     @Test
@@ -83,9 +83,6 @@ class DocumentServiceTest {
 
     @Test
     void supprimerDocument_echecBdd_doitLeverRuntimeException() throws SQLException {
-        Document document = TestDataFactory.documentValide();
-        document.setId(3);
-        when(documentDAO.getById(3)).thenReturn(document);
         when(documentDAO.deleteDocument(3)).thenReturn(false);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.supprimerDocument(3));

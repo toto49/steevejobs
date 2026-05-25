@@ -19,9 +19,14 @@ public class DocumentService {
     private final PdfGeneratorService pdfService;
 
     public DocumentService(DocumentDAO documentDAO) {
+        this(documentDAO, new ComposerDAO(), new PdfGeneratorService());
+    }
+
+    public DocumentService(DocumentDAO documentDAO, ComposerDAO composerDAO,
+                           PdfGeneratorService pdfService) {
         this.documentDAO = documentDAO;
-        this.composerDAO = new ComposerDAO();
-        this.pdfService  = new PdfGeneratorService();
+        this.composerDAO = composerDAO;
+        this.pdfService  = pdfService;
     }
 
     // --------------------------------------------------------

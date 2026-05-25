@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import service.support.MockitoJava25Support;
+import service.support.TestDataFactory;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -55,8 +56,7 @@ class HeuresTravailServiceTest {
                 1, date,
                 LocalTime.of(8, 0), LocalTime.of(12, 0),
                 LocalTime.of(13, 0), LocalTime.of(17, 0),
-                LocalTime.of(8, 0),
-                null
+                TestDataFactory.utilisateurActif(1, "user@mail.fr")
         );
         when(heuresTravailDAO.getHeuresParDate(1, date)).thenReturn(heures);
 
@@ -68,6 +68,8 @@ class HeuresTravailServiceTest {
         when(heuresTravailDAO.sauvegarder(anyInt(), any(), any(), any(), any(), any(), any())).thenReturn(false);
 
         assertFalse(service.sauvegarderHeures(1, LocalDate.now(),
-                LocalTime.NOON, LocalTime.NOON, LocalTime.NOON, LocalTime.NOON, LocalTime.NOON));
+                LocalTime.of(8, 0), LocalTime.of(12, 0),
+                LocalTime.of(13, 0), LocalTime.of(17, 0),
+                LocalTime.of(8, 0)));
     }
 }

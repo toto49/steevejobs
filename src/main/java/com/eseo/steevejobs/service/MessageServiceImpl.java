@@ -7,7 +7,15 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class MessageServiceImpl {
-    private final MessageDAO messageDAO = new MessageDAO();
+    private final MessageDAO messageDAO;
+
+    public MessageServiceImpl() {
+        this.messageDAO = new MessageDAO();
+    }
+
+    public MessageServiceImpl(MessageDAO messageDAO) {
+        this.messageDAO = messageDAO;
+    }
 
     public Message getMessageByID(int id) {
         try {
