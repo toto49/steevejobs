@@ -1,5 +1,3 @@
-
-
 package com.eseo.steevejobs.service;
 
 import com.eseo.steevejobs.dao.ProduitDAO;
@@ -13,17 +11,17 @@ public class ProduitService {
 
     private final ProduitDAO produitDAO;
 
-    // Constructeur par défaut
+    // Constructeur par défaut (utilisé par les controllers)
     public ProduitService() {
         this.produitDAO = new ProduitDAO();
     }
 
-    // --------------------------------------------------------
-    // MÉTHODES PUBLIQUES (Appelées par tes contrôleurs JavaFX)
-    // --------------------------------------------------------
+    // Constructeur avec injection (utilisé pour les tests)
+    public ProduitService(ProduitDAO produitDAO) {
+        this.produitDAO = produitDAO;
+    }
 
     public void ajouterProduit(Produit produit) throws IllegalArgumentException, SQLException {
-        // 1. Validation métier
         validerProduit(produit);
 
         boolean success = produitDAO.createProduit(produit);
@@ -33,6 +31,9 @@ public class ProduitService {
     }
 
     public void modifierProduit(Produit produit) throws IllegalArgumentException, SQLException {
+        if (produit == null) {
+            throw new IllegalArgumentException("Les données du produit sont vides.");
+        }
         if (produit.getId() <= 0) {
             throw new IllegalArgumentException("L'ID du produit est invalide pour une modification.");
         }
@@ -57,7 +58,6 @@ public class ProduitService {
     }
 
     public void mettreAJourStock(int idProduit, int variation) throws IllegalArgumentException, SQLException {
-
         if (idProduit <= 0) {
             throw new IllegalArgumentException("L'ID du produit est invalide.");
         }
@@ -67,23 +67,102 @@ public class ProduitService {
             throw new IllegalArgumentException("Produit introuvable.");
         }
 
-        int nouveauStock = produitActuel.getQuantite() + variation; // <-- On calcule le nouveau stock
+        int nouveauStock = produitActuel.getQuantite() + variation;
 
         if (nouveauStock < 0) {
             throw new IllegalArgumentException("Le stock ne peut pas être négatif !");
         }
 
         boolean success = produitDAO.updateStock(idProduit, nouveauStock);
-        if (!success) throw new RuntimeException("Erreur de mise à jour du stock.");
+        if (!success) {
+            throw new RuntimeException("Erreur de mise à jour du stock.");
+        }
+    }
+
+    public void mettreAJourStockAuto(
+            int idProduit,
+            Integer variationQuantite,
+            BigDecimal variationPoids
+    ) throws SQLException {
+
+        if (idProduit <= 0) {
+            throw new IllegalArgumentException("L'ID du produit est invalide.");
+        }
+
+        Produit produit = produitDAO.getById(idProduit);
+        if (produit == null) {
+            throw new IllegalArgumentException("Produit introuvable.");
+        }
+
+        if (produit.getPoid() != null) {
+
+            if (variationPoids == null) {
+                throw new IllegalArgumentException(
+                        "Variation de poids requise pour un produit géré en vrac."
+                );
+            }
+
+            BigDecimal nouveauPoids = produit.getPoid().add(variationPoids);
+
+            if (nouveauPoids.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException(
+                        "Le stock en poids ne peut pas être négatif."
+                );
+            }
+
+            boolean success = produitDAO.updatePoids(idProduit, nouveauPoids);
+            if (!success) {
+                throw new RuntimeException("Erreur de mise à jour du stock en poids.");
+            }
+
+            return;
+        }
+
+        if (variationQuantite == null) {
+            throw new IllegalArgumentException(
+                    "Variation de quantité requise pour un produit unitaire."
+            );
+        }
+
+        int nouvelleQuantite = produit.getQuantite() + variationQuantite;
+
+        if (nouvelleQuantite < 0) {
+            throw new IllegalArgumentException(
+                    "Le stock ne peut pas être négatif."
+            );
+        }
+
+        boolean success = produitDAO.updateStock(idProduit, nouvelleQuantite);
+        if (!success) {
+            throw new RuntimeException("Erreur de mise à jour du stock en quantité.");
+        }
     }
 
     public List<Produit> obtenirTousLesProduits() throws SQLException {
         return produitDAO.findAll();
     }
 
-    // --------------------------------------------------------
-    // MÉTHODES PRIVÉES (Logique métier interne)
-    // --------------------------------------------------------
+    /** Recherche par nom (barre de recherche de la page Stock) */
+    public List<Produit> rechercherProduitsParNom(String term) throws SQLException {
+        if (term == null) term = "";
+        return produitDAO.searchByNom(term.trim());
+    }
+
+    /** Liste des produits dont le stock ≤ seuil */
+    public List<Produit> obtenirProduitsStockBas(int seuil) throws SQLException {
+        if (seuil < 0) {
+            throw new IllegalArgumentException("Le seuil ne peut pas être négatif.");
+        }
+        return produitDAO.findProduitsWithLowStock(seuil);
+    }
+
+    /** Optionnel : utile pour écran détail ou rechargement */
+    public Produit obtenirProduitParId(int idProduit) throws SQLException {
+        if (idProduit <= 0) {
+            throw new IllegalArgumentException("L'ID du produit est invalide.");
+        }
+        return produitDAO.getById(idProduit);
+    }
 
     private void validerProduit(Produit produit) throws IllegalArgumentException {
         if (produit == null) {
@@ -94,12 +173,24 @@ public class ProduitService {
             throw new IllegalArgumentException("Le nom du produit est obligatoire.");
         }
 
+        if (produit.getPrix() == null) {
+            throw new IllegalArgumentException("Le prix du produit est obligatoire.");
+        }
+
         if (produit.getPrix().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Le prix du produit ne peut pas être négatif.");
         }
 
         if (produit.getQuantite() < 0) {
             throw new IllegalArgumentException("Le stock initial ne peut pas être négatif.");
+        }
+
+        if (produit.getTauxTva() != null && produit.getTauxTva().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le taux de TVA ne peut pas être négatif.");
+        }
+
+        if (produit.getPoid() != null && produit.getPoid().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le poids ne peut pas être négatif.");
         }
     }
 }

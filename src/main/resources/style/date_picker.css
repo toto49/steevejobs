@@ -1,0 +1,107 @@
+/* =======================================================
+   1. LE BOUTON FERMÉ
+   ======================================================= */
+.date-picker-custom {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* Cacher le champ texte */
+.date-picker-custom > .text-field {
+    -fx-pref-width: 0;
+    -fx-min-width: 0;
+    -fx-max-width: 0;
+    -fx-padding: 0;
+    -fx-opacity: 0;
+}
+
+/* Styliser le bouton */
+.date-picker-custom > .arrow-button {
+    -fx-background-color: #6a8bce;
+    -fx-background-radius: 5;
+    -fx-padding: 10 15 10 15; /* Ajuste ces chiffres pour modifier la largeur */
+    -fx-cursor: hand;
+}
+
+/* Couleur de l'icône calendrier à l'intérieur */
+.date-picker-custom > .arrow-button > .arrow {
+    -fx-background-color: #ffffff;
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+}
+
+.date-picker-custom > .arrow-button:hover {
+    -fx-background-color: #b3e5fc; /* Un peu plus sombre au survol */
+}
+
+/* =======================================================
+   2. LE CALENDRIER OUVERT
+   ======================================================= */
+/* Le fond global du calendrier */
+.date-picker-popup {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    /* Petite ombre sympa */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 5);
+}
+
+/* L'en-tête (Mois et Année) */
+.date-picker-popup .month-year-pane {
+    -fx-background-color: #6a8bce; /* Ton bleu principal */
+    -fx-background-radius: 10 10 0 0; /* Arrondi seulement en haut */
+}
+.date-picker-popup .month-year-pane .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+/* Flèches pour changer de mois */
+.date-picker-popup .month-year-pane .left-button .left-arrow,
+.date-picker-popup .month-year-pane .right-button .right-arrow {
+    -fx-background-color: white;
+}
+
+/* La zone des jours (L, M, M, J, V, S, D) */
+.date-picker-popup .calendar-grid {
+    -fx-background-color: white;
+    -fx-background-radius: 5;
+    -fx-padding: 10;
+}
+.date-picker-popup .calendar-grid .day-name-cell {
+    -fx-text-fill: #6a8bce;
+    -fx-font-weight: bold;
+}
+
+/* Les cases des jours (1, 2, 3...) */
+.date-picker-popup .day-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-background-radius: 30; /* Rend le survol rond */
+}
+
+/* Jour au survol de la souris */
+.date-picker-popup .day-cell:hover {
+    -fx-background-color: #e1f5fe;
+    -fx-text-fill: #01579b;
+}
+
+/* Jour sélectionné */
+.date-picker-popup .day-cell:selected {
+    -fx-background-color: #6a8bce;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+/* Jour d'aujourd'hui (mise en évidence) */
+.date-picker-popup .today {
+    -fx-border-color: #6a8bce;
+    -fx-border-radius: 30;
+    -fx-border-width: 1;
+}
+
+/* Colonne des numéros de semaine à gauche */
+.date-picker-popup .week-number-cell {
+    -fx-background-color: white; /* Pour enlever le fond noir */
+    -fx-text-fill: #776a6a;      /* Couleur du texte (ex: gris clair) */
+}

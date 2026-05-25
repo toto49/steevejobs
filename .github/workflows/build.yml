@@ -54,8 +54,8 @@ jobs:
       - name: Compilation
         run: mvn -B clean compile "-Djfx.os=${{ matrix.jfx_classifier }}"
 
-      # - name: Tests Unitaires
-      #   run: mvn -B test "-Djfx.os=${{ matrix.jfx_classifier }}"
+      - name: Tests Unitaires
+        run: mvn -B test "-Djfx.os=${{ matrix.jfx_classifier }}"
 
       - name: Création de l'exécutable (Packaging)
         run: mvn -B package -DskipTests "-Djfx.os=${{ matrix.jfx_classifier }}" "-Dapp.icon=${{ matrix.icon_path }}"

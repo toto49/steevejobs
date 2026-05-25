@@ -1,27 +1,28 @@
 package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.HelloApplication;
+import com.eseo.steevejobs.service.WebSocketService;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 
-/**
- * The type Menu controller.
- */
 public class MenuController {
 
     private static MenuController instance;
-    /**
-     * The Btn list view.
-     */
+
     @FXML
     public Button btnListView;
     @FXML
@@ -40,49 +41,37 @@ public class MenuController {
     private Stage mainStage;
     private Label lblTitreHeader;
 
-    /**
-     * Gets instance.
-     *
-     * @return the instance
-     */
+    private Label badgeAccueil;
+    private Label badgeTicket;
+
     public static MenuController getInstance() {
         return instance;
     }
 
-    /**
-     * Initialize.
-     */
     @FXML
     public void initialize() {
         instance = this;
-        chargerPage("home");
+        badgeAccueil = installerBadge(btnAccueil);
+        badgeTicket = installerBadge(btnTicket);
         if (btnAccueil != null) updateButtonStyles(btnAccueil);
+        chargerPage("home");
+        WebSocketService.getInstance().connecter();
     }
 
-    /**
-     * Sets composants fenetre.
-     *
-     * @param stage      the stage
-     * @param labelTitre the label titre
-     */
     public void setComposantsFenetre(Stage stage, Label labelTitre) {
         this.mainStage = stage;
         this.lblTitreHeader = labelTitre;
     }
 
-    /**
-     * Charger page.
-     *
-     * @param nomFichier the nom fichier
-     */
     public void chargerPage(String nomFichier) {
+        TicketController.fermerChat();
         try {
             String chemin = "/com/eseo/steevejobs/view/" + nomFichier + "-view.fxml";
             FXMLLoader loader = new FXMLLoader(getClass().getResource(chemin));
+
             Parent vue = loader.load();
 
             if (mainPane != null) {
-
                 mainPane.setCenter(vue);
             }
 
@@ -95,11 +84,62 @@ public class MenuController {
         }
     }
 
-    /**
-     * Afficher accueil.
-     *
-     * @param event the event
-     */
+
+    public void allumerBadge(String typeCible, int nombreExact) {
+        Platform.runLater(() -> {
+            if ("TECH".equals(typeCible)) {
+                mettreAJourBadgeRelatif(badgeAccueil, nombreExact);
+            } else {
+                mettreAJourBadgeRelatif(badgeTicket, nombreExact);
+            }
+        });
+    }
+
+    private void mettreAJourBadgeRelatif(Label badge, int nombre) {
+        if (badge == null) return;
+
+        if (nombre <= 0) {
+            badge.setVisible(false);
+            badge.setText("0");
+        } else {
+            badge.setText(String.valueOf(nombre));
+            badge.setVisible(true);
+        }
+    }
+
+    private void incrementerBadge(Label badge) {
+        if (badge == null) return;
+
+        if (!badge.isVisible()) {
+            badge.setText("1");
+            badge.setVisible(true);
+        } else {
+            int count = Integer.parseInt(badge.getText());
+            badge.setText(String.valueOf(count + 1));
+        }
+    }
+
+    private Label installerBadge(Button bouton) {
+        if (bouton == null || bouton.getGraphic() == null) return null;
+
+        Label badge = new Label("1");
+        badge.setStyle("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-background-radius: 10; -fx-padding: 1 5 1 5; -fx-font-size: 10px; -fx-font-weight: bold;");
+        badge.setVisible(false);
+        badge.setMouseTransparent(true);
+
+        Node iconeActuelle = bouton.getGraphic();
+
+        StackPane calque = new StackPane();
+        calque.getChildren().addAll(iconeActuelle, badge);
+        StackPane.setAlignment(badge, Pos.TOP_RIGHT);
+        StackPane.setMargin(badge, new Insets(0, 14, 0, 0));
+
+        bouton.setGraphic(calque);
+
+        return badge;
+    }
+
+
     @FXML
     void afficherAccueil(ActionEvent event) {
         chargerPage("home");
@@ -107,47 +147,53 @@ public class MenuController {
         changerTitre("Accueil");
     }
 
-    /**
-     * Afficher emprunt.
-     *
-     * @param event the event
-     */
+
+    public void effacerBadgeAccueil() {
+        if (badgeAccueil != null) {
+            badgeAccueil.setVisible(false);
+            badgeAccueil.setText("0");
+        }
+    }
+
     @FXML
     void afficherPlanning(ActionEvent event) {
         chargerPage("calendrier");
         updateButtonStyles(btnPlanning);
         changerTitre("Calendrier");
     }
-
-    /**
-     * Afficheradherent.
-     *
-     * @param event the event
-     */
     @FXML
     void afficherTicket(ActionEvent event) {
-        chargerPage("ticket");
-        updateButtonStyles(btnTicket);
-        changerTitre("ticket");
+        TicketController.fermerChat();
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticketsList-view.fxml"));
+            Parent root = loader.load();
+
+            TicketsListController controller = loader.getController();
+            controller.afficherMesTickets();
+
+            setCenterView(root);
+            updateButtonStyles(btnTicket);
+            changerTitre("Tickets");
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Erreur lors de l'ouverture de la vue ticketsList");
+        }
     }
 
-    /**
-     * Afficher add produit.
-     *
-     * @param event the event
-     */
+    public void effacerBadgeticket() {
+        if (badgeTicket != null) {
+            badgeTicket.setVisible(false);
+            badgeTicket.setText("0");
+        }
+    }
+
     @FXML
     void afficherFiles(ActionEvent event) {
-        chargerPage("document");
+        chargerPage("documentUser");
         updateButtonStyles(btnFiles);
-        changerTitre("Document  ");
+        changerTitre("Document");
     }
 
-    /**
-     * Afficher parametres.
-     *
-     * @param event the event
-     */
     @FXML
     void afficherParametres(ActionEvent event) {
         chargerPage("parametres");
@@ -155,9 +201,7 @@ public class MenuController {
         changerTitre("Paramètres");
     }
 
-
     private void updateButtonStyles(Button boutonActif) {
-
         String STYLE_INACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
         String STYLE_ACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
 
@@ -166,7 +210,6 @@ public class MenuController {
         for (Button btn : tousLesBoutons) {
             if (btn != null) {
                 btn.setStyle(STYLE_INACTIF);
-
                 SVGPath icone = extraireIcone(btn);
                 if (icone != null) {
                     icone.setFill(javafx.scene.paint.Color.WHITE);
@@ -185,25 +228,31 @@ public class MenuController {
 
     private SVGPath extraireIcone(Button btn) {
         Object graphic = btn.getGraphic();
-
-        if (graphic instanceof javafx.scene.Group group) {
+        if (graphic instanceof StackPane stack) {
+            for (Node n : stack.getChildren()) {
+                if (n instanceof SVGPath) return (SVGPath) n;
+                if (n instanceof javafx.scene.Group group && !group.getChildren().isEmpty() && group.getChildren().get(0) instanceof SVGPath) {
+                    return (SVGPath) group.getChildren().get(0);
+                }
+            }
+        } else if (graphic instanceof javafx.scene.Group group) {
             if (!group.getChildren().isEmpty() && group.getChildren().get(0) instanceof SVGPath) {
                 return (SVGPath) group.getChildren().get(0);
             }
-        }
-        else if (graphic instanceof SVGPath) {
+        } else if (graphic instanceof SVGPath) {
             return (SVGPath) graphic;
         }
 
         return null;
     }
 
-    /**
-     * Changer titre.
-     *
-     * @param nouveauTitre the nouveau titre
-     */
     public void changerTitre(String nouveauTitre) {
         HelloApplication.changerTitreGlobal(nouveauTitre);
+    }
+
+    public void setCenterView(Parent vue) {
+        if (mainPane != null) {
+            mainPane.setCenter(vue);
+        }
     }
 }

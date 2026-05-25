@@ -8,22 +8,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Data Access Object dédié aux opérations sur la table des plannings.
- * <p>
- * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- * et sauvegarder les objets {@link com.eseo.steevejobs.model.Planning} en base de données.
- * </p>
- */
 public class PlanningDAO {
 
-    /**
-     * Créer un nouveau planning
-     * @param planning le planning à créer
-     * @throws SQLException exception SQL
-     */
     public boolean createPlanning(Planning planning) throws SQLException {
-        String sql = "INSERT INTO PLANNING (jour_debut, jour_fin, type, id_user) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO PLANNING (jour_debut, jour_fin, type, description, couleur, id_user) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -31,7 +19,9 @@ public class PlanningDAO {
             stmt.setTimestamp(1, Timestamp.valueOf(planning.getJourDebut()));
             stmt.setTimestamp(2, Timestamp.valueOf(planning.getJourFin()));
             stmt.setString(3, planning.getType());
-            stmt.setInt(4, planning.getUser().getId());
+            stmt.setString(4, planning.getDescription());
+            stmt.setString(5, planning.getCouleur()); // Nouveau champ
+            stmt.setInt(6, planning.getUser().getId());
 
             stmt.executeUpdate();
 
@@ -39,20 +29,17 @@ public class PlanningDAO {
                 if (generatedKeys.next()) {
                     planning.setId(generatedKeys.getInt(1));
                 }
-            }return true;
+            }
+            return true;
 
         } catch (SQLException e) {
+            e.printStackTrace();
             return false;
         }
     }
 
-    /**
-     * Mettre à jour un planning existant
-     * @param planning le planning à mettre à jour
-     * @throws SQLException exception SQL
-     */
     public boolean updatePlanning(Planning planning) throws SQLException {
-        String sql = "UPDATE PLANNING SET jour_debut = ?, jour_fin = ?, type = ?, id_user = ? WHERE id_planning = ?";
+        String sql = "UPDATE PLANNING SET jour_debut = ?, jour_fin = ?, type = ?, description = ?, couleur = ?, id_user = ? WHERE id_planning = ?";
 
         int rowsAffected;
 
@@ -62,20 +49,16 @@ public class PlanningDAO {
             stmt.setTimestamp(1, Timestamp.valueOf(planning.getJourDebut()));
             stmt.setTimestamp(2, Timestamp.valueOf(planning.getJourFin()));
             stmt.setString(3, planning.getType());
-            stmt.setInt(4, planning.getUser().getId());
-            stmt.setInt(5, planning.getId());
+            stmt.setString(4, planning.getDescription());
+            stmt.setString(5, planning.getCouleur()); // Nouveau champ
+            stmt.setInt(6, planning.getUser().getId());
+            stmt.setInt(7, planning.getId());
 
             rowsAffected = stmt.executeUpdate();
         }
         return rowsAffected > 0;
     }
 
-    /**
-     * Supprimer un planning par son ID
-     * @param id l'ID du planning
-     * @return true si supprimé, false sinon
-     * @throws SQLException exception SQL
-     */
     public boolean deletePlanning(int id) throws SQLException {
         String sql = "DELETE FROM PLANNING WHERE id_planning = ?";
 
@@ -83,18 +66,11 @@ public class PlanningDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
-
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
         }
     }
 
-    /**
-     * Récupérer un planning par son ID
-     * @param id l'ID du planning
-     * @return le planning trouvé, null sinon
-     * @throws SQLException exception SQL
-     */
     public Planning getById(int id) throws SQLException {
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
                 "FROM PLANNING p " +
@@ -107,23 +83,14 @@ public class PlanningDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    User user = new User(
-                            rs.getInt("id_user"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif")
-                    );
+                    User user = extractUser(rs);
                     return new Planning(
                             rs.getInt("id_planning"),
                             rs.getTimestamp("jour_debut").toLocalDateTime(),
                             rs.getTimestamp("jour_fin").toLocalDateTime(),
                             rs.getString("type"),
+                            rs.getString("description"),
+                            rs.getString("couleur"), // Nouveau champ
                             user
                     );
                 }
@@ -132,12 +99,6 @@ public class PlanningDAO {
         }
     }
 
-    /**
-     * Récupérer tous les plannings d'un utilisateur
-     * @param userId l'ID de l'utilisateur
-     * @return la liste des plannings de l'utilisateur
-     * @throws SQLException exception SQL
-     */
     public List<Planning> findByUserId(int userId) throws SQLException {
         List<Planning> plannings = new ArrayList<>();
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
@@ -152,23 +113,14 @@ public class PlanningDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    User user = new User(
-                            rs.getInt("id_user"),
-                            rs.getString("nom"),
-                            rs.getString("prenom"),
-                            rs.getString("email"),
-                            rs.getString("mdp"),
-                            rs.getString("adresse"),
-                            rs.getString("role"),
-                            rs.getString("tel"),
-                            rs.getString("poste"),
-                            rs.getBoolean("actif")
-                    );
+                    User user = extractUser(rs);
                     plannings.add(new Planning(
                             rs.getInt("id_planning"),
                             rs.getTimestamp("jour_debut").toLocalDateTime(),
                             rs.getTimestamp("jour_fin").toLocalDateTime(),
                             rs.getString("type"),
+                            rs.getString("description"),
+                            rs.getString("couleur"), // Nouveau champ
                             user
                     ));
                 }
@@ -177,11 +129,6 @@ public class PlanningDAO {
         return plannings;
     }
 
-    /**
-     * Récupérer tous les plannings
-     * @return la liste de tous les plannings
-     * @throws SQLException exception SQL
-     */
     public List<Planning> findAll() throws SQLException {
         List<Planning> plannings = new ArrayList<>();
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
@@ -190,27 +137,18 @@ public class PlanningDAO {
                 "ORDER BY p.jour_debut";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                User user = new User(
-                        rs.getInt("id_user"),
-                        rs.getString("nom"),
-                        rs.getString("prenom"),
-                        rs.getString("email"),
-                        rs.getString("mdp"),
-                        rs.getString("adresse"),
-                        rs.getString("role"),
-                        rs.getString("tel"),
-                        rs.getString("poste"),
-                        rs.getBoolean("actif")
-                );
+                User user = extractUser(rs);
                 plannings.add(new Planning(
                         rs.getInt("id_planning"),
                         rs.getTimestamp("jour_debut").toLocalDateTime(),
                         rs.getTimestamp("jour_fin").toLocalDateTime(),
                         rs.getString("type"),
+                        rs.getString("description"),
+                        rs.getString("couleur"), // Nouveau champ
                         user
                 ));
             }
@@ -218,45 +156,40 @@ public class PlanningDAO {
         return plannings;
     }
 
-    /**
-     * Compter le nombre total de plannings
-     * @return le nombre total de plannings
-     * @throws SQLException exception SQL
-     */
     public int countPlannings() throws SQLException {
         String sql = "SELECT COUNT(*) FROM PLANNING";
-
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) { return rs.getInt(1); }
+        }
+        return 0;
+    }
 
-            if (rs.next()) {
-                return rs.getInt(1);
+    public int countByUserId(int userId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM PLANNING WHERE id_user = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) { return rs.getInt(1); }
             }
         }
         return 0;
     }
 
-    /**
-     * Compter le nombre de plannings par utilisateur
-     * @param userId l'ID de l'utilisateur
-     * @return le nombre de plannings de l'utilisateur
-     * @throws SQLException exception SQL
-     */
-    public int countByUserId(int userId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PLANNING WHERE id_user = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, userId);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
-        }
-        return 0;
+    private User extractUser(ResultSet rs) throws SQLException {
+        return new User(
+                rs.getInt("id_user"),
+                rs.getString("nom"),
+                rs.getString("prenom"),
+                rs.getString("email"),
+                rs.getString("mdp"),
+                rs.getString("adresse"),
+                rs.getString("role"),
+                rs.getString("tel"),
+                rs.getString("poste"),
+                rs.getBoolean("actif")
+        );
     }
 }
