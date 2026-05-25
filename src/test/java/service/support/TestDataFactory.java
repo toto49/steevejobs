@@ -20,7 +20,7 @@ public final class TestDataFactory {
     }
 
     public static Produit produitUnitaire(int id, int quantite) {
-        return new Produit(id, "Pomme", BigDecimal.TEN, BigDecimal.valueOf(20), quantite, BigDecimal.ZERO, true);
+        return new Produit(id, "Pomme", BigDecimal.TEN, BigDecimal.valueOf(20), quantite, BigDecimal.ZERO, true, 5);
     }
 
     public static Tiers tiersValide() {

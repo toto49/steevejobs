@@ -12,15 +12,12 @@ import java.util.List;
 
 public class FichePayeService {
 
-    private final FichePayeDAO       fichePayeDAO;
-    private final PlanningDAO        planningDAO;
+    private final FichePayeDAO        fichePayeDAO;
+    private final PlanningDAO         planningDAO;
     private final PdfGeneratorService pdfService;
 
-    // Constantes métier
-    private static final double SALAIRE_MINIMUM_LEGAL = 1766.92; // SMIC mensuel brut 2025
+    private static final double SALAIRE_MINIMUM_LEGAL = 1766.92;
     private static final double SALAIRE_MAXIMUM       = 100_000.0;
-    private static final double TAUX_COTISATIONS_MIN  = 0.0;
-    private static final double TAUX_COTISATIONS_MAX  = 0.99;
 
     public FichePayeService() {
         this.fichePayeDAO = new FichePayeDAO();
@@ -35,22 +32,15 @@ public class FichePayeService {
         this.pdfService   = pdfService;
     }
 
-    // --------------------------------------------------------
-    // MÉTHODES PUBLIQUES
-    // --------------------------------------------------------
-
-    /**
-     * Génère une fiche de paie en détectant automatiquement
-     * les congés depuis le planning du mois concerné.
-     */
     public FichePaye genererFichePaye(User employe, LocalDateTime mois,
-                                      double salaireBase, double tauxCotisations)
+                                      double salaireBrut, double tauxCotisationsPatronales,
+                                      double heuresTravaillees, double tauxHoraire)
             throws IllegalArgumentException, SQLException {
 
-        validerParametresGeneration(employe, mois, salaireBase, tauxCotisations);
+        validerParametresGeneration(employe, mois, salaireBrut, tauxCotisationsPatronales,
+                heuresTravaillees, tauxHoraire);
 
-        // Vérifier qu'aucune fiche n'existe déjà pour ce mois
-        FichePaye existante = fichePayeDAO.findByEmployeIdAndMois(employe.getId(), mois);
+        FichePaye existante = fichePayeDAO.findByEmployeIdAndDate(employe.getId(), mois);
         if (existante != null) {
             throw new IllegalStateException(
                     "Une fiche de paie existe déjà pour "
@@ -63,7 +53,9 @@ public class FichePayeService {
         FichePaye fiche = new FichePaye(0, mois, "", employe);
         fichePayeDAO.createFichePaye(fiche);
 
-        String url = pdfService.genererFichePaye(fiche, salaireBase, tauxCotisations, joursConge);
+        String url = pdfService.genererFichePaye(fiche, salaireBrut, tauxCotisationsPatronales,
+                joursConge, heuresTravaillees, tauxHoraire);
+
         fichePayeDAO.updateUrl(fiche.getId(), url);
         fiche.setUrl(url);
 
@@ -99,19 +91,27 @@ public class FichePayeService {
         return fichePayeDAO.findByAnnee(annee);
     }
 
-    // Méthodes conservées pour rétrocompatibilité
-    public List<FichePaye> findAll()               throws SQLException { return fichePayeDAO.findAll(); }
-    public List<FichePaye> findByEmployeId(int id) throws SQLException { return fichePayeDAO.findByEmployeId(id); }
-    public List<FichePaye> findByAnnee(int annee)  throws SQLException { return fichePayeDAO.findByAnnee(annee); }
-    public boolean         supprimer(int id)        throws SQLException { return fichePayeDAO.deleteFichePaye(id); }
+    public List<FichePaye> findAll() throws SQLException {
+        return fichePayeDAO.findAll();
+    }
 
-    // --------------------------------------------------------
-    // MÉTHODES PRIVÉES (Logique métier interne)
-    // --------------------------------------------------------
+    public List<FichePaye> findByEmployeId(int id) throws SQLException {
+        return fichePayeDAO.findByEmployeId(id);
+    }
+
+    public List<FichePaye> findByAnnee(int annee) throws SQLException {
+        return fichePayeDAO.findByAnnee(annee);
+    }
+
+    public boolean supprimer(int id) throws SQLException {
+        return fichePayeDAO.deleteFichePaye(id);
+    }
 
     private void validerParametresGeneration(User employe, LocalDateTime mois,
-                                             double salaireBase,
-                                             double tauxCotisations)
+                                             double salaireBrut,
+                                             double tauxCotisationsPatronales,
+                                             double heuresTravaillees,
+                                             double tauxHoraire)
             throws IllegalArgumentException {
 
         if (employe == null) {
@@ -120,31 +120,32 @@ public class FichePayeService {
         if (employe.getId() <= 0) {
             throw new IllegalArgumentException("L'ID de l'employé est invalide.");
         }
-
         if (mois == null) {
             throw new IllegalArgumentException("Le mois de la fiche est obligatoire.");
         }
         if (mois.isAfter(LocalDateTime.now())) {
-            throw new IllegalArgumentException(
-                    "Impossible de générer une fiche de paie pour un mois futur.");
+            throw new IllegalArgumentException("Impossible de générer une fiche de paie pour un mois futur.");
         }
-
-        if (salaireBase <= 0) {
+        if (salaireBrut <= 0) {
             throw new IllegalArgumentException("Le salaire brut doit être supérieur à 0.");
         }
-        if (salaireBase < SALAIRE_MINIMUM_LEGAL) {
+        if (salaireBrut < SALAIRE_MINIMUM_LEGAL) {
             throw new IllegalArgumentException(
                     String.format("Le salaire brut ne peut pas être inférieur au SMIC (%.2f €).",
                             SALAIRE_MINIMUM_LEGAL));
         }
-        if (salaireBase > SALAIRE_MAXIMUM) {
+        if (salaireBrut > SALAIRE_MAXIMUM) {
             throw new IllegalArgumentException(
                     String.format("Le salaire brut ne peut pas dépasser %.0f €.", SALAIRE_MAXIMUM));
         }
-
-        if (tauxCotisations < TAUX_COTISATIONS_MIN || tauxCotisations >= TAUX_COTISATIONS_MAX) {
-            throw new IllegalArgumentException(
-                    "Le taux de cotisations doit être compris entre 0 et 0.99 (ex : 0.22 = 22%).");
+        if (tauxCotisationsPatronales < 0 || tauxCotisationsPatronales >= 1) {
+            throw new IllegalArgumentException("Le taux de cotisations patronales doit être entre 0 et 1.");
+        }
+        if (heuresTravaillees <= 0) {
+            throw new IllegalArgumentException("Les heures travaillées doivent être supérieures à 0.");
+        }
+        if (tauxHoraire <= 0) {
+            throw new IllegalArgumentException("Le taux horaire doit être supérieur à 0.");
         }
     }
 

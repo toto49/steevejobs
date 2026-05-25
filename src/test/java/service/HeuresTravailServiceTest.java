@@ -56,6 +56,7 @@ class HeuresTravailServiceTest {
                 1, date,
                 LocalTime.of(8, 0), LocalTime.of(12, 0),
                 LocalTime.of(13, 0), LocalTime.of(17, 0),
+                LocalTime.of(8, 0),
                 TestDataFactory.utilisateurActif(1, "user@mail.fr")
         );
         when(heuresTravailDAO.getHeuresParDate(1, date)).thenReturn(heures);

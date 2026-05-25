@@ -8,6 +8,7 @@ import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
 import com.eseo.steevejobs.service.DocumentService;
 import com.eseo.steevejobs.service.SessionService;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 public class NouveauDocumentController implements Initializable {
 
@@ -37,7 +39,6 @@ public class NouveauDocumentController implements Initializable {
     @FXML private TableColumn<Composer, Void> colActions;
     @FXML private Label lblTotalHT, lblTVA, lblTotalTTC;
     @FXML private Button btnAnnuler, btnCreer;
-
 
     private final TiersDAO tiersDAO = new TiersDAO();
     private final ProduitDAO produitDAO = new ProduitDAO();
@@ -130,11 +131,9 @@ public class NouveauDocumentController implements Initializable {
             BigDecimal quantite = new BigDecimal(quantiteStr);
             BigDecimal prixVente = new BigDecimal(prixStr);
 
-            // Vérification selon le type de produit (poids vs unité)
             boolean estProduitPoids = produit.getPoid() != null && produit.getPoid().compareTo(BigDecimal.ZERO) > 0;
 
             if (!estProduitPoids) {
-                // Vente à l'unité - la quantité doit être un entier
                 if (quantite.remainder(BigDecimal.ONE).compareTo(BigDecimal.ZERO) != 0) {
                     afficherErreur("La quantité doit être un nombre entier pour ce produit (unités)");
                     return;
@@ -144,7 +143,6 @@ public class NouveauDocumentController implements Initializable {
                     return;
                 }
             } else {
-                // Vente au poids - quantité positive
                 if (quantite.compareTo(BigDecimal.ZERO) <= 0) {
                     afficherErreur("Le poids doit être supérieur à 0 kg");
                     return;
@@ -154,7 +152,6 @@ public class NouveauDocumentController implements Initializable {
             Composer ligne = new Composer(0, produit, quantite, prixVente);
             lignes.add(ligne);
 
-            // Vider les champs
             txtQuantite.clear();
             txtPrixVente.clear();
             comboProduit.setValue(null);
@@ -185,25 +182,49 @@ public class NouveauDocumentController implements Initializable {
             return;
         }
 
+        if (lignes.isEmpty()) {
+            afficherErreur("Vous devez ajouter au moins un produit à ce document.");
+            return;
+        }
+        btnCreer.setDisable(true);
+        btnAnnuler.setDisable(true);
+
         BigDecimal totalHT = BigDecimal.ZERO;
         for (Composer ligne : lignes) {
             totalHT = totalHT.add(ligne.getPrixVente().multiply(ligne.getQuantite()));
         }
-        // Crée le vendeur avec l'ID de l'utilisateur connecté
-        User vendeur = new User();
-
-        vendeur.setId(user.getId());
-
         Document doc = new Document(0, comboType.getValue(), datePicker.getValue().atStartOfDay(),
                 totalHT, totalHT.multiply(new BigDecimal("1.20")), comboStatut.getValue(),
-                "", comboTiers.getValue(), vendeur);
+                "", comboTiers.getValue(), user);
 
         try {
             documentService.ajouterDocument(doc, lignes);
-            afficherSucces("Document créé avec succès !");
-            fermer();
+
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    return documentService.exporterPdf(doc.getId());
+                } catch (SQLException e) {
+                    throw new RuntimeException("Erreur de l'exportation PDF/NAS : " + e.getMessage(), e);
+                }
+            }).thenAcceptAsync(urlPdf -> {
+                Platform.runLater(() -> {
+                    afficherSucces("Document généré et sauvegardé sur le NAS avec succès !");
+                    fermer();
+                });
+            }).exceptionally(ex -> {
+                Platform.runLater(() -> {
+                    ex.printStackTrace();
+                    afficherErreur("Document sauvegardé, mais échec du transfert NAS : " + ex.getCause().getMessage());
+                    btnCreer.setDisable(false);
+                    btnAnnuler.setDisable(false);
+                });
+                return null;
+            });
+
         } catch (Exception e) {
-            afficherErreur("Erreur création : " + e.getMessage());
+            afficherErreur("Erreur critique (Création BDD) : " + e.getMessage());
+            btnCreer.setDisable(false);
+            btnAnnuler.setDisable(false);
         }
     }
 
@@ -213,12 +234,17 @@ public class NouveauDocumentController implements Initializable {
     }
 
     private void afficherErreur(String msg) {
-        new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
+        Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
+        alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        alert.showAndWait();
     }
 
     private void afficherSucces(String msg) {
-        new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
+        Alert alert = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
+        alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        alert.showAndWait();
     }
+
     private User utilisateurConnecte;
 
     public void setUtilisateurConnecte(User user) {

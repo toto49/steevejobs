@@ -35,7 +35,7 @@ class ProduitServiceTest {
     }
 
     private Produit produitUnitaire(int id, int quantite) {
-        return new Produit(id, "Pomme", BigDecimal.TEN, BigDecimal.valueOf(20), quantite, BigDecimal.ZERO, true);
+        return new Produit(id, "Pomme", BigDecimal.TEN, BigDecimal.valueOf(20), quantite, BigDecimal.ZERO, true, 5);
     }
 
     @Test
@@ -49,7 +49,7 @@ class ProduitServiceTest {
 
     @Test
     void ajouterProduit_nomVide_doitLeverException() {
-        Produit produit = new Produit(0, "", BigDecimal.TEN, BigDecimal.valueOf(20), 10, BigDecimal.ZERO, true);
+        Produit produit = new Produit(0, "", BigDecimal.TEN, BigDecimal.valueOf(20), 10, BigDecimal.ZERO, true, 5);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.ajouterProduit(produit));
         assertEquals("Le nom du produit est obligatoire.", ex.getMessage());
@@ -70,7 +70,6 @@ class ProduitServiceTest {
         when(produitDAO.updateStock(1, 8)).thenReturn(true);
 
         assertDoesNotThrow(() -> service.mettreAJourStock(1, 3));
-
         verify(produitDAO).updateStock(1, 8);
     }
 
@@ -88,7 +87,7 @@ class ProduitServiceTest {
 
     @Test
     void ajouterProduit_prixNegatif_doitLeverException() {
-        Produit produit = new Produit(0, "Nom", new BigDecimal("-1"), BigDecimal.valueOf(20), 10, BigDecimal.ZERO, true);
+        Produit produit = new Produit(0, "Nom", new BigDecimal("-1"), BigDecimal.valueOf(20), 10, BigDecimal.ZERO, true, 5);
         assertThrows(IllegalArgumentException.class, () -> service.ajouterProduit(produit));
     }
 
@@ -98,5 +97,11 @@ class ProduitServiceTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.mettreAJourStock(1, 1));
         assertEquals("Produit introuvable.", ex.getMessage());
+    }
+
+    @Test
+    void obtenirProduitsStockBas_seuilNegatif_doitLeverException() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.obtenirProduitsStockBas(-1));
+        assertEquals("Le seuil ne peut pas être négatif.", ex.getMessage());
     }
 }

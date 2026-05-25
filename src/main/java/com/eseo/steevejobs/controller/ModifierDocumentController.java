@@ -6,11 +6,12 @@ import com.eseo.steevejobs.dao.ProduitDAO;
 import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.Document;
-import com.eseo.steevejobs.model.Produit;
-import com.eseo.steevejobs.model.Tiers;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
+import com.eseo.steevejobs.model.Produit;
+import com.eseo.steevejobs.model.Tiers;
 import com.eseo.steevejobs.service.DocumentService;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -24,6 +25,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 public class ModifierDocumentController implements Initializable {
 
@@ -98,7 +100,6 @@ public class ModifierDocumentController implements Initializable {
     private void configurerTableLignes() {
         colProduit.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getProduit().getNom()));
 
-        // Colonne Quantité avec unité (kg ou unité(s))
         colQuantite.setCellValueFactory(data -> {
             Produit p = data.getValue().getProduit();
             BigDecimal quantite = data.getValue().getQuantite();
@@ -151,11 +152,9 @@ public class ModifierDocumentController implements Initializable {
             BigDecimal quantite = new BigDecimal(qStr);
             BigDecimal prix = new BigDecimal(pStr);
 
-            // Vérification selon le type de produit (poids vs unité)
             boolean estProduitPoids = produit.getPoid() != null && produit.getPoid().compareTo(BigDecimal.ZERO) > 0;
 
             if (!estProduitPoids) {
-                // Vente à l'unité - la quantité doit être un entier
                 if (quantite.remainder(BigDecimal.ONE).compareTo(BigDecimal.ZERO) != 0) {
                     afficherErreur("La quantité doit être un nombre entier pour ce produit (unités)");
                     return;
@@ -165,7 +164,6 @@ public class ModifierDocumentController implements Initializable {
                     return;
                 }
             } else {
-                // Vente au poids - quantité positive
                 if (quantite.compareTo(BigDecimal.ZERO) <= 0) {
                     afficherErreur("Le poids doit être supérieur à 0 kg");
                     return;
@@ -203,6 +201,11 @@ public class ModifierDocumentController implements Initializable {
             return;
         }
 
+        if (lignes.isEmpty()) {
+            afficherErreur("Le document doit contenir au moins un produit.");
+            return;
+        }
+
         BigDecimal totalHT = BigDecimal.ZERO;
         for (Composer ligne : lignes) {
             totalHT = totalHT.add(ligne.getPrixVente().multiply(ligne.getQuantite()));
@@ -215,21 +218,41 @@ public class ModifierDocumentController implements Initializable {
         documentModification.setStatut(comboStatut.getValue());
         documentModification.setPrixHt(totalHT);
         documentModification.setPrixTtc(totalTTC);
+        btnModifier.setDisable(true);
+        btnAnnuler.setDisable(true);
 
         try {
             documentService.modifierDocument(documentModification);
-
-            // Mettre à jour les lignes
             composerDAO.deleteByDocumentId(documentModification.getId());
-            for (Composer ligne : lignes) {
-                ligne.setIdDocument(documentModification.getId());
-                composerDAO.createLigne(ligne);
+            for (Composer nouvelleLigne : lignes) {
+                nouvelleLigne.setIdDocument(documentModification.getId());
+                composerDAO.createLigne(nouvelleLigne);
             }
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    return documentService.exporterPdf(documentModification.getId());
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }).thenAcceptAsync(urlPdf -> {
+                Platform.runLater(() -> {
+                    afficherSucces("Document mis à jour en base et sur le NAS !");
+                    fermer();
+                });
+            }).exceptionally(ex -> {
+                Platform.runLater(() -> {
+                    ex.printStackTrace();
+                    afficherErreur("Mis à jour en BDD, mais échec du PDF/NAS : " + ex.getCause().getMessage());
+                    btnModifier.setDisable(false);
+                    btnAnnuler.setDisable(false);
+                });
+                return null;
+            });
 
-            afficherSucces("Document modifié !");
-            fermer();
         } catch (Exception e) {
-            afficherErreur("Erreur modification : " + e.getMessage());
+            afficherErreur("Erreur modification BDD : " + e.getMessage());
+            btnModifier.setDisable(false);
+            btnAnnuler.setDisable(false);
         }
     }
 

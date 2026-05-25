@@ -3,7 +3,10 @@ package com.eseo.steevejobs.dao;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.Produit;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +19,7 @@ public class ComposerDAO {
      */
     public List<Composer> findByDocumentId(int idDocument) throws SQLException {
         List<Composer> lignes = new ArrayList<>();
-        String sql = "SELECT c.*, p.nom, p.prix_unitaire, p.taux_tva, p.quantite, p.poids, p.actif " +
+        String sql = "SELECT c.*, p.nom, p.prix_unitaire, p.taux_tva, p.quantite, p.poids, p.actif, p.seuil_alerte " +
                 "FROM COMPOSER c " +
                 "INNER JOIN PRODUITS p ON c.id_produits = p.id_produits " +
                 "WHERE c.id_documents = ?";
@@ -34,7 +37,8 @@ public class ComposerDAO {
                             rs.getBigDecimal("taux_tva"),
                             rs.getInt("quantite"),
                             rs.getBigDecimal("poids"),
-                            rs.getBoolean("actif")
+                            rs.getBoolean("actif"),
+                            rs.getInt("seuil_alerte")
                     );
                     lignes.add(new Composer(
                             idDocument,

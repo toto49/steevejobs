@@ -83,6 +83,9 @@ class DocumentServiceTest {
 
     @Test
     void supprimerDocument_echecBdd_doitLeverRuntimeException() throws SQLException {
+        Document document = TestDataFactory.documentValide();
+        document.setId(3);
+        when(documentDAO.getById(3)).thenReturn(document);
         when(documentDAO.deleteDocument(3)).thenReturn(false);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.supprimerDocument(3));

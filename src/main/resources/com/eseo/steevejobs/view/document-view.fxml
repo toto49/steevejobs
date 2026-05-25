@@ -4,7 +4,6 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
-
 <BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="720.0" prefWidth="1280.0" stylesheets="@/style/style.css"
             style="-fx-background-color: #f4f5f7;" xmlns="http://javafx.com/javafx/11"
             fx:controller="com.eseo.steevejobs.controller.DocumentController">
@@ -15,12 +14,6 @@
             <Label text="GESTION COMMERCIALE" textFill="WHITE">
                 <font><Font name="System Bold" size="24.0"/></font>
             </Label>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="btnNouveauDoc" onAction="#ouvrirFormulaireCreation"
-                    text="+ Nouveau document"
-                    style="-fx-background-color: white; -fx-text-fill: #4B78CC;
-                           -fx-font-weight: bold; -fx-background-radius: 20;
-                           -fx-cursor: hand; -fx-padding: 8 16;"/>
         </HBox>
     </top>
 
@@ -28,27 +21,30 @@
         <HBox spacing="15.0">
             <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/></padding>
 
-            <!-- LISTE DES DOCUMENTS -->
             <VBox HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-background-radius: 10;
                          -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
                 <padding><Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/></padding>
 
-                <!-- FILTRES -->
                 <HBox alignment="CENTER_LEFT" spacing="15.0">
-                    <TextField fx:id="searchField" promptText="Rechercher un client..." prefWidth="250.0"
+                    <TextField fx:id="searchField" promptText="Rechercher un client..." prefWidth="250.0" prefHeight="50.0"
                                onKeyReleased="#filtrer" style="-fx-background-radius: 20; -fx-padding: 8 12;"/>
-                    <ComboBox fx:id="comboTypeFiltre" promptText="Tous les types" prefWidth="180.0"
+                    <ComboBox fx:id="comboTypeFiltre" promptText="Tous les types" prefWidth="180.0" prefHeight="50.0"
                               onAction="#filtrer" style="-fx-background-radius: 20;"/>
-                    <ComboBox fx:id="comboStatutFiltre" promptText="Tous les statuts" prefWidth="180.0"
+                    <ComboBox fx:id="comboStatutFiltre" promptText="Tous les statuts" prefWidth="180.0" prefHeight="50.0"
                               onAction="#filtrer" style="-fx-background-radius: 20;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnNouveauDoc" onAction="#ouvrirFormulaireCreation"
+                            text="+ Nouveau document" prefWidth="220.0" prefHeight="50.0"
+                            style="-fx-background-color: white; -fx-text-fill: #4B78CC;
+               -fx-font-weight: bold; -fx-border-color: #d1d5db;
+               -fx-border-radius: 20; -fx-background-radius: 20;
+               -fx-cursor: hand; -fx-padding: 8 16;"/>
                 </HBox>
 
-                <!-- ESPACE ENTRE FILTRES ET TABLEAU -->
                 <VBox prefHeight="20.0" minHeight="20.0">
                     <padding><Insets top="15.0" bottom="5.0"/></padding>
                 </VBox>
 
-                <!-- TABLEAU -->
                 <TableView fx:id="tableDocuments" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colType" text="TYPE" prefWidth="140.0"/>
@@ -72,20 +68,17 @@
                 </HBox>
             </VBox>
 
-            <!-- PANNEAU DÉTAIL -->
             <VBox prefWidth="380.0" style="-fx-background-color: white; -fx-background-radius: 10;
                          -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
 
-                <!-- ENTÊTE DÉTAIL -->
-                <VBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #aebce1; -fx-background-radius: 10 10 0 0;">
-                    <padding><Insets left="20.0"/></padding>
+                <VBox alignment="CENTER_LEFT" prefHeight="60.0" minHeight="60.0" style="-fx-background-color: #aebce1; -fx-background-radius: 10 10 0 0;">
+                    <padding><Insets left="20.0" top="15.0" bottom="15.0"/></padding>
                     <Label fx:id="detailType" style="-fx-text-fill: black; -fx-font-size: 18px; -fx-font-weight: bold;"/>
                 </VBox>
 
                 <VBox spacing="12.0">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="15.0"/></padding>
 
-                    <!-- INFOS CLIENT -->
                     <Label text="INFORMATIONS CLIENT" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #4B78CC;"/>
                     <GridPane vgap="8.0" hgap="10.0">
                         <Label text="Nom :" textFill="#6b7280" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
@@ -103,7 +96,6 @@
 
                     <Separator/>
 
-                    <!-- INFORMATIONS DOCUMENT -->
                     <Label text="INFORMATIONS DOCUMENT" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #4B78CC;"/>
 
                     <GridPane vgap="8.0" hgap="10.0">
@@ -122,13 +114,6 @@
 
                     <Separator/>
 
-                    <!-- LIGNES PRODUITS -->
-                    <Label text="LIGNES PRODUITS" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #4B78CC;"/>
-                    <VBox fx:id="lignesContainer" spacing="8.0"/>
-
-                    <Region VBox.vgrow="ALWAYS"/>
-
-                    <!-- BOUTONS -->
                     <Button fx:id="btnExporterPdf" onAction="#exporterPdf" maxWidth="Infinity" text="📄 Exporter en PDF"
                             style="-fx-background-color: #4B78CC; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 0;"/>
                     <Button fx:id="btnOuvrirPdf" onAction="#ouvrirPdf" maxWidth="Infinity" text="📂 Ouvrir le PDF"

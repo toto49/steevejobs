@@ -5,6 +5,7 @@
 [![Liberica](https://img.shields.io/badge/Liberica%20JDK-25-0A7BBB?style=for-the-badge&logo=java&logoColor=white)](https://bell-sw.com/pages/downloads/#jdk-25-lts)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/fr/)
 [![Maven](https://img.shields.io/badge/Maven-Build-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
+[![Docker](https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
 **SteeveJobs** est un logiciel de bureau moderne conçu pour la gestion complète d’une entreprise de type PME
 
@@ -52,6 +53,8 @@ code claire, sécurisée et maintenable.
 - **Interface graphique :** JavaFX (avec Scene Builder FXML & AtlantaFX)
 - **Base de données :** MySQL (JDBC direct)
 - **Synology MailPlus Server**
+- **Conteneur docker** : websocket
+- **JWT**
 - **Outils externes :** JavaFX, ControlsFX, Atlantafx, JUnit, Kotlin Stdlib, Kotlin Test, jBCrypt, Dotenv Java, MySQL
   Connector/J, Jakarta Mail (API + Impl), JavaFX Maven Plugin, Kotlin Maven Plugin, Maven Compiler Plugin
 
@@ -73,6 +76,7 @@ code claire, sécurisée et maintenable.
 - **MySQL 8.0+** fonctionnel
 - **Maven** (inclus via le wrapper `mvnw` du projet, ou installable manuellement)
 - **Serveur STMP** installé et fonctionnel pour pouvoir envoyer des mails
+- **Docker** installé et fonctionnel pour pouvoir éxécuter des conteneurs
 
 ### 1. Configuration de l'environnement (JDK & Maven)
 
@@ -109,7 +113,55 @@ DATABASE steevejobs;
 
 Ensuite, importez la structure des tables en exécutant le script fourni : `sql/steevejobs.sql`.
 
-### 3. Configuration sécurisée
+### 3. Déploiement du serveur WebSocket (Docker)
+
+Le système de notifications en temps réel repose sur un serveur WebSocket indépendant. Les fichiers de configuration
+Docker (`Dockerfile`, etc.) étant déjà présents à la racine de la branche dédiée, le déploiement se fait rapidement.
+
+#### Étape A — Basculer sur la branche du serveur
+
+Basculez sur la branche Git contenant l'application serveur :
+
+```bash
+git checkout websocket
+```
+
+#### Étape B — Compiler et générer le fichier .jar
+
+Générez l'exécutable Java autonome à l'aide de Maven :
+
+```bash
+mvn clean package
+```
+
+Maven génère deux fichiers dans `target/` : le jar standard et le jar avec dépendances. Renommez ce dernier pour
+correspondre à ce qu'attend le `Dockerfile` :
+
+```bash
+mv target/websocket-server-with-dependencies.jar target/serveur.jar
+```
+
+#### Étape C — Construction et déploiement du conteneur
+
+Avant de construire l'image, créez un fichier `.env` à la racine de la branche avec la variable d'environnement  :
+
+```env
+JWT_SECRET=cle_secrete_pour_signer_les_tokens
+```
+
+> ⚠️ Ne commitez jamais ce fichier `.env` — vérifiez qu'il est bien présent dans votre `.gitignore`.
+
+Construisez ensuite l'image et lancez le conteneur en arrière-plan (idéal pour votre Synology NAS) :
+
+```bash
+# Construire l'image Docker à partir du Dockerfile existant
+docker build -t steevejobs-websocket .
+
+# Lancer le conteneur sur le port 8887
+docker run -d -p 8887:8887 --name steevejobs-ws-serveurr --restart always steevejobs-websocket
+```
+
+### 4. Configuration sécurisée
 
 Pour que l'application puisse se connecter à la base de données, vous devez créer un fichier nommé exactement `.env` et
 y ajouter vos identifiants MySQL. Son emplacement dépend de votre utilisation :
@@ -122,11 +174,37 @@ y ajouter vos identifiants MySQL. Son emplacement dépend de votre utilisation :
 Contenu à ajouter dans le fichier `.env` :
 
 ```env
+
+# 🔌 Base de données MySQL
+
 DB_URL=jdbc:mysql://localhost:3306/steevejobs
 DB_USER=root
 DB_PASSWORD=votre_mot_de_passe_ici
-SMTP_URL = lien de votre serveur mail
-EXPEDITEUR = adresse mail de votre expediteur
+
+
+# 📧 Serveur SMTP (envoi d’e-mails)
+
+SMTP_URL=lien_de_votre_serveur_mail
+EXPEDITEUR=adresse_mail_de_votre_expediteur
+
+
+# 🔗 WebSocket sécurisé
+
+WS_SERVER_IP=adresse_ip
+WS_SERVER_PORT=port_du_serveur_ws
+
+
+# 🔐 JWT (authentification)
+
+JWT_SECRET=cle_secrete_pour_signer_les_tokens
+
+
+# 📁 WebDAV (stockage fichiers)
+
+WEBDAV_BASE_URL=url_du_serveur_webdav
+WEBDAV_USERNAME=nom_utilisateur_webdav
+WEBDAV_PASSWORD=mot_de_passe_webdav
+
 ```
 
 ### 🌱 Initialisation de la base de données (premier lancement)
