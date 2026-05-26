@@ -37,9 +37,9 @@
                                         </Label>
                                         <Region HBox.hgrow="ALWAYS" />
                                         <DatePicker fx:id="datePickerSemaine" prefHeight="35" styleClass="date-picker-custom" />
-                                        <Button onAction="#lastWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5;" text="◀ Précédent" />
-                                        <Button onAction="#nextWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5;" text="Suivant ▶" />
-                                        <Button onAction="#ouvrirPopupAjout" prefHeight="35" style="-fx-cursor: hand; -fx-background-color: #6a8bce; -fx-text-fill: white; -fx-background-radius: 5; -fx-font-weight: bold;" text="Nouvel Événement" />
+                                        <Button onAction="#lastWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 5;" text="◀ Précédent" />
+                                        <Button onAction="#nextWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 5;" text="Suivant ▶" />
+                                        <Button onAction="#ouvrirPopupAjout" prefHeight="35" style="-fx-cursor: hand; -fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 5; -fx-font-weight: bold;" text="Nouvel Événement" />
                                         <HBox spacing="10.0" />
                                     </children>
                                 </HBox>

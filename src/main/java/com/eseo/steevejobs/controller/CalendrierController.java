@@ -66,6 +66,7 @@ public class CalendrierController {
     private HeuresTravailService heuresTravailService;
     private UserDAO userDAO;
     private boolean miseAJourRechercheEmploye;
+    private int employeSelectionneId = -1;
 
 
     // ==========================================
@@ -86,8 +87,13 @@ public class CalendrierController {
             events = new ArrayList<>();
             initialiserSelecteurEmploye();
         } else {
-            utilisateurAffiche = utilisateurConnecte;
-            events = initEvent();
+            if (utilisateurConnecte != null) {
+                utilisateurAffiche = utilisateurConnecte;
+                events = initEvent();
+            } else {
+                utilisateurAffiche = null;
+                events = new ArrayList<>();
+            }
         }
 
         rafraichirCalendrier();
@@ -106,17 +112,6 @@ public class CalendrierController {
             return new ArrayList<>();
         }
         return planningService.obtenirPlanningsParUtilisateur(utilisateurAffiche.getId());
-    }
-
-    @FXML
-    public void changerEmploye(ActionEvent event) throws SQLException {
-        if (comboEmploye == null) {
-            return;
-        }
-        User selection = comboEmploye.getValue();
-        if (selection != null) {
-            appliquerEmployeSelectionne(selection);
-        }
     }
 
     private void initialiserSelecteurEmploye() {
@@ -148,6 +143,7 @@ public class CalendrierController {
         miseAJourRechercheEmploye = true;
         comboEmploye.setValue(null);
         comboEmploye.getEditor().clear();
+        employeSelectionneId = -1;
         miseAJourRechercheEmploye = false;
 
         comboEmploye.getEditor().textProperty().addListener((obs, oldText, newText) -> {
@@ -155,23 +151,14 @@ public class CalendrierController {
                 return;
             }
             if (utilisateurAffiche != null && newText != null
-                    && formaterNomEmploye(utilisateurAffiche).equals(newText.trim())) {
+                    && formaterNomEmploye(utilisateurAffiche).equalsIgnoreCase(newText.trim())) {
                 return;
             }
-            if (utilisateurAffiche != null) {
-                utilisateurAffiche = null;
-                events = new ArrayList<>();
-                try {
-                    rafraichirCalendrier();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+            if (newText == null || newText.isBlank()) {
+                reinitialiserSelectionEmploye();
+                return;
             }
-            try {
-                proposerEmployesCorrespondants(newText);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            proposerEmployesCorrespondants(newText);
         });
 
         comboEmploye.getSelectionModel().selectedItemProperty().addListener((obs, ancien, selection) -> {
@@ -181,23 +168,22 @@ public class CalendrierController {
             try {
                 appliquerEmployeSelectionne(selection);
             } catch (SQLException e) {
-                e.printStackTrace();
+                afficherErreur("Impossible de charger le planning : " + e.getMessage());
             }
         });
+    }
 
-        comboEmploye.setOnAction(event -> {
-            User selection = comboEmploye.getSelectionModel().getSelectedItem();
-            if (selection == null) {
-                selection = comboEmploye.getValue();
-            }
-            if (selection != null) {
-                try {
-                    appliquerEmployeSelectionne(selection);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+    private void reinitialiserSelectionEmploye() {
+        utilisateurAffiche = null;
+        employeSelectionneId = -1;
+        events = new ArrayList<>();
+        comboEmploye.getItems().clear();
+        comboEmploye.hide();
+        try {
+            rafraichirCalendrier();
+        } catch (SQLException e) {
+            afficherErreur("Impossible de rafraîchir le calendrier : " + e.getMessage());
+        }
     }
 
     private boolean employeRhSelectionne() {
@@ -216,28 +202,50 @@ public class CalendrierController {
         return false;
     }
 
-    private void proposerEmployesCorrespondants(String saisie) throws SQLException {
+    private void proposerEmployesCorrespondants(String saisie) {
         if (saisie == null || saisie.trim().length() < RECHERCHE_EMPLOYE_MIN_CHARS) {
-            comboEmploye.getItems().clear();
-            comboEmploye.hide();
+            Platform.runLater(() -> {
+                if (!miseAJourRechercheEmploye) {
+                    comboEmploye.getItems().clear();
+                    comboEmploye.hide();
+                }
+            });
             return;
         }
 
-        List<User> resultats = userDAO.searchByName(saisie.trim(), RECHERCHE_EMPLOYE_MAX_SUGGESTIONS);
-        comboEmploye.getItems().setAll(resultats);
-
-        if (resultats.isEmpty()) {
-            comboEmploye.hide();
-        } else {
-            Platform.runLater(comboEmploye::show);
-        }
+        final String terme = saisie.trim();
+        Thread recherche = new Thread(() -> {
+            try {
+                List<User> resultats = userDAO.searchByName(terme, RECHERCHE_EMPLOYE_MAX_SUGGESTIONS);
+                Platform.runLater(() -> {
+                    if (miseAJourRechercheEmploye) {
+                        return;
+                    }
+                    String saisieActuelle = comboEmploye.getEditor().getText();
+                    if (saisieActuelle == null || !saisieActuelle.trim().equals(terme)) {
+                        return;
+                    }
+                    comboEmploye.getItems().setAll(resultats);
+                    if (resultats.isEmpty()) {
+                        comboEmploye.hide();
+                    } else {
+                        comboEmploye.show();
+                    }
+                });
+            } catch (SQLException e) {
+                Platform.runLater(() -> afficherErreur("Recherche employé impossible : " + e.getMessage()));
+            }
+        }, "recherche-employe-rh");
+        recherche.setDaemon(true);
+        recherche.start();
     }
 
     private void appliquerEmployeSelectionne(User employe) throws SQLException {
-        if (employe == null) {
+        if (employe == null || employe.getId() == employeSelectionneId) {
             return;
         }
 
+        employeSelectionneId = employe.getId();
         utilisateurAffiche = employe;
         events = initEvent();
         rafraichirCalendrier();
@@ -265,7 +273,18 @@ public class CalendrierController {
         if (user == null) {
             return "";
         }
-        return user.getPrenom() + " " + user.getNom();
+        String prenom = user.getPrenom() != null ? user.getPrenom().trim() : "";
+        String nom = user.getNom() != null ? user.getNom().trim() : "";
+        return (prenom + " " + nom).trim();
+    }
+
+    private void afficherErreur(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Erreur");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
     }
 
     public void nextWeek(ActionEvent e) throws SQLException {
@@ -317,7 +336,7 @@ public class CalendrierController {
         LocalDate dateCible = dateDebutSemaineAffichee.plusDays(dayIndex);
 
         // --- DÉTECTION DU MODE LECTURE SEULE ---
-        boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
+        final boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
 
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(isReadOnly ? "Consultation des heures" : "Saisie des heures");
@@ -452,7 +471,7 @@ public class CalendrierController {
     // --- CORRECTION : Tranches de 15 minutes ---
     private ComboBox<String> creerComboBoxTemps(String moment) {
         ComboBox<String> cb = new ComboBox<>();
-        if (moment == "matin"){
+        if (moment.equals("matin")){
             for (int h = 6; h <= 14; h++) {
                 cb.getItems().add(String.format("%02d:00", h));
                 cb.getItems().add(String.format("%02d:15", h));
@@ -602,7 +621,7 @@ public class CalendrierController {
         grid.setHgap(20); grid.setVgap(15); grid.setPrefWidth(450);
 
         ComboBox<String> typeBox = new ComboBox<>();
-        typeBox.getItems().addAll("Cours", "Réunion", "Vacances", "Autre");
+        typeBox.getItems().addAll("Réunion", "Congé", "Vacances", "Autre");
         typeBox.setMaxWidth(Double.MAX_VALUE);
 
         ColorPicker colorPicker = new ColorPicker();
@@ -649,9 +668,12 @@ public class CalendrierController {
 
                     String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
 
-                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor, isEdit ? eventToEdit.getId() : -1);
+                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor,
+                            isEdit ? eventToEdit.getId() : -1, isEdit ? eventToEdit : null);
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    afficherErreur("Impossible d'enregistrer l'événement : " + e.getMessage());
                 }
             }
         });
@@ -664,17 +686,28 @@ public class CalendrierController {
         g.add(field, 1, row);
     }
 
-    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, String couleur, int idToDelete) throws SQLException {
-        if (idToDelete != -1) {
-            planningService.supprimerPlanning(idToDelete);
+    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc,
+                                             String couleur, int idExistant, Planning existant) throws SQLException {
+        if (utilisateurAffiche == null) {
+            afficherErreur("Sélectionnez d'abord un employé.");
+            return;
         }
 
-        PlanningDAO dao = new PlanningDAO();
-        Planning newEvent = new Planning(0, start, end, type, desc, couleur, utilisateurAffiche);
-        dao.createPlanning(newEvent);
-
-        events = initEvent();
-        rafraichirCalendrier();
+        try {
+            if (idExistant > 0 && existant != null) {
+                Planning modifie = new Planning(idExistant, start, end, type, desc, couleur, utilisateurAffiche);
+                planningService.modifierPlanning(modifie);
+            } else {
+                Planning nouveau = new Planning(0, start, end, type, desc, couleur, utilisateurAffiche);
+                planningService.ajouterPlanning(nouveau);
+            }
+            events = initEvent();
+            rafraichirCalendrier();
+        } catch (IllegalArgumentException ex) {
+            afficherErreur(ex.getMessage());
+        } catch (RuntimeException ex) {
+            afficherErreur(ex.getMessage());
+        }
     }
 
     private void supprimerEvenement(Planning event) {
@@ -684,11 +717,16 @@ public class CalendrierController {
         a.showAndWait().ifPresent(res -> {
             if (res == ButtonType.YES) {
                 try {
-                    PlanningDAO dao = new PlanningDAO();
-                    dao.deletePlanning(event.getId());
+                    planningService.supprimerPlanning(event.getId());
                     events = initEvent();
                     rafraichirCalendrier();
-                } catch (SQLException e) { e.printStackTrace(); }
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (RuntimeException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (SQLException e) {
+                    afficherErreur("Impossible de supprimer l'événement : " + e.getMessage());
+                }
             }
         });
     }

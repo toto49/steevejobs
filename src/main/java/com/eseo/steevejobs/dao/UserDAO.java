@@ -228,18 +228,16 @@ public class UserDAO {
         }
 
         String sql = "SELECT * FROM USER WHERE actif = 1 AND ("
-                + "nom LIKE ? OR prenom LIKE ? OR email LIKE ? "
-                + "OR CONCAT(prenom, ' ', nom) LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ?"
+                + "nom LIKE ? ESCAPE '\\\\' OR prenom LIKE ? ESCAPE '\\\\' OR email LIKE ? ESCAPE '\\\\' "
+                + "OR CONCAT(prenom, ' ', nom) LIKE ? ESCAPE '\\\\' OR CONCAT(nom, ' ', prenom) LIKE ? ESCAPE '\\\\'"
                 + ") ORDER BY nom, prenom LIMIT ?";
 
-        String pattern = "%" + searchTerm.trim() + "%";
+        String pattern = toLikePattern(searchTerm.trim());
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, pattern);
-            stmt.setString(2, pattern);
-            stmt.setString(3, pattern);
-            stmt.setString(4, pattern);
-            stmt.setString(5, pattern);
+            for (int i = 1; i <= 5; i++) {
+                stmt.setString(i, pattern);
+            }
             stmt.setInt(6, Math.max(1, maxResults));
 
             try (ResultSet rs = stmt.executeQuery()) {
@@ -249,6 +247,14 @@ public class UserDAO {
             }
         }
         return users;
+    }
+
+    private String toLikePattern(String searchTerm) {
+        String escaped = searchTerm
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+        return "%" + escaped + "%";
     }
 
     public boolean deactivateUser(int id) throws SQLException {
