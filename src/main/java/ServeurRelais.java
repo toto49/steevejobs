@@ -4,6 +4,9 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import io.github.cdimascio.dotenv.Dotenv;
+import io.livekit.server.AccessToken;
+import io.livekit.server.RoomJoin;
+import io.livekit.server.RoomName;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -36,14 +39,26 @@ public class ServeurRelais extends WebSocketServer {
         return t;
     });
     private final JWTVerifier jwtVerifier;
+    private final String livekitApiKey;
+    private final String livekitApiSecret;
 
     public ServeurRelais(int port) {
         super(new InetSocketAddress(port));
         this.setConnectionLostTimeout(30);
-        String secret = Dotenv.load().get("JWT_SECRET");
+
+        Dotenv dotenv = Dotenv.load();
+        String secret = dotenv.get("JWT_SECRET");
         if (secret == null || secret.trim().isEmpty()) {
             throw new IllegalStateException("🚨 CRITIQUE : JWT_SECRET manquant dans le .env ! Arrêt du serveur.");
         }
+        this.livekitApiKey = dotenv.get("API_KEY_VISIO");
+        this.livekitApiSecret = dotenv.get("API_SECRET_VISIO");
+
+        if (this.livekitApiKey == null || this.livekitApiKey.trim().isEmpty() ||
+                this.livekitApiSecret == null || this.livekitApiSecret.trim().isEmpty()) {
+            throw new IllegalStateException("🚨 CRITIQUE : API_KEY_VISIO ou API_SECRET_VISIO manquant dans le .env ! Arrêt du serveur.");
+        }
+
         Algorithm jwtAlgorithm = Algorithm.HMAC256(secret);
         this.jwtVerifier = JWT.require(jwtAlgorithm)
                 .withIssuer("steevejobs-api")
@@ -140,6 +155,38 @@ public class ServeurRelais extends WebSocketServer {
                 });
 
                 logger.info("✅ Auth Réussie : UserID={} est en ligne.", userId);
+
+            } else if ("REQUEST_VISIO_TOKEN".equals(type)) {
+                String senderId = conn.getAttachment();
+                if (senderId == null) {
+                    conn.close(1008, "Not Authenticated");
+                    return;
+                }
+
+                String roomName = json.optString("roomName", "Reunion_Generale");
+                String identity = json.optString("identity", "Employe_" + senderId);
+
+                logger.info("Génération d'un token LiveKit pour UserID={} (Room: {})", senderId, roomName);
+
+                try {
+                    AccessToken tokenLiveKit = new AccessToken(livekitApiKey, livekitApiSecret);
+                    tokenLiveKit.setIdentity(identity);
+                    tokenLiveKit.setName(identity);
+                    tokenLiveKit.addGrants(new RoomJoin(true), new RoomName(roomName));
+                    tokenLiveKit.setTtl(3600);
+
+                    String jwtString = tokenLiveKit.toJwt();
+
+                    JSONObject reponse = new JSONObject();
+                    reponse.put("type", "VISIO_TOKEN_RESPONSE");
+                    reponse.put("token", jwtString);
+                    reponse.put("roomName", roomName);
+
+                    conn.send(reponse.toString());
+
+                } catch (Exception ex) {
+                    logger.error("Erreur génération token LiveKit : ", ex);
+                }
 
             } else if ("NOTIFY".equals(type)) {
                 String senderId = conn.getAttachment();
