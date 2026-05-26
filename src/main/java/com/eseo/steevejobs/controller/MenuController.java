@@ -51,8 +51,11 @@ public class MenuController {
     @FXML
     public void initialize() {
         instance = this;
-        badgeAccueil = installerBadge(btnAccueil);
-        badgeTicket = installerBadge(btnTicket);
+        Platform.runLater(() -> {
+            badgeAccueil = installerBadge(btnAccueil);
+            badgeTicket = installerBadge(btnTicket);
+        });
+
         if (btnAccueil != null) updateButtonStyles(btnAccueil);
         chargerPage("home");
         WebSocketService.getInstance().connecter();
@@ -84,7 +87,6 @@ public class MenuController {
         }
     }
 
-
     public void allumerBadge(String typeCible, int nombreExact) {
         Platform.runLater(() -> {
             if ("TECH".equals(typeCible)) {
@@ -96,7 +98,13 @@ public class MenuController {
     }
 
     private void mettreAJourBadgeRelatif(Label badge, int nombre) {
-        if (badge == null) return;
+        if (badge == null) {
+            Platform.runLater(() -> {
+                badgeAccueil = installerBadge(btnAccueil);
+                badgeTicket = installerBadge(btnTicket);
+            });
+            return;
+        }
 
         if (nombre <= 0) {
             badge.setVisible(false);
@@ -120,7 +128,12 @@ public class MenuController {
     }
 
     private Label installerBadge(Button bouton) {
-        if (bouton == null || bouton.getGraphic() == null) return null;
+        if (bouton == null) {
+            return null;
+        }
+        if (bouton.getGraphic() == null) {
+            return null;
+        }
 
         Label badge = new Label("1");
         badge.setStyle("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-background-radius: 10; -fx-padding: 1 5 1 5; -fx-font-size: 10px; -fx-font-weight: bold;");
@@ -139,14 +152,12 @@ public class MenuController {
         return badge;
     }
 
-
     @FXML
     void afficherAccueil(ActionEvent event) {
         chargerPage("home");
         updateButtonStyles(btnAccueil);
         changerTitre("Accueil");
     }
-
 
     public void effacerBadgeAccueil() {
         if (badgeAccueil != null) {
@@ -161,6 +172,7 @@ public class MenuController {
         updateButtonStyles(btnPlanning);
         changerTitre("Calendrier");
     }
+
     @FXML
     void afficherTicket(ActionEvent event) {
         TicketController.fermerChat();
