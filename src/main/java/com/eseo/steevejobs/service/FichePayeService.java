@@ -16,7 +16,7 @@ public class FichePayeService {
     private final PlanningDAO         planningDAO;
     private final PdfGeneratorService pdfService;
 
-    private static final double SALAIRE_MINIMUM_LEGAL = 1766.92;
+    private static final double SALAIRE_MINIMUM_LEGAL = 0;
     private static final double SALAIRE_MAXIMUM       = 100_000.0;
 
     public FichePayeService() {
