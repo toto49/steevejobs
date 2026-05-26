@@ -218,13 +218,30 @@ public class UserDAO {
     }
 
     public List<User> searchByName(String searchTerm) throws SQLException {
+        return searchByName(searchTerm, 50);
+    }
+
+    public List<User> searchByName(String searchTerm, int maxResults) throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM USER WHERE nom LIKE ? OR prenom LIKE ? ORDER BY nom, prenom";
+        if (searchTerm == null || searchTerm.trim().length() < 2) {
+            return users;
+        }
+
+        String sql = "SELECT * FROM USER WHERE actif = 1 AND ("
+                + "nom LIKE ? OR prenom LIKE ? OR email LIKE ? "
+                + "OR CONCAT(prenom, ' ', nom) LIKE ? OR CONCAT(nom, ' ', prenom) LIKE ?"
+                + ") ORDER BY nom, prenom LIMIT ?";
+
+        String pattern = "%" + searchTerm.trim() + "%";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            String pattern = "%" + searchTerm + "%";
             stmt.setString(1, pattern);
             stmt.setString(2, pattern);
+            stmt.setString(3, pattern);
+            stmt.setString(4, pattern);
+            stmt.setString(5, pattern);
+            stmt.setInt(6, Math.max(1, maxResults));
+
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     users.add(mapUser(rs));

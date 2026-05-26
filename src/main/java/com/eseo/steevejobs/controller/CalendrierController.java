@@ -1,15 +1,20 @@
 package com.eseo.steevejobs.controller;
 
+import com.eseo.steevejobs.config.ColorContrastUtil;
 import com.eseo.steevejobs.dao.PlanningDAO;
+import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.HeuresTravail;
 import com.eseo.steevejobs.model.Planning;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.HeuresTravailService;
 import com.eseo.steevejobs.service.PlanningService;
 import com.eseo.steevejobs.service.SessionService;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.util.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -37,6 +42,8 @@ public class CalendrierController {
     // --- STYLES ---
     private static final String STYLE_ACTIF = "-fx-background-color: #e1f5fe; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20; -fx-background-radius: 20; -fx-font-size: 12; -fx-cursor: hand;";
     private static final String STYLE_INACTIF = "-fx-background-color: #e0e0e0; -fx-text-fill: #a0a0a0; -fx-background-radius: 20; -fx-font-size: 12;";
+    private static final int RECHERCHE_EMPLOYE_MIN_CHARS = 2;
+    private static final int RECHERCHE_EMPLOYE_MAX_SUGGESTIONS = 8;
 
     @FXML
     private Label lundiLabel, mardiLabel, mercrediLabel, jeudiLabel, vendrediLabel, samediLabel, dimancheLabel;
@@ -47,13 +54,18 @@ public class CalendrierController {
     @FXML
     private DatePicker datePickerSemaine;
     @FXML
+    private ComboBox<User> comboEmploye;
+    @FXML
     private GridPane gridPlanning;
 
     private LocalDate dateDebutSemaineAffichee;
     private List<Planning> events;
-    private User utilisateur;
+    private User utilisateurConnecte;
+    private User utilisateurAffiche;
     private PlanningService planningService;
     private HeuresTravailService heuresTravailService;
+    private UserDAO userDAO;
+    private boolean miseAJourRechercheEmploye;
 
 
     // ==========================================
@@ -65,10 +77,19 @@ public class CalendrierController {
         PlanningDAO planningDAO = new PlanningDAO();
         planningService = new PlanningService(planningDAO);
         heuresTravailService = new HeuresTravailService();
-        utilisateur = SessionService.getUtilisateurConnecte();
+        utilisateurConnecte = SessionService.getUtilisateurConnecte();
 
-        events = initEvent();
         dateDebutSemaineAffichee = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        if (comboEmploye != null) {
+            utilisateurAffiche = null;
+            events = new ArrayList<>();
+            initialiserSelecteurEmploye();
+        } else {
+            utilisateurAffiche = utilisateurConnecte;
+            events = initEvent();
+        }
+
         rafraichirCalendrier();
 
         datePickerSemaine.setOnAction(event -> {
@@ -81,7 +102,170 @@ public class CalendrierController {
     }
 
     public List<Planning> initEvent() throws SQLException {
-        return planningService.obtenirPlanningsParUtilisateur(utilisateur.getId());
+        if (utilisateurAffiche == null) {
+            return new ArrayList<>();
+        }
+        return planningService.obtenirPlanningsParUtilisateur(utilisateurAffiche.getId());
+    }
+
+    @FXML
+    public void changerEmploye(ActionEvent event) throws SQLException {
+        if (comboEmploye == null) {
+            return;
+        }
+        User selection = comboEmploye.getValue();
+        if (selection != null) {
+            appliquerEmployeSelectionne(selection);
+        }
+    }
+
+    private void initialiserSelecteurEmploye() {
+        userDAO = new UserDAO();
+        comboEmploye.setEditable(true);
+        comboEmploye.setItems(FXCollections.observableArrayList());
+        comboEmploye.setPromptText("Nom, prénom ou email…");
+        comboEmploye.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(User user) {
+                return formaterNomEmploye(user);
+            }
+
+            @Override
+            public User fromString(String string) {
+                if (string == null || string.isBlank()) {
+                    return null;
+                }
+                String recherche = string.trim();
+                for (User user : comboEmploye.getItems()) {
+                    if (formaterNomEmploye(user).equalsIgnoreCase(recherche)) {
+                        return user;
+                    }
+                }
+                return null;
+            }
+        });
+
+        miseAJourRechercheEmploye = true;
+        comboEmploye.setValue(null);
+        comboEmploye.getEditor().clear();
+        miseAJourRechercheEmploye = false;
+
+        comboEmploye.getEditor().textProperty().addListener((obs, oldText, newText) -> {
+            if (miseAJourRechercheEmploye) {
+                return;
+            }
+            if (utilisateurAffiche != null && newText != null
+                    && formaterNomEmploye(utilisateurAffiche).equals(newText.trim())) {
+                return;
+            }
+            if (utilisateurAffiche != null) {
+                utilisateurAffiche = null;
+                events = new ArrayList<>();
+                try {
+                    rafraichirCalendrier();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                proposerEmployesCorrespondants(newText);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+
+        comboEmploye.getSelectionModel().selectedItemProperty().addListener((obs, ancien, selection) -> {
+            if (miseAJourRechercheEmploye || selection == null) {
+                return;
+            }
+            try {
+                appliquerEmployeSelectionne(selection);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+
+        comboEmploye.setOnAction(event -> {
+            User selection = comboEmploye.getSelectionModel().getSelectedItem();
+            if (selection == null) {
+                selection = comboEmploye.getValue();
+            }
+            if (selection != null) {
+                try {
+                    appliquerEmployeSelectionne(selection);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private boolean employeRhSelectionne() {
+        if (comboEmploye == null) {
+            return true;
+        }
+        if (utilisateurAffiche != null) {
+            return true;
+        }
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Employé requis");
+        alert.setHeaderText(null);
+        alert.setContentText("Recherchez et sélectionnez un employé pour afficher son planning.");
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
+        return false;
+    }
+
+    private void proposerEmployesCorrespondants(String saisie) throws SQLException {
+        if (saisie == null || saisie.trim().length() < RECHERCHE_EMPLOYE_MIN_CHARS) {
+            comboEmploye.getItems().clear();
+            comboEmploye.hide();
+            return;
+        }
+
+        List<User> resultats = userDAO.searchByName(saisie.trim(), RECHERCHE_EMPLOYE_MAX_SUGGESTIONS);
+        comboEmploye.getItems().setAll(resultats);
+
+        if (resultats.isEmpty()) {
+            comboEmploye.hide();
+        } else {
+            Platform.runLater(comboEmploye::show);
+        }
+    }
+
+    private void appliquerEmployeSelectionne(User employe) throws SQLException {
+        if (employe == null) {
+            return;
+        }
+
+        utilisateurAffiche = employe;
+        events = initEvent();
+        rafraichirCalendrier();
+
+        String nomAffiche = formaterNomEmploye(employe);
+        miseAJourRechercheEmploye = true;
+        comboEmploye.getItems().setAll(employe);
+        comboEmploye.getSelectionModel().select(employe);
+        comboEmploye.setValue(employe);
+        comboEmploye.getEditor().setText(nomAffiche);
+        comboEmploye.hide();
+
+        Platform.runLater(() -> {
+            comboEmploye.hide();
+            if (gridPlanning != null) {
+                gridPlanning.requestFocus();
+            } else if (comboEmploye.getScene() != null) {
+                comboEmploye.getScene().getRoot().requestFocus();
+            }
+            miseAJourRechercheEmploye = false;
+        });
+    }
+
+    private String formaterNomEmploye(User user) {
+        if (user == null) {
+            return "";
+        }
+        return user.getPrenom() + " " + user.getNom();
     }
 
     public void nextWeek(ActionEvent e) throws SQLException {
@@ -125,6 +309,9 @@ public class CalendrierController {
 
     @FXML
     public void ouvrirPopupHeures(ActionEvent event) {
+        if (!employeRhSelectionne()) {
+            return;
+        }
         Node source = (Node) event.getSource();
         int dayIndex = Integer.parseInt(source.getUserData().toString());
         LocalDate dateCible = dateDebutSemaineAffichee.plusDays(dayIndex);
@@ -143,7 +330,7 @@ public class CalendrierController {
         // 1. récupération BDD
         HeuresTravail hr = null;
         try {
-            hr = heuresTravailService.getHeuresParDate(utilisateur.getId(), dateCible);
+            hr = heuresTravailService.getHeuresParDate(utilisateurAffiche.getId(), dateCible);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -254,7 +441,7 @@ public class CalendrierController {
                     LocalTime tTotal = LocalTime.of((int) (totalMinutes / 60), (int) (totalMinutes % 60));
 
                     // N'oublie pas d'ajouter tTotal dans les paramètres de ta méthode Service et DAO !
-                    heuresTravailService.sauvegarderHeures(utilisateur.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
+                    heuresTravailService.sauvegarderHeures(utilisateurAffiche.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -344,8 +531,12 @@ public class CalendrierController {
         String color = (event.getCouleur() != null && !event.getCouleur().isEmpty()) ? event.getCouleur() : "#ffcc00";
         box.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 5;");
 
+        String textFill = ColorContrastUtil.textFillForBackground(color);
+        String labelStyleBold = "-fx-text-fill: " + textFill + "; -fx-font-weight: bold; -fx-font-size: 11px;";
+        String labelStyleSmall = "-fx-text-fill: " + textFill + "; -fx-font-size: 10px;";
+
         Label lblType = new Label(event.getType());
-        lblType.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 11px;");
+        lblType.setStyle(labelStyleBold);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -353,8 +544,9 @@ public class CalendrierController {
         header.setAlignment(Pos.CENTER_LEFT);
 
         if (afficherBoutons) {
+            String btnTextFill = textFill;
             Button btnEdit = new Button("✎");
-            btnEdit.setStyle("-fx-background-color: rgba(255, 255, 255, 0.4); -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnEdit.setStyle("-fx-background-color: rgba(128, 128, 128, 0.35); -fx-text-fill: " + btnTextFill + "; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
             btnEdit.setOnAction(e -> modifierEvenement(event));
 
             Button btnSuppr = new Button("X");
@@ -367,10 +559,10 @@ public class CalendrierController {
 
         DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
         Label lblTime = new Label(event.getJourDebut().format(tf) + " - " + event.getJourFin().format(tf));
-        lblTime.setStyle("-fx-text-fill: white; -fx-font-size: 10px;");
+        lblTime.setStyle(labelStyleSmall);
 
         Label lblDesc = new Label(event.getDescription());
-        lblDesc.setStyle("-fx-text-fill: white; -fx-font-size: 10px;");
+        lblDesc.setStyle(labelStyleSmall);
         lblDesc.setWrapText(true);
 
         box.getChildren().addAll(header, lblTime, lblDesc);
@@ -383,6 +575,9 @@ public class CalendrierController {
 
     @FXML
     public void ouvrirPopupAjout(ActionEvent event) {
+        if (!employeRhSelectionne()) {
+            return;
+        }
         afficherFormulaire(null);
     }
 
@@ -475,7 +670,7 @@ public class CalendrierController {
         }
 
         PlanningDAO dao = new PlanningDAO();
-        Planning newEvent = new Planning(0, start, end, type, desc, couleur, utilisateur);
+        Planning newEvent = new Planning(0, start, end, type, desc, couleur, utilisateurAffiche);
         dao.createPlanning(newEvent);
 
         events = initEvent();

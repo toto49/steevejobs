@@ -6,7 +6,8 @@ public enum AppModule {
     STOCKS("APP_STOCKS_VIEW", "GESTION\nDES STOCKS", "Inventaire, alertes", "stock", "steevestock.png", "#76B89A"),
     DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "document", "happy.png", "#F1CE6C"),
     TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "happy.png", "#92B4F2", "services"),
-    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "fiche-paye", "happy.png", "#9B59B6"),
+    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Plannings & Paies", "fiche-paye", "happy.png", "#7A9FE0"),
+    CALENDRIERRH("APP_RH_VIEW", "CALENDRIER\nRH", "Plannings des employés", "calendrier-rh", "happy.png", "#7A9FE0"),
     CLIENTS("APP_RH_VIEW", "GESTION\nCLIENTS", "Création & Gestion des clients", "clients", "happy.png", "#FF99cc");
 
 

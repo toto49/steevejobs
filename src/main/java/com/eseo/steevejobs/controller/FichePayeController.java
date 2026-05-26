@@ -148,6 +148,14 @@ public class FichePayeController implements Initializable {
     // ==========================================
 
     @FXML
+    private void ouvrirCalendrierRh() {
+        if (MenuController.getInstance() != null) {
+            MenuController.getInstance().chargerPage("calendrier-rh");
+            MenuController.getInstance().changerTitre("Calendrier RH");
+        }
+    }
+
+    @FXML
     private void ouvrirFormulaireGeneration() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Générer");
