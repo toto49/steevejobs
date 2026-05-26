@@ -19,6 +19,9 @@
             <ComboBox fx:id="comboEmploye" editable="true" prefHeight="35.0" prefWidth="280.0"
                       promptText="Nom, prénom ou email…"
                       style="-fx-background-color: white; -fx-background-radius: 5;"/>
+            <Button onAction="#ouvrirPopupDemandesConge" prefHeight="35.0" prefWidth="170.0"
+                    text="Demandes de congés"
+                    style="-fx-cursor: hand; -fx-background-color: white; -fx-text-fill: #7A9FE0; -fx-font-weight: bold; -fx-background-radius: 5; -fx-border-color: white; -fx-border-radius: 5;"/>
         </children>
     </HBox>
     <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #f4f5f7; -fx-border-color: transparent;">

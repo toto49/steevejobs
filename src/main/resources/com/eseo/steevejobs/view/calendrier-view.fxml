@@ -40,6 +40,7 @@
                                         <Button onAction="#lastWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 5;" text="◀ Précédent" />
                                         <Button onAction="#nextWeek" prefHeight="35" prefWidth="100" style="-fx-cursor: hand; -fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 5;" text="Suivant ▶" />
                                         <Button onAction="#ouvrirPopupAjout" prefHeight="35" style="-fx-cursor: hand; -fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 5; -fx-font-weight: bold;" text="Nouvel Événement" />
+                                        <Button onAction="#ouvrirPopupDemandeConge" prefHeight="35" style="-fx-cursor: hand; -fx-background-color: white; -fx-text-fill: #7A9FE0; -fx-border-color: #7A9FE0; -fx-border-width: 1; -fx-background-radius: 5; -fx-border-radius: 5; -fx-font-weight: bold;" text="Demander des congés" />
                                         <HBox spacing="10.0" />
                                     </children>
                                 </HBox>

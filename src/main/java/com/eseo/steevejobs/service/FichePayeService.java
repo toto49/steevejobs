@@ -155,7 +155,7 @@ public class FichePayeService {
         int moisValeur = mois.getMonthValue();
 
         return plannings.stream()
-                .filter(p -> estTypeConge(p.getType()))
+                .filter(p -> CongeUtil.estTypeConge(p.getType()))
                 .filter(p -> {
                     LocalDateTime debutMois = LocalDateTime.of(annee, moisValeur, 1, 0, 0);
                     LocalDateTime finMois   = debutMois.plusMonths(1);
@@ -169,14 +169,5 @@ public class FichePayeService {
                     return java.time.Duration.between(debut, fin).toDays();
                 })
                 .sum();
-    }
-
-    private boolean estTypeConge(String type) {
-        if (type == null || type.isBlank()) {
-            return false;
-        }
-        String normalise = type.trim().toLowerCase(java.util.Locale.ROOT)
-                .replace("é", "e");
-        return normalise.equals("conge") || normalise.equals("vacances");
     }
 }
