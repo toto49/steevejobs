@@ -131,7 +131,7 @@ public class FichePayeService {
         }
         if (salaireBrut < SALAIRE_MINIMUM_LEGAL) {
             throw new IllegalArgumentException(
-                    String.format("Le salaire brut ne peut pas être inférieur au SMIC (%.2f €).",
+                    String.format("Le salaire brut ne peut pas être inférieur a 0.",
                             SALAIRE_MINIMUM_LEGAL));
         }
         if (salaireBrut > SALAIRE_MAXIMUM) {
