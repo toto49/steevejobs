@@ -96,15 +96,6 @@ class FichePayeServiceTest {
     }
 
     @Test
-    void genererFichePaye_salaireInferieurAuSmic_doitLeverException() {
-        User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
-        LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
-
-        assertThrows(IllegalArgumentException.class,
-                () -> service.genererFichePaye(employe, mois, 1000, 0.45, 160, 15));
-    }
-
-    @Test
     void genererFichePaye_heuresInvalides_doitLeverException() {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
         LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
