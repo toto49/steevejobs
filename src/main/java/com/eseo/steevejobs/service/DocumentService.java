@@ -98,47 +98,6 @@ public class DocumentService {
         return url;
     }
 
-    public void regenererPdf(int idDocument) throws IllegalArgumentException, SQLException {
-        exporterPdf(idDocument);
-    }
-
-    public boolean changerStatut(int idDocument, DocumentStatut nouveauStatut)
-            throws IllegalArgumentException, SQLException {
-
-        if (idDocument <= 0) {
-            throw new IllegalArgumentException("L'ID du document est invalide.");
-        }
-        if (nouveauStatut == null) {
-            throw new IllegalArgumentException("Le nouveau statut est obligatoire.");
-        }
-
-        return documentDAO.updateStatut(idDocument, nouveauStatut);
-    }
-
-    public Document getDocumentById(int id) throws IllegalArgumentException, SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("L'ID du document est invalide.");
-        }
-        return documentDAO.getById(id);
-    }
-
-    public List<Document> obtenirTousLesDocuments() throws SQLException {
-        return documentDAO.findAll();
-    }
-
-    public List<Document> getByTiersId(int tiersId) throws IllegalArgumentException, SQLException {
-        if (tiersId <= 0) {
-            throw new IllegalArgumentException("L'ID du tiers est invalide.");
-        }
-        return documentDAO.findByTiersId(tiersId);
-    }
-
-    public List<Composer> getLignes(int idDocument) throws IllegalArgumentException, SQLException {
-        if (idDocument <= 0) {
-            throw new IllegalArgumentException("L'ID du document est invalide.");
-        }
-        return composerDAO.findByDocumentId(idDocument);
-    }
 
     public List<Document> findAll() throws SQLException {
         return documentDAO.findAll();
