@@ -64,6 +64,7 @@ public class ServeurRelais extends WebSocketServer {
                 .withIssuer("steevejobs-api")
                 .acceptLeeway(5)
                 .build();
+
         scheduler.scheduleAtFixedRate(rateLimiter::clear, 1, 1, TimeUnit.SECONDS);
     }
 
@@ -183,6 +184,7 @@ public class ServeurRelais extends WebSocketServer {
                     reponse.put("roomName", roomName);
 
                     conn.send(reponse.toString());
+                    logger.info("✅ Token envoyé au client pour la room {}", roomName);
 
                 } catch (Exception ex) {
                     logger.error("Erreur génération token LiveKit : ", ex);
