@@ -70,6 +70,19 @@ public class WebSocketService {
         return dotenvInstance;
     }
 
+
+    public void envoyerMessageBrut(String message) {
+        try {
+            if (wsClient != null && wsClient.isOpen() && isConnected.get()) {
+                wsClient.send(message);
+            } else {
+                System.err.println("⚠️ Impossible d'envoyer le message : Le WebSocket n'est pas connecté au serveur.");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Erreur d'envoi de message brut : " + e.getMessage());
+        }
+    }
+
     public void connecter() {
         if (isConnected.get() || !isConnecting.compareAndSet(false, true)) return;
 
@@ -114,8 +127,42 @@ public class WebSocketService {
                 public void onMessage(String message) {
                     try {
                         JSONObject json = new JSONObject(message);
-                        if ("UPDATE_TICKET".equals(json.optString("type"))) {
+                        String type = json.optString("type");
+
+                        if ("UPDATE_TICKET".equals(type)) {
                             traiterMessageUpdate(json);
+                        }
+
+                        if ("VISIO_TOKEN_RESPONSE".equals(type)) {
+                            String token = json.getString("token");
+
+                            Platform.runLater(() -> {
+                                try {
+                                    String urlLiveKit = getDotenv().get("LIVEKIT_SERVER_URL");
+                                    if (urlLiveKit == null || urlLiveKit.isEmpty()) {
+                                        System.err.println("⚠️ Warning : LIVEKIT_SERVER_URL manquant dans le .env. Utilisation de l'IP par défaut.");
+                                        urlLiveKit = "ws://82.65.149.31:7880";
+                                    }
+
+                                    String urlAppel = String.format("https://meet.livekit.io/?livekitUrl=%s&token=%s", urlLiveKit, token);
+
+                                    System.out.println("🚀 [WS] Token reçu ! Lancement de la visio : " + urlAppel);
+
+                                    if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
+                                        java.awt.Desktop.getDesktop().browse(new java.net.URI(urlAppel));
+                                    } else {
+                                        Runtime.getRuntime().exec("cmd /c start " + urlAppel);
+                                    }
+
+                                    if (MenuController.getInstance() != null) {
+                                        MenuController.getInstance().chargerPage("home-view");
+                                        MenuController.getInstance().changerTitre("Tableau de bord");
+                                    }
+
+                                } catch (Exception e) {
+                                    System.err.println("❌ Erreur lors du traitement de la réponse visio : " + e.getMessage());
+                                }
+                            });
                         }
                     } catch (Exception e) {
                         System.err.println("❌ WS_ERR (Parse Msg): " + e.getMessage());

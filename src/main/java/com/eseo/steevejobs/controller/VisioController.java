@@ -1,57 +1,86 @@
 package com.eseo.steevejobs.controller;
 
-import com.github.sarxos.webcam.Webcam;
+import fi.iki.elonen.NanoHTTPD;
 import javafx.application.Platform;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
+import org.json.JSONObject;
 
-import java.awt.image.BufferedImage;
+import java.awt.*;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 public class VisioController {
 
-    @FXML
-    private ImageView imageView;
-    private Webcam webcam;
-    private boolean isRunning = true;
+    private static VisioController activeInstance;
+    private MiniServeurVisio serveurWeb;
+
+    public static VisioController getActiveInstance() {
+        return activeInstance;
+    }
 
     @FXML
     public void initialize() {
-        // 1. Initialiser la caméra par défaut
-        webcam = Webcam.getDefault();
-        if (webcam != null) {
-            webcam.open();
-
-            // 2. Lancer un thread pour lire les images sans bloquer l'UI
-            Thread thread = new Thread(() -> {
-                while (isRunning) {
-                    BufferedImage image = webcam.getImage();
-                    if (image != null) {
-                        // 3. Convertir l'image AWT en image JavaFX
-                        WritableImage fxImage = SwingFXUtils.toFXImage(image, null);
-
-                        // 4. Mettre à jour l'UI sur le thread principal
-                        Platform.runLater(() -> imageView.setImage(fxImage));
-                        image.flush(); // Libère la mémoire
-                    }
-                    try {
-                        Thread.sleep(33);
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            });
-            thread.setDaemon(true);
-            thread.start();
-        }
+        activeInstance = this;
     }
 
-    // Très important : ferme la caméra quand on quitte la vue !
-    public void stopPreview() {
-        isRunning = false;
-        if (webcam != null) {
-            webcam.close();
+    @FXML
+    private void demanderConnexion() {
+        JSONObject requete = new JSONObject();
+        requete.put("type", "REQUEST_VISIO_TOKEN");
+        requete.put("roomName", "Salle_De_Crise");
+        requete.put("identity", "Tom_Boudaud");
+        System.out.println("⏳ Demande de token envoyée...");
+    }
+
+    public void recevoirTokenEtLancer(String tokenJWT) {
+        Platform.runLater(() -> {
+            try {
+                if (serveurWeb == null) {
+                    serveurWeb = new MiniServeurVisio(9999);
+                    serveurWeb.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+                }
+
+                String urlLiveKit = "ws://82.65.149.31:7880";
+
+                String urlComplete = String.format("http://localhost:9999/?url=%s&token=%s", urlLiveKit, tokenJWT);
+                System.out.println("🚀 Lancement de la visio via serveur embarqué : " + urlComplete);
+
+                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                    Desktop.getDesktop().browse(new URI(urlComplete));
+                } else {
+                    Runtime.getRuntime().exec("cmd /c start " + urlComplete);
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Erreur lors du lancement du serveur/navigateur : " + e.getMessage());
+            }
+        });
+    }
+
+    private class MiniServeurVisio extends NanoHTTPD {
+        public MiniServeurVisio(int port) {
+            super(port);
+        }
+
+        @Override
+        public Response serve(IHTTPSession session) {
+            try {
+                InputStream is = getClass().getResourceAsStream("/visio.html");
+                if (is == null) {
+                    return newFixedLengthResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "Fichier visio.html introuvable dans les ressources JavaFX");
+                }
+
+                String htmlContenu = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+                        .lines().collect(Collectors.joining("\n"));
+
+                return newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_HTML, htmlContenu);
+            } catch (Exception e) {
+                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "Erreur serveur : " + e.getMessage());
+            }
         }
     }
 }
