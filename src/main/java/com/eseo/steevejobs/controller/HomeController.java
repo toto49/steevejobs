@@ -52,6 +52,7 @@ public class HomeController {
     private final PermissionService permissionService = new PermissionService();
     private List<String> currentUserPermissions;
     private ScheduledExecutorService permissionScheduler;
+
     public static HomeController getActiveInstance() {
         return activeInstance;
     }
@@ -100,9 +101,12 @@ public class HomeController {
         cachedUserId = -1;
         cacheTimestamp = -1;
         if (activeInstance != null) {
-            Platform.runLater(() -> activeInstance.onUserLogin(
-                    SessionService.getUtilisateurConnecte().getId()
-            ));
+            Platform.runLater(() -> {
+                User user = SessionService.getUtilisateurConnecte();
+                if (user != null) {
+                    activeInstance.onUserLogin(user.getId());
+                }
+            });
         }
     }
 
@@ -145,7 +149,7 @@ public class HomeController {
 
         if (cacheValide) {
             this.currentUserPermissions = cachedPermissions;
-            Platform.runLater(this::renderAppCenter);
+            renderAppCenter();
         } else {
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(idUserConnecte))
                     .thenAcceptAsync(perms -> {
@@ -197,14 +201,16 @@ public class HomeController {
             if (currentUser == null) return;
 
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(currentUser.getId()))
-                    .thenAcceptAsync(perms -> {
+                    .thenAccept(perms -> {
                         if (!perms.equals(cachedPermissions)) {
-                            cachedPermissions = perms;
-                            cacheTimestamp = System.currentTimeMillis();
-                            this.currentUserPermissions = perms;
-                            renderAppCenter();
+                            Platform.runLater(() -> {
+                                cachedPermissions = perms;
+                                cacheTimestamp = System.currentTimeMillis();
+                                this.currentUserPermissions = perms;
+                                renderAppCenter();
+                            });
                         }
-                    }, Platform::runLater)
+                    })
                     .exceptionally(ex -> {
                         ex.printStackTrace();
                         return null;
@@ -213,51 +219,55 @@ public class HomeController {
     }
 
     private void renderAppCenter() {
-        appsGrid.getChildren().clear();
+        Platform.runLater(() -> {
+            if (appsGrid == null) return;
 
-        for (AppModule app : AppModule.values()) {
-            if (hasPermission(app.getCodeAction())) {
+            appsGrid.getChildren().clear();
 
-                String parametre = null;
-                String codeAction = app.getCodeAction();
-                if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                    parametre = currentUser.getRole();
-                }
+            for (AppModule app : AppModule.values()) {
+                if (hasPermission(app.getCodeAction())) {
 
-                Label badgeDynamique = new Label();
-                badgeDynamique.setVisible(false);
-
-                if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                    badgeCarteTech = badgeDynamique;
-                    if (notificationsTech > 0) {
-                        badgeDynamique.setText(String.valueOf(notificationsTech));
-                        badgeDynamique.setVisible(true);
+                    String parametre = null;
+                    String codeAction = app.getCodeAction();
+                    if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                        parametre = currentUser.getRole();
                     }
-                } else if ("MES_TICKETS".equals(codeAction)) {
-                    badgeCarteAuteur = badgeDynamique;
-                    if (notificationsAuteur > 0) {
-                        badgeDynamique.setText(String.valueOf(notificationsAuteur));
-                        badgeDynamique.setVisible(true);
+
+                    Label badgeDynamique = new Label();
+                    badgeDynamique.setVisible(false);
+
+                    if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                        badgeCarteTech = badgeDynamique;
+                        if (notificationsTech > 0) {
+                            badgeDynamique.setText(String.valueOf(notificationsTech));
+                            badgeDynamique.setVisible(true);
+                        }
+                    } else if ("MES_TICKETS".equals(codeAction)) {
+                        badgeCarteAuteur = badgeDynamique;
+                        if (notificationsAuteur > 0) {
+                            badgeDynamique.setText(String.valueOf(notificationsAuteur));
+                            badgeDynamique.setVisible(true);
+                        }
                     }
+
+                    HBox card = createAppCard(
+                            app.getTitle(),
+                            app.getSubtitle(),
+                            badgeDynamique,
+                            app.getBgColor(),
+                            app.getChemin(),
+                            app.getImage(),
+                            parametre,
+                            codeAction
+                    );
+
+                    card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
+                    card.prefHeightProperty().bind(card.widthProperty().multiply(0.6));
+
+                    appsGrid.getChildren().add(card);
                 }
-
-                HBox card = createAppCard(
-                        app.getTitle(),
-                        app.getSubtitle(),
-                        badgeDynamique,
-                        app.getBgColor(),
-                        app.getChemin(),
-                        app.getImage(),
-                        parametre,
-                        codeAction
-                );
-
-                card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
-                card.prefHeightProperty().bind(card.widthProperty().multiply(0.6));
-
-                appsGrid.getChildren().add(card);
             }
-        }
+        });
     }
 
     private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
