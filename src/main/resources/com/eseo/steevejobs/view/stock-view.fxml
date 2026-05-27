@@ -184,6 +184,11 @@
                                 style="-fx-background-color: #f39c12; -fx-text-fill: white;
                                        -fx-font-weight: bold; -fx-background-radius: 8;
                                        -fx-border-radius: 8; -fx-padding: 9 0; -fx-cursor: hand;"/>
+                        <Button fx:id="btnFicheModifier" text="Modifier ✏️"
+                                maxWidth="Infinity" onAction="#onFicheModifier"
+                                style="-fx-background-color: #5584D5; -fx-text-fill: white;
+               -fx-font-weight: bold; -fx-background-radius: 8;
+               -fx-border-radius: 8; -fx-padding: 9 0; -fx-cursor: hand;"/>
                     </VBox>
 
                 </VBox>

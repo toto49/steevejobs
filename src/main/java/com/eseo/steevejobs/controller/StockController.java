@@ -42,6 +42,7 @@ public class StockController {
     @FXML private Button btnFicheEntree;
     @FXML private Button btnFicheSortie;
     @FXML private Button btnFicheAjuster;
+    @FXML private Button btnFicheModifier;
 
     // ── Données ────────────────────────────────────────────────────
     private final ProduitService          produitService     = new ProduitService();
@@ -153,6 +154,7 @@ public class StockController {
         btnFicheEntree.setDisable(!actif);
         btnFicheSortie.setDisable(!actif);
         btnFicheAjuster.setDisable(!actif);
+        btnFicheModifier.setDisable(!actif);
 
         if (!actif) {
             ficheNom.setText("Aucun produit sélectionné");
@@ -383,6 +385,168 @@ public class StockController {
         Label l = new Label("");
         l.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 11px;");
         return l;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Popup Modifier Produit
+    // ─────────────────────────────────────────────────────────────
+
+    @FXML
+    private void onFicheModifier() {
+        if (produitSelectionne == null) return;
+        Produit p = produitSelectionne;
+
+        Stage popup = new Stage();
+        popup.initModality(Modality.APPLICATION_MODAL);
+        popup.setTitle("Modifier le produit");
+        popup.setResizable(true);
+        popup.setMinWidth(380);
+        popup.setMinHeight(400);
+
+        // ── Champs (pré-remplis avec les valeurs actuelles) ───────
+        String styleChamp = "-fx-background-radius: 25; -fx-border-radius: 25; " +
+                "-fx-border-color: #000000; -fx-background-color: transparent; " +
+                "-fx-pref-height: 38; -fx-font-family: Arial;";
+
+        TextField champNom   = new TextField(p.getNom());
+        champNom.setStyle(styleChamp);
+
+        TextField champPrix  = new TextField(p.getPrix() != null ? p.getPrix().toPlainString() : "");
+        champPrix.setStyle(styleChamp);
+
+        TextField champTva   = new TextField(p.getTauxTva() != null ? p.getTauxTva().toPlainString() : "");
+        champTva.setStyle(styleChamp);
+
+        TextField champPoids = new TextField(p.getPoid() != null ? p.getPoid().toPlainString() : "");
+        champPoids.setPromptText("Laisser vide si produit unitaire");
+        champPoids.setStyle(styleChamp);
+
+        TextField champSeuil = new TextField(String.valueOf(p.getSeuilAlerte()));
+        champSeuil.setStyle(styleChamp);
+
+        // Labels d'erreur
+        Label errNom   = erreurLabel();
+        Label errPrix  = erreurLabel();
+        Label errTva   = erreurLabel();
+        Label errPoids = erreurLabel();
+        Label errSeuil = erreurLabel();
+
+        // ── Header ────────────────────────────────────────────────
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(14, 20, 14, 20));
+        header.setStyle("-fx-background-color: #82A9F1;");
+        Label titrePopup = new Label("Modifier : " + p.getNom());
+        titrePopup.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; " +
+                "-fx-font-family: 'Comic Sans MS'; -fx-text-fill: white;");
+        header.getChildren().add(titrePopup);
+
+        // ── Carte formulaire ──────────────────────────────────────
+        VBox carte = new VBox(14);
+        carte.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
+                "-fx-border-color: #CCCCCC; -fx-border-radius: 10; -fx-padding: 20;");
+
+        carte.getChildren().addAll(
+                labelChamp("Nom du produit *"),  champNom,   errNom,
+                labelChamp("Prix HT (€) *"),      champPrix,  errPrix,
+                labelChamp("Taux TVA (%) *"),      champTva,   errTva,
+                labelChamp("Poids (kg) — laisser vide si produit unitaire"),
+                champPoids, errPoids,
+                labelChamp("Seuil d'alerte stock bas"), champSeuil, errSeuil
+        );
+
+        // ── Boutons ───────────────────────────────────────────────
+        Button btnAnnuler = new Button("Annuler");
+        btnAnnuler.setStyle("-fx-background-color: white; -fx-text-fill: #5584D5; " +
+                "-fx-border-color: #5584D5; -fx-border-width: 1; " +
+                "-fx-background-radius: 8; -fx-border-radius: 8; " +
+                "-fx-padding: 9 20; -fx-cursor: hand;");
+
+        Button btnEnregistrer = new Button("Enregistrer les modifications");
+        btnEnregistrer.setStyle("-fx-background-color: #5584D5; -fx-text-fill: white; " +
+                "-fx-font-weight: bold; -fx-background-radius: 8; -fx-border-radius: 8; " +
+                "-fx-padding: 9 20; -fx-cursor: hand;");
+
+        HBox boutons = new HBox(12, btnAnnuler, btnEnregistrer);
+        boutons.setAlignment(Pos.CENTER_RIGHT);
+
+        // ── Contenu scrollable ────────────────────────────────────
+        VBox contenu = new VBox(16, carte, boutons);
+        contenu.setStyle("-fx-background-color: #DDE8FF;");
+        contenu.setPadding(new Insets(20));
+
+        ScrollPane scroll = new ScrollPane(contenu);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: #DDE8FF; -fx-background: #DDE8FF; " +
+                "-fx-border-color: transparent;");
+        scroll.getStyleClass().add("rounded-scroll-pane");
+
+        VBox root = new VBox(header, scroll);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        root.setStyle("-fx-background-color: #DDE8FF;");
+
+        // ── Actions ───────────────────────────────────────────────
+        btnAnnuler.setOnAction(e -> popup.close());
+
+        btnEnregistrer.setOnAction(ev -> {
+            errNom.setText(""); errPrix.setText(""); errTva.setText("");
+            errPoids.setText(""); errSeuil.setText("");
+            boolean valide = true;
+
+            String nom = champNom.getText().trim();
+            if (nom.isEmpty()) { errNom.setText("Le nom est obligatoire."); valide = false; }
+
+            BigDecimal prix = null;
+            try {
+                prix = new BigDecimal(champPrix.getText().trim().replace(',', '.'));
+                if (prix.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
+            } catch (NumberFormatException ex) { errPrix.setText("Prix invalide (ex : 29.90)."); valide = false; }
+
+            BigDecimal tva = null;
+            try {
+                tva = new BigDecimal(champTva.getText().trim().replace(',', '.'));
+                if (tva.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
+            } catch (NumberFormatException ex) { errTva.setText("TVA invalide (ex : 20)."); valide = false; }
+
+            BigDecimal poids = null;
+            String txtPoids = champPoids.getText().trim().replace(',', '.');
+            if (!txtPoids.isEmpty()) {
+                try {
+                    poids = new BigDecimal(txtPoids);
+                    if (poids.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
+                } catch (NumberFormatException ex) { errPoids.setText("Poids invalide (ex : 1000.00)."); valide = false; }
+            }
+
+            int seuil = 0;
+            try {
+                String txtSeuil = champSeuil.getText().trim();
+                if (!txtSeuil.isEmpty()) {
+                    seuil = Integer.parseInt(txtSeuil);
+                    if (seuil < 0) throw new NumberFormatException();
+                }
+            } catch (NumberFormatException ex) { errSeuil.setText("Seuil invalide (entier positif)."); valide = false; }
+
+            if (!valide) return;
+
+            p.setNom(nom);
+            p.setPrix(prix);
+            p.setTauxTva(tva);
+            p.setPoid(poids);
+            p.setSeuilAlerte(seuil);
+
+            try {
+                produitService.modifierProduit(p);
+                popup.close();
+                refreshTable();
+                rafraichirFiche(p);
+            } catch (Exception ex) {
+                errNom.setText("Erreur : " + ex.getMessage());
+            }
+        });
+
+        Scene scene = new Scene(root, 460, 580);
+        popup.setScene(scene);
+        popup.showAndWait();
     }
 
     // ─────────────────────────────────────────────────────────────
