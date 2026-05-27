@@ -1,0 +1,114 @@
+/* ============================
+   FOND GLOBAL
+   ============================ */
+
+.root {
+    -fx-background-color: red;
+}
+
+/* ============================
+   TABLE & EN-TÊTES
+   ============================ */
+
+.table-view {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #f5f5f5;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-size: 32px;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+    -fx-background-color: transparent;
+}
+
+.table-row-cell:filled:selected {
+    -fx-background-color: #e3f2fd;
+}
+
+/* ============================
+   BADGES STATUT
+   ============================ */
+
+.badge-en-stock {
+    -fx-background-color: #28a745;
+    -fx-text-fill: white;
+    -fx-padding: 4 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 12px;
+}
+
+.badge-recommander {
+    -fx-background-color: #ffc107;
+    -fx-text-fill: black;
+    -fx-padding: 4 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 12px;
+}
+
+.badge-rupture {
+    -fx-background-color: #dc3545;
+    -fx-text-fill: white;
+    -fx-padding: 4 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 12px;
+}
+
+/* ============================
+   FICHE PRODUIT (PANNEAU DROIT)
+   ============================ */
+
+#ficheProduitPane {
+    -fx-background-color: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 16, 0, 0, 0);
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+#ficheProduitPane .label {
+    -fx-font-size: 13px;
+}
+
+/* ============================
+   BOUTONS BARRE DU HAUT
+   ============================ */
+
+.button {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-padding: 6 12;
+    -fx-font-size: 13px;
+}
+
+.button:hover {
+    -fx-background-color: #1d4ed8;
+}
+
+.button:pressed {
+    -fx-background-color: #1e40af;
+}
+
+/* ============================
+   TEXTFIELD & SPINNER
+   ============================ */
+
+.text-field {
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-color: #d1d5db;
+    -fx-background-color: #ffffff;
+}
+
+.spinner {
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-color: #d1d5db;
+    -fx-background-color: #ffffff;
+}

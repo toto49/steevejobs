@@ -60,15 +60,13 @@
 
                         <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS"
                                    style="-fx-background-color: transparent;
-                                          -fx-background-radius: 10;
-                                          -fx-border-color: transparent;">
+                  -fx-background-radius: 10;
+                  -fx-border-color: transparent;">
                             <columns>
-                                <TableColumn fx:id="colId"        text="ID"          prefWidth="55"/>
-                                <TableColumn fx:id="colNom"       text="Nom Produit" prefWidth="190"/>
-                                <TableColumn fx:id="colCategorie" text="Catégorie"   prefWidth="110"/>
-                                <TableColumn fx:id="colReference" text="Référence"   prefWidth="110"/>
-                                <TableColumn fx:id="colQuantite"  text="Quantité"    prefWidth="110"/>
-                                <TableColumn fx:id="colStatut"    text="Status"      prefWidth="140"/>
+                                <TableColumn fx:id="colId"       text="ID"          prefWidth="55"/>
+                                <TableColumn fx:id="colNom"      text="Nom Produit" prefWidth="190"/>
+                                <TableColumn fx:id="colQuantite" text="Quantité"    prefWidth="110"/>
+                                <TableColumn fx:id="colStatut"   text="Status"      prefWidth="140"/>
                             </columns>
                         </TableView>
 

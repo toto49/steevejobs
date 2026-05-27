@@ -28,8 +28,6 @@ public class StockController {
     @FXML private TableView<Produit>           tableProduits;
     @FXML private TableColumn<Produit, Number> colId;
     @FXML private TableColumn<Produit, String> colNom;
-    @FXML private TableColumn<Produit, String> colCategorie;
-    @FXML private TableColumn<Produit, String> colReference;
     @FXML private TableColumn<Produit, Number> colQuantite;
     @FXML private TableColumn<Produit, String> colStatut;
 
@@ -55,11 +53,10 @@ public class StockController {
     public void initialize() {
 
         tableProduits.getStyleClass().add("stock-table");
+        tableProduits.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         colId.setCellValueFactory(c -> new SimpleIntegerProperty(c.getValue().getId()));
         colNom.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getNom()));
-        colCategorie.setCellValueFactory(c -> new SimpleStringProperty("—"));
-        colReference.setCellValueFactory(c -> new SimpleStringProperty("—"));
 
         colQuantite.setCellValueFactory(c -> new SimpleIntegerProperty(c.getValue().getQuantite()));
         colQuantite.setCellFactory(col -> new TableCell<>() {
