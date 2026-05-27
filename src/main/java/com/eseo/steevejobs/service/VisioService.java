@@ -31,19 +31,18 @@ public class VisioService {
             visioDAO.enregistrerSalonInstantane(instantAppel);
         }
 
+        visioDAO.ouvrirSalon(roomName);
+
         int codeAcces = visioDAO.verifierAccesSalon(roomName, userId);
 
         if (codeAcces == 1) {
-
-            visioDAO.ouvrirSalon(roomName);
-
             try {
-
                 String tokenJWT = "MOCK_TOKEN_LIVEKIT_FOR_TESTS";
 
                 reponse.put("type", "VISIO_TOKEN_RESPONSE");
                 reponse.put("status", "SUCCESS");
                 reponse.put("token", tokenJWT);
+                reponse.put("roomName", roomName);
                 System.out.println("✅ Accès accordé pour " + userName + " sur le salon [" + roomName + "]");
 
             } catch (Exception e) {
@@ -67,6 +66,7 @@ public class VisioService {
             return false;
         }
         Visio planification = new Visio(roomName.trim(), createurId, heureProg);
+        planification.setStatut(VisioStatut.PROGRAMMEE);
         return visioDAO.planifierReunion(planification, idInvites);
     }
 
@@ -75,10 +75,8 @@ public class VisioService {
         return visioDAO.listerReunionsDisponibles(userId);
     }
 
-
     public void gererDepartParticipant(String roomName, int userId) {
         System.out.println("🚶 Profil #" + userId + " déconnecté du salon : " + roomName);
-
     }
 
     public void couperSalonDefinitif(String roomName, int userId) {
