@@ -15,7 +15,10 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -28,6 +31,8 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VisioController {
 
@@ -45,16 +50,36 @@ public class VisioController {
     @FXML private DatePicker datePlanif;
     @FXML private Spinner<Integer> spinnerHeure;
     @FXML private Spinner<Integer> spinnerMinute;
-    @FXML private ListView<User> listEmployesDisponibles;
     @FXML private Button btnPlanifier;
-    @FXML private TableView<Visio> tableReunions;
+    private static final int ITEMS_PER_PAGE = 8;
+    private final ContextMenu menuSuggestions = new ContextMenu();
+    private final List<Integer> listeIdInvitesSelectionnes = new ArrayList<>();
     @FXML private TableColumn<Visio, String> colRoomName;
     @FXML private TableColumn<Visio, String> colStatut;
     @FXML private TableColumn<Visio, String> colDate;
+    private final ObservableList<Visio> listeToutesReunions = FXCollections.observableArrayList();
+    private final ObservableList<Visio> listeReunionsActives = FXCollections.observableArrayList();
+    private final ObservableList<Visio> listeReunionsArchives = FXCollections.observableArrayList();
     @FXML private Button btnRejoindreSelection;
-
-    private final ObservableList<Visio> listeReunionsData = FXCollections.observableArrayList();
-    private final ObservableList<User> listeEmployesData = FXCollections.observableArrayList();
+    private final ObservableList<User> tousLesEmployes = FXCollections.observableArrayList();
+    @FXML
+    private TabPane tabPaneReunions;
+    @FXML
+    private TableView<Visio> tableReunionsActives;
+    @FXML
+    private TableView<Visio> tableReunionsArchives;
+    @FXML
+    private TableColumn<Visio, String> colRoomNameArchive;
+    @FXML
+    private TableColumn<Visio, String> colStatutArchive;
+    @FXML
+    private TableColumn<Visio, String> colDateArchive;
+    @FXML
+    private Pagination paginationReunions;
+    @FXML
+    private TextField txtRechercheInvite;
+    @FXML
+    private FlowPane flowPaneInvitesBadges;
 
     public static VisioController getActiveInstance() {
         return activeInstance;
@@ -70,37 +95,140 @@ public class VisioController {
         activeInstance = this;
         this.attenteTokenVisio = false;
 
+        menuSuggestions.setStyle("-fx-background-color: #1F2937; -fx-border-color: #374151; -fx-background-radius: 6px; -fx-border-radius: 6px;");
         afficherStatut("Prêt.", false);
 
-        if (tableReunions != null) {
-            colRoomName.setCellValueFactory(data ->
-                    new SimpleStringProperty(data.getValue().getRoom_name()));
-            colStatut.setCellValueFactory(data -> {
-                VisioStatut statut = data.getValue().getStatut();
-                return new SimpleStringProperty(statut != null ? statut.getValeur() : "");
-            });
-            colDate.setCellValueFactory(data -> {
-                LocalDateTime heure = data.getValue().getHeure_programmee();
-                String texte = heure != null ? heure.format(DATE_HEURE_FMT) : "—";
-                return new SimpleStringProperty(texte);
-            });
-            tableReunions.setItems(listeReunionsData);
-            rafraichirListeReunions();
-        }
-
+        initialiserTablesEtPagination();
         initialiserDateEtHeure();
 
-        if (listEmployesDisponibles != null) {
-            listEmployesDisponibles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-            listEmployesDisponibles.setItems(listeEmployesData);
-            chargerListeEmployes();
+        try {
+            tousLesEmployes.setAll(userDAO.findActiveUsers());
+        } catch (SQLException e) {
+            afficherStatut("Impossible de charger la liste des employés.", true);
         }
+
+        if (txtRechercheInvite != null) {
+            txtRechercheInvite.textProperty().addListener((obs, oldText, newText) -> gererMenuSuggestionsEnTempsReel(newText));
+            txtRechercheInvite.setOnAction(event -> ajouterInviteManuel());
+        }
+
+        rafraichirListeReunions();
     }
 
     public void couperController() {
         this.attenteTokenVisio = false;
         activeInstance = null;
     }
+
+    private void initialiserTablesEtPagination() {
+        if (tableReunionsActives != null) {
+            colRoomName.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRoom_name()));
+            colStatut.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatut() != null ? data.getValue().getStatut().getValeur() : ""));
+            colDate.setCellValueFactory(data -> new SimpleStringProperty(formaterDate(data.getValue().getHeure_programmee())));
+            paginationReunions.setPageFactory(this::creerPageReunions);
+        }
+
+        if (tableReunionsArchives != null) {
+            colRoomNameArchive.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRoom_name()));
+            colStatutArchive.setCellValueFactory(data -> new SimpleStringProperty("Terminée"));
+            colDateArchive.setCellValueFactory(data -> new SimpleStringProperty(formaterDate(data.getValue().getHeure_programmee())));
+            tableReunionsArchives.setItems(listeReunionsArchives);
+        }
+    }
+
+    private String formaterDate(LocalDateTime heure) {
+        return heure != null ? heure.format(DATE_HEURE_FMT) : "—";
+    }
+
+    private TableView<Visio> creerPageReunions(int pageIndex) {
+        int fromIndex = pageIndex * ITEMS_PER_PAGE;
+        int toIndex = Math.min(fromIndex + ITEMS_PER_PAGE, listeReunionsActives.size());
+        tableReunionsActives.setItems(FXCollections.observableArrayList(listeReunionsActives.subList(fromIndex, toIndex)));
+        return tableReunionsActives;
+    }
+
+    private void mettreAJourPagination() {
+        int pageCount = (int) Math.ceil((double) listeReunionsActives.size() / ITEMS_PER_PAGE);
+        paginationReunions.setPageCount(pageCount == 0 ? 1 : pageCount);
+        creerPageReunions(paginationReunions.getCurrentPageIndex());
+    }
+
+
+    private void gererMenuSuggestionsEnTempsReel(String saisie) {
+        if (saisie == null || saisie.trim().isEmpty()) {
+            menuSuggestions.hide();
+            return;
+        }
+
+        String recherche = saisie.trim().toLowerCase();
+        menuSuggestions.getItems().clear();
+
+        for (User u : tousLesEmployes) {
+            String nomComplet = (u.getPrenom() + " " + u.getNom());
+            if (nomComplet.toLowerCase().contains(recherche)) {
+                MenuItem item = new MenuItem(nomComplet + " — " + u.getPoste());
+                item.setStyle("-fx-text-fill: #F9FAFB; -fx-font-family: 'Segoe UI'; -fx-padding: 6 12;");
+                item.setOnAction(e -> {
+                    creerBadgeInvite(u);
+                    txtRechercheInvite.clear();
+                    menuSuggestions.hide();
+                });
+                menuSuggestions.getItems().add(item);
+            }
+        }
+
+        if (!menuSuggestions.getItems().isEmpty()) {
+            if (!menuSuggestions.isShowing()) {
+                menuSuggestions.show(txtRechercheInvite, javafx.geometry.Side.BOTTOM, 0, 2);
+            }
+        } else {
+            menuSuggestions.hide();
+        }
+    }
+
+    private void creerBadgeInvite(User u) {
+        final int idEmploye = u.getId();
+        final String nomAffichage = u.getPrenom() + " " + u.getNom();
+
+        if (listeIdInvitesSelectionnes.contains(idEmploye)) return;
+        listeIdInvitesSelectionnes.add(idEmploye);
+
+        HBox badge = new HBox();
+        badge.getStyleClass().add("user-badge");
+
+        Label lblNom = new Label(nomAffichage);
+        lblNom.getStyleClass().add("user-badge-text");
+
+        Label lblSupprimer = new Label("❌");
+        lblSupprimer.getStyleClass().add("user-badge-delete");
+
+        lblSupprimer.setOnMouseClicked(event -> {
+            flowPaneInvitesBadges.getChildren().remove(badge);
+            listeIdInvitesSelectionnes.remove(Integer.valueOf(idEmploye));
+        });
+
+        badge.getChildren().addAll(lblNom, lblSupprimer);
+        flowPaneInvitesBadges.getChildren().add(badge);
+    }
+
+    @FXML
+    private void ajouterInviteManuel() {
+        String recherche = txtRechercheInvite.getText().trim();
+        if (recherche.isEmpty()) return;
+
+        for (User u : tousLesEmployes) {
+            String nomComplet = (u.getPrenom() + " " + u.getNom()).toLowerCase();
+            if (nomComplet.contains(recherche.toLowerCase())) {
+                creerBadgeInvite(u);
+                txtRechercheInvite.clear();
+                menuSuggestions.hide();
+                return;
+            }
+        }
+        afficherStatut("⚠️ Aucun collaborateur trouvé pour : " + recherche, true);
+    }
+
+
 
     @FXML
     private void demanderConnexion() {
@@ -114,7 +242,7 @@ public class VisioController {
 
     @FXML
     private void rejoindreSalonSelectionne() {
-        Visio visioSelectionnee = tableReunions.getSelectionModel().getSelectedItem();
+        Visio visioSelectionnee = tableReunionsActives.getSelectionModel().getSelectedItem();
         if (visioSelectionnee == null) {
             afficherStatut("Sélectionnez d'abord une réunion dans le tableau.", true);
             return;
@@ -125,8 +253,9 @@ public class VisioController {
     private void envoyerRequeteConnexion(String roomName) {
         this.attenteTokenVisio = true;
         this.roomNameEnAttente = roomName;
+
         User currentUser = SessionService.getUtilisateurConnecte();
-        String nomUtilisateur = (currentUser != null) ? currentUser.getNom() : "Tom_Boudaud";
+        Integer nomUtilisateur = currentUser.getId();
 
         JSONObject requete = new JSONObject();
         requete.put("type", "REQUEST_VISIO_TOKEN");
@@ -155,8 +284,8 @@ public class VisioController {
         LocalDateTime heurePro = LocalDateTime.of(datePlanif.getValue(), LocalTime.of(heure, minute));
 
         JSONArray invitesArray = new JSONArray();
-        for (User u : listEmployesDisponibles.getSelectionModel().getSelectedItems()) {
-            invitesArray.put(u.getId());
+        for (int idInvite : listeIdInvitesSelectionnes) {
+            invitesArray.put(idInvite);
         }
 
         JSONObject planifMsg = new JSONObject();
@@ -167,6 +296,10 @@ public class VisioController {
 
         WebSocketService.getInstance().envoyerMessageBrut(planifMsg.toString());
         afficherStatut("Enregistrement de la planification...", false);
+
+        txtPlanifRoomName.clear();
+        flowPaneInvitesBadges.getChildren().clear();
+        listeIdInvitesSelectionnes.clear();
     }
 
     public void rafraichirListeReunions() {
@@ -174,95 +307,6 @@ public class VisioController {
         msg.put("type", "GET_MY_VISIOS");
         WebSocketService.getInstance().envoyerMessageBrut(msg.toString());
     }
-
-    private void initialiserDateEtHeure() {
-        LocalDateTime maintenant = LocalDateTime.now().plusMinutes(15);
-
-        if (datePlanif != null) {
-            datePlanif.setValue(maintenant.toLocalDate());
-        }
-        if (spinnerHeure != null) {
-            spinnerHeure.setValueFactory(
-                    new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, maintenant.getHour()));
-            formaterSpinner(spinnerHeure);
-        }
-        if (spinnerMinute != null) {
-            spinnerMinute.setValueFactory(
-                    new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59, maintenant.getMinute(), 1));
-            formaterSpinner(spinnerMinute);
-        }
-    }
-
-    private void formaterSpinner(Spinner<Integer> spinner) {
-        spinner.setEditable(true);
-        spinner.setMinWidth(130);
-        spinner.setPrefWidth(130);
-        spinner.getValueFactory().setConverter(new StringConverter<>() {
-            @Override
-            public String toString(Integer value) {
-                return value == null ? "" : String.format("%02d", value);
-            }
-
-            @Override
-            public Integer fromString(String string) {
-                if (string == null || string.isBlank()) {
-                    return null;
-                }
-                String chiffres = string.replaceAll("\\D", "");
-                if (chiffres.isEmpty()) {
-                    return null;
-                }
-                return Integer.parseInt(chiffres);
-            }
-        });
-    }
-
-    private Integer lireValeurSpinner(Spinner<Integer> spinner) {
-        if (spinner == null || spinner.getValueFactory() == null) {
-            return null;
-        }
-        try {
-            spinner.commitValue();
-        } catch (Exception ignored) {
-        }
-        Integer value = spinner.getValue();
-        if (value == null) {
-            return null;
-        }
-        SpinnerValueFactory<Integer> factory = spinner.getValueFactory();
-        if (factory instanceof SpinnerValueFactory.IntegerSpinnerValueFactory intFactory) {
-            if (value < intFactory.getMin() || value > intFactory.getMax()) {
-                return null;
-            }
-        }
-        return value;
-    }
-
-    private void chargerListeEmployes() {
-        try {
-            listeEmployesData.setAll(userDAO.findActiveUsers());
-            listEmployesDisponibles.setCellFactory(lv -> new ListCell<>() {
-                @Override
-                protected void updateItem(User user, boolean empty) {
-                    super.updateItem(user, empty);
-                    if (empty || user == null) {
-                        setText(null);
-                    } else {
-                        setText(user.getPrenom() + " " + user.getNom() + " — " + user.getPoste());
-                    }
-                }
-            });
-        } catch (SQLException e) {
-            afficherStatut("Impossible de charger la liste des employés.", true);
-        }
-    }
-
-    private void afficherStatut(String message, boolean erreur) {
-        if (lblStatut == null) return;
-        lblStatut.setStyle(erreur ? "-fx-text-fill: #E81123;" : "-fx-text-fill: #5882D6;");
-        lblStatut.setText(message);
-    }
-
     public void recevoirTokenEtLancer(String tokenJWT) {
         if (!attenteTokenVisio) return;
         this.attenteTokenVisio = false;
@@ -294,12 +338,22 @@ public class VisioController {
 
     public void recevoirErreurVisio(String messageErreur) {
         this.attenteTokenVisio = false;
-        Platform.runLater(() -> afficherStatut(messageErreur, true));
+        Platform.runLater(() -> {
+            if (messageErreur.startsWith("✅")) {
+                afficherStatut(messageErreur, false);
+                rafraichirListeReunions();
+            } else {
+                afficherStatut(messageErreur, true);
+            }
+        });
     }
 
     public void recevoirListeReunions(JSONArray reunionsJson) {
         Platform.runLater(() -> {
-            listeReunionsData.clear();
+            listeToutesReunions.clear();
+            listeReunionsActives.clear();
+            listeReunionsArchives.clear();
+
             for (int i = 0; i < reunionsJson.length(); i++) {
                 JSONObject obj = reunionsJson.getJSONObject(i);
 
@@ -312,8 +366,67 @@ public class VisioController {
                 if (!dateStr.isEmpty()) {
                     v.setHeure_programmee(LocalDateTime.parse(dateStr));
                 }
-                listeReunionsData.add(v);
+
+                listeToutesReunions.add(v);
+                if (v.getStatut() == VisioStatut.TERMINE) {
+                    listeReunionsArchives.add(v);
+                } else {
+                    listeReunionsActives.add(v);
+                }
+            }
+            mettreAJourPagination();
+        });
+    }
+
+
+    private void initialiserDateEtHeure() {
+        LocalDateTime maintenant = LocalDateTime.now().plusMinutes(15);
+        if (datePlanif != null) datePlanif.setValue(maintenant.toLocalDate());
+        if (spinnerHeure != null) {
+            spinnerHeure.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, maintenant.getHour()));
+            formaterSpinner(spinnerHeure);
+        }
+        if (spinnerMinute != null) {
+            spinnerMinute.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59, maintenant.getMinute(), 1));
+            formaterSpinner(spinnerMinute);
+        }
+    }
+
+    private void formaterSpinner(Spinner<Integer> spinner) {
+        spinner.setEditable(true);
+        spinner.getValueFactory().setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Integer value) {
+                return value == null ? "" : String.format("%02d", value);
+            }
+
+            @Override
+            public Integer fromString(String string) {
+                if (string == null || string.isBlank()) return null;
+                String chiffres = string.replaceAll("\\D", "");
+                return chiffres.isEmpty() ? null : Integer.parseInt(chiffres);
             }
         });
+    }
+
+    private Integer lireValeurSpinner(Spinner<Integer> spinner) {
+        if (spinner == null || spinner.getValueFactory() == null) return null;
+        try {
+            spinner.commitValue();
+        } catch (Exception ignored) {
+        }
+        Integer value = spinner.getValue();
+        if (value == null) return null;
+
+        if (spinner.getValueFactory() instanceof SpinnerValueFactory.IntegerSpinnerValueFactory intFactory) {
+            if (value < intFactory.getMin() || value > intFactory.getMax()) return null;
+        }
+        return value;
+    }
+
+    private void afficherStatut(String message, boolean erreur) {
+        if (lblStatut == null) return;
+        lblStatut.setStyle(erreur ? "-fx-text-fill: #EF4444;" : "-fx-text-fill: #10B981;");
+        lblStatut.setText(message);
     }
 }

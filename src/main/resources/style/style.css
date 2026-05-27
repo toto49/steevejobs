@@ -443,3 +443,36 @@
     -fx-alignment: CENTER;
     -fx-font-size: 14px;
 }
+
+/* --- BADGES UTILISATEURS (Thème Clair) --- */
+.user-badge {
+    -fx-background-color: #DDE8FF;
+    -fx-border-color: #7A9FE0;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 4px 10px;
+    -fx-alignment: center;
+}
+
+.user-badge-text {
+    -fx-text-fill: #2C488A;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.user-badge-delete {
+    -fx-text-fill: #7A9FE0;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 0 0 0 6px;
+    -fx-font-weight: bold;
+}
+
+.user-badge-delete:hover {
+    -fx-text-fill: #E81123; /* Rouge au survol de la croix */
+}
+
+/* Ajustement du fond du TabPane pour qu'il soit blanc */
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: transparent;
+}
