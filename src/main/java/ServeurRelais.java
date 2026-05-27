@@ -4,9 +4,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import io.github.cdimascio.dotenv.Dotenv;
-import io.livekit.server.AccessToken;
-import io.livekit.server.RoomJoin;
-import io.livekit.server.RoomName;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -19,10 +16,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -81,6 +75,10 @@ public class ServeurRelais extends WebSocketServer {
     }
 
     private Connection getDatabaseConnection() throws SQLException {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException ignored) {
+        }
         return DriverManager.getConnection(dbUrl, dbUser, dbPassword);
     }
 
@@ -182,7 +180,7 @@ public class ServeurRelais extends WebSocketServer {
                 int intUserId = Integer.parseInt(senderId);
 
                 String roomName = json.optString("roomName", "Reunion_Generale").trim();
-                String identity = json.optString("identity", "Employe_" + senderId);
+                String identity = json.optString("identity", "Employe_" + senderId).trim();
 
                 logger.info("Vérification des droits et gestion d'accès visio pour UserID={} (Room: {})", senderId, roomName);
 
@@ -251,17 +249,28 @@ public class ServeurRelais extends WebSocketServer {
                             stmtOpen.executeUpdate();
                         }
 
+                        String safeIdentity = identity.replaceAll("[^a-zA-Z0-9_\\-]", "_");
 
-                        AccessToken tokenLiveKit = new AccessToken(livekitApiKey, livekitApiSecret);
-                        tokenLiveKit.setIdentity(identity);
-                        tokenLiveKit.setName(identity);
-                        tokenLiveKit.addGrants(new RoomJoin(true), new RoomName(roomName));
-                        tokenLiveKit.setTtl(3600);
+                        Algorithm lkAlgorithm = Algorithm.HMAC256(livekitApiSecret);
+
+                        Map<String, Object> videoGrants = new HashMap<>();
+                        videoGrants.put("roomJoin", true);
+                        videoGrants.put("room", roomName);
+                        videoGrants.put("canPublish", true);
+                        videoGrants.put("canSubscribe", true);
+
+                        String jwtLiveKit = JWT.create()
+                                .withIssuer(livekitApiKey)
+                                .withExpiresAt(new java.util.Date(System.currentTimeMillis() + 3600 * 1000))
+                                .withSubject(safeIdentity)
+                                .withClaim("name", identity)
+                                .withClaim("video", videoGrants)
+                                .sign(lkAlgorithm);
 
                         reponse.put("status", "SUCCESS");
-                        reponse.put("token", tokenLiveKit.toJwt());
+                        reponse.put("token", jwtLiveKit);
                         reponse.put("roomName", roomName);
-                        logger.info("🔒 Token LiveKit généré et signé avec succès pour la room {}", roomName);
+                        logger.info("🔒 Token LiveKit natif généré et signé avec succès pour {}", safeIdentity);
 
                     } else if (codeAcces == -1) {
                         reponse.put("status", "ERROR");
@@ -455,7 +464,7 @@ public class ServeurRelais extends WebSocketServer {
 
     @Override
     public void onStart() {
-        logger.info("🚀 Serveur WS (Production) démarré sur le port {}", getPort());
+        logger.info("🚀 Serveur WS autonome et ultra-léger démarré sur le port {}", getPort());
     }
 
     private String extraireUserIdDuToken(String token) {
