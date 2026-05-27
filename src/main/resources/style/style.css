@@ -352,3 +352,94 @@
     -fx-background-color: #e5e7eb;
     -fx-text-fill: #333333;
 }
+
+/* Page visio */
+.visio-content {
+    -fx-padding: 40 40 40 40;
+}
+
+.visio-subtitle {
+    -fx-text-fill: #4B5563;
+    -fx-font-size: 14px;
+}
+
+.visio-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #D1D5DB;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-padding: 20 20 20 20;
+}
+
+.visio-card-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4B78CC;
+}
+
+.visio-field-label {
+    -fx-text-fill: #6B7280;
+    -fx-font-size: 12px;
+}
+
+.visio-field {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8 12 8 12;
+}
+
+.visio-list {
+    -fx-background-radius: 8;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 8;
+}
+
+.visio-btn-primary {
+    -fx-background-color: #5882D6;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-padding: 10 18 10 18;
+}
+
+.visio-btn-primary-wide {
+    -fx-background-color: #4B78CC;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-padding: 12 0 12 0;
+    -fx-max-width: infinity;
+}
+
+.visio-btn-header {
+    -fx-background-color: white;
+    -fx-text-fill: #5882D6;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-padding: 10 20 10 20;
+}
+
+.visio-status-bar {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: #D1D5DB;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 12 20 12 20;
+}
+
+.visio-status-text {
+    -fx-text-fill: #6B7280;
+    -fx-font-size: 13px;
+}
+
+.visio-card .spinner .text-field {
+    -fx-alignment: CENTER;
+    -fx-font-size: 14px;
+}

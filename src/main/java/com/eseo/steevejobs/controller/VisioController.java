@@ -1,5 +1,6 @@
 package com.eseo.steevejobs.controller;
 
+import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.Enum.VisioStatut;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.model.Visio;
@@ -7,6 +8,7 @@ import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.WebSocketService;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -14,50 +16,45 @@ import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.util.StringConverter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.awt.*;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 public class VisioController {
 
+    private static final DateTimeFormatter DATE_HEURE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static VisioController activeInstance;
     private static Dotenv dotenv;
+    private final UserDAO userDAO = new UserDAO();
     private boolean attenteTokenVisio = false;
-    @FXML
-    private TextField txtRoomName;
-    @FXML
-    private Button btnRejoindre;
-    @FXML
-    private Label lblStatut;
+    private String roomNameEnAttente = "";
+
+    @FXML private TextField txtRoomName;
+    @FXML private Button btnRejoindre;
+    @FXML private Label lblStatut;
+    @FXML private TextField txtPlanifRoomName;
+    @FXML private DatePicker datePlanif;
+    @FXML private Spinner<Integer> spinnerHeure;
+    @FXML private Spinner<Integer> spinnerMinute;
+    @FXML private ListView<User> listEmployesDisponibles;
+    @FXML private Button btnPlanifier;
+    @FXML private TableView<Visio> tableReunions;
+    @FXML private TableColumn<Visio, String> colRoomName;
+    @FXML private TableColumn<Visio, String> colStatut;
+    @FXML private TableColumn<Visio, String> colDate;
+    @FXML private Button btnRejoindreSelection;
+
     private final ObservableList<Visio> listeReunionsData = FXCollections.observableArrayList();
     private final ObservableList<User> listeEmployesData = FXCollections.observableArrayList();
-    @FXML
-    private TextField txtPlanifRoomName;
-    @FXML
-    private DatePicker datePlanif;
-    @FXML
-    private ComboBox<String> comboHeure;
-    @FXML
-    private ComboBox<String> comboMinute;
-    @FXML
-    private ListView<User> listEmployesDisponibles;
-    @FXML
-    private Button btnPlanifier;
-    @FXML
-    private TableView<Visio> tableReunions;
-    @FXML
-    private TableColumn<Visio, String> colRoomName;
-    @FXML
-    private TableColumn<Visio, String> colStatut;
-    @FXML
-    private TableColumn<Visio, String> colDate;
-    @FXML
-    private Button btnRejoindreSelection;
 
     public static VisioController getActiveInstance() {
         return activeInstance;
@@ -73,21 +70,25 @@ public class VisioController {
         activeInstance = this;
         this.attenteTokenVisio = false;
 
-        if (lblStatut != null) lblStatut.setText("");
-        if (tableReunions != null) {
-            colRoomName.setCellValueFactory(new PropertyValueFactory<>("roomName"));
-            colStatut.setCellValueFactory(new PropertyValueFactory<>("statut"));
-            colDate.setCellValueFactory(new PropertyValueFactory<>("heureProgrammee"));
-            tableReunions.setItems(listeReunionsData);
+        afficherStatut("Prêt.", false);
 
+        if (tableReunions != null) {
+            colRoomName.setCellValueFactory(data ->
+                    new SimpleStringProperty(data.getValue().getRoom_name()));
+            colStatut.setCellValueFactory(data -> {
+                VisioStatut statut = data.getValue().getStatut();
+                return new SimpleStringProperty(statut != null ? statut.getValeur() : "");
+            });
+            colDate.setCellValueFactory(data -> {
+                LocalDateTime heure = data.getValue().getHeure_programmee();
+                String texte = heure != null ? heure.format(DATE_HEURE_FMT) : "—";
+                return new SimpleStringProperty(texte);
+            });
+            tableReunions.setItems(listeReunionsData);
             rafraichirListeReunions();
         }
-        if (comboHeure != null && comboMinute != null) {
-            for (int i = 0; i < 24; i++) comboHeure.getItems().add(String.format("%02dd", i));
-            for (int i = 0; i < 60; i += 5) comboMinute.getItems().add(String.format("%02dd", i));
-            comboHeure.setValue("14");
-            comboMinute.setValue("00");
-        }
+
+        initialiserDateEtHeure();
 
         if (listEmployesDisponibles != null) {
             listEmployesDisponibles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -101,13 +102,11 @@ public class VisioController {
         activeInstance = null;
     }
 
-
     @FXML
     private void demanderConnexion() {
         String room = txtRoomName.getText().trim();
         if (room.isEmpty()) {
-            lblStatut.setStyle("-fx-text-fill: #e74c3c;");
-            lblStatut.setText("⚠️ Veuillez renseigner un identifiant de salon.");
+            afficherStatut("Veuillez renseigner un identifiant de salon.", true);
             return;
         }
         envoyerRequeteConnexion(room);
@@ -117,8 +116,7 @@ public class VisioController {
     private void rejoindreSalonSelectionne() {
         Visio visioSelectionnee = tableReunions.getSelectionModel().getSelectedItem();
         if (visioSelectionnee == null) {
-            lblStatut.setStyle("-fx-text-fill: #e74c3c;");
-            lblStatut.setText("⚠️ Sélectionnez d'abord une réunion dans le tableau.");
+            afficherStatut("Sélectionnez d'abord une réunion dans le tableau.", true);
             return;
         }
         envoyerRequeteConnexion(visioSelectionnee.getRoom_name());
@@ -126,6 +124,7 @@ public class VisioController {
 
     private void envoyerRequeteConnexion(String roomName) {
         this.attenteTokenVisio = true;
+        this.roomNameEnAttente = roomName;
         User currentUser = SessionService.getUtilisateurConnecte();
         String nomUtilisateur = (currentUser != null) ? currentUser.getNom() : "Tom_Boudaud";
 
@@ -135,25 +134,24 @@ public class VisioController {
         requete.put("identity", nomUtilisateur);
 
         WebSocketService.getInstance().envoyerMessageBrut(requete.toString());
-
-        if (lblStatut != null) {
-            lblStatut.setStyle("-fx-text-fill: #3498db;");
-            lblStatut.setText("⏳ Négociation du protocole de sécurité avec le NAS...");
-        }
+        afficherStatut("Connexion au serveur de visio en cours...", false);
     }
 
     @FXML
     private void planifierReunion() {
         String room = txtPlanifRoomName.getText().trim();
         if (room.isEmpty() || datePlanif.getValue() == null) {
-            lblStatut.setStyle("-fx-text-fill: #e74c3c;");
-            lblStatut.setText("⚠️ Nom de salle et date obligatoires.");
+            afficherStatut("Nom de salle et date obligatoires.", true);
             return;
         }
 
+        Integer heure = lireValeurSpinner(spinnerHeure);
+        Integer minute = lireValeurSpinner(spinnerMinute);
+        if (heure == null || minute == null) {
+            afficherStatut("Heure et minutes invalides.", true);
+            return;
+        }
 
-        int heure = Integer.parseInt(comboHeure.getValue().replace("d", ""));
-        int minute = Integer.parseInt(comboMinute.getValue().replace("d", ""));
         LocalDateTime heurePro = LocalDateTime.of(datePlanif.getValue(), LocalTime.of(heure, minute));
 
         JSONArray invitesArray = new JSONArray();
@@ -168,8 +166,7 @@ public class VisioController {
         planifMsg.put("invites", invitesArray);
 
         WebSocketService.getInstance().envoyerMessageBrut(planifMsg.toString());
-        lblStatut.setStyle("-fx-text-fill: #3498db;");
-        lblStatut.setText("⏳ Enregistrement de la planification sur le NAS...");
+        afficherStatut("Enregistrement de la planification...", false);
     }
 
     public void rafraichirListeReunions() {
@@ -178,9 +175,93 @@ public class VisioController {
         WebSocketService.getInstance().envoyerMessageBrut(msg.toString());
     }
 
-    private void chargerListeEmployes() {
+    private void initialiserDateEtHeure() {
+        LocalDateTime maintenant = LocalDateTime.now().plusMinutes(15);
+
+        if (datePlanif != null) {
+            datePlanif.setValue(maintenant.toLocalDate());
+        }
+        if (spinnerHeure != null) {
+            spinnerHeure.setValueFactory(
+                    new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, maintenant.getHour()));
+            formaterSpinner(spinnerHeure);
+        }
+        if (spinnerMinute != null) {
+            spinnerMinute.setValueFactory(
+                    new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59, maintenant.getMinute(), 1));
+            formaterSpinner(spinnerMinute);
+        }
     }
 
+    private void formaterSpinner(Spinner<Integer> spinner) {
+        spinner.setEditable(true);
+        spinner.setMinWidth(130);
+        spinner.setPrefWidth(130);
+        spinner.getValueFactory().setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Integer value) {
+                return value == null ? "" : String.format("%02d", value);
+            }
+
+            @Override
+            public Integer fromString(String string) {
+                if (string == null || string.isBlank()) {
+                    return null;
+                }
+                String chiffres = string.replaceAll("\\D", "");
+                if (chiffres.isEmpty()) {
+                    return null;
+                }
+                return Integer.parseInt(chiffres);
+            }
+        });
+    }
+
+    private Integer lireValeurSpinner(Spinner<Integer> spinner) {
+        if (spinner == null || spinner.getValueFactory() == null) {
+            return null;
+        }
+        try {
+            spinner.commitValue();
+        } catch (Exception ignored) {
+        }
+        Integer value = spinner.getValue();
+        if (value == null) {
+            return null;
+        }
+        SpinnerValueFactory<Integer> factory = spinner.getValueFactory();
+        if (factory instanceof SpinnerValueFactory.IntegerSpinnerValueFactory intFactory) {
+            if (value < intFactory.getMin() || value > intFactory.getMax()) {
+                return null;
+            }
+        }
+        return value;
+    }
+
+    private void chargerListeEmployes() {
+        try {
+            listeEmployesData.setAll(userDAO.findActiveUsers());
+            listEmployesDisponibles.setCellFactory(lv -> new ListCell<>() {
+                @Override
+                protected void updateItem(User user, boolean empty) {
+                    super.updateItem(user, empty);
+                    if (empty || user == null) {
+                        setText(null);
+                    } else {
+                        setText(user.getPrenom() + " " + user.getNom() + " — " + user.getPoste());
+                    }
+                }
+            });
+        } catch (SQLException e) {
+            afficherStatut("Impossible de charger la liste des employés.", true);
+        }
+    }
+
+    private void afficherStatut(String message, boolean erreur) {
+        if (lblStatut == null) return;
+        lblStatut.setStyle(erreur ? "-fx-text-fill: #E81123;" : "-fx-text-fill: #5882D6;");
+        lblStatut.setText(message);
+    }
 
     public void recevoirTokenEtLancer(String tokenJWT) {
         if (!attenteTokenVisio) return;
@@ -189,41 +270,31 @@ public class VisioController {
         Platform.runLater(() -> {
             try {
                 String urlFrontNas = getDotenv().get("URL_FRONT_VISIO");
-                String urlLiveKit = getDotenv().get("LIVEKIT_SERVER_URL");
+                String urlComplete = String.format(
+                        "%s?token=%s&room=%s",
+                        urlFrontNas,
+                        URLEncoder.encode(tokenJWT, StandardCharsets.UTF_8),
+                        URLEncoder.encode(roomNameEnAttente, StandardCharsets.UTF_8)
+                );
+                System.out.println("Lancement visio : " + urlComplete);
 
-                String urlComplete = String.format("%s?url=%s&token=%s", urlFrontNas, urlLiveKit, tokenJWT);
-                System.out.println("🚀 Lancement de la visio hébergée sur le NAS : " + urlComplete);
+                afficherStatut("Ouverture de la visio dans votre navigateur...", false);
 
-                if (lblStatut != null) {
-                    lblStatut.setStyle("-fx-text-fill: #2ecc71;");
-                    lblStatut.setText("✅ Redirection vers le serveur de visio...");
-                }
-
-                String arch = System.getProperty("os.arch").toLowerCase();
-                if (arch.contains("arm") || arch.contains("aarch64")) {
-                    Runtime.getRuntime().exec("cmd /c start msedge --app=\"" + urlComplete + "\"");
+                String os = System.getProperty("os.name", "").toLowerCase();
+                if (os.contains("win")) {
+                    Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", "", urlComplete});
                 } else {
                     Desktop.getDesktop().browse(new URI(urlComplete));
                 }
-
             } catch (Exception e) {
-                if (lblStatut != null) {
-                    lblStatut.setStyle("-fx-text-fill: #e74c3c;");
-                    lblStatut.setText("❌ Erreur : " + e.getMessage());
-                }
+                afficherStatut("Erreur : " + e.getMessage(), true);
             }
         });
     }
 
-
     public void recevoirErreurVisio(String messageErreur) {
         this.attenteTokenVisio = false;
-        Platform.runLater(() -> {
-            if (lblStatut != null) {
-                lblStatut.setStyle("-fx-text-fill: #e74c3c;");
-                lblStatut.setText(messageErreur);
-            }
-        });
+        Platform.runLater(() -> afficherStatut(messageErreur, true));
     }
 
     public void recevoirListeReunions(JSONArray reunionsJson) {
@@ -241,7 +312,6 @@ public class VisioController {
                 if (!dateStr.isEmpty()) {
                     v.setHeure_programmee(LocalDateTime.parse(dateStr));
                 }
-
                 listeReunionsData.add(v);
             }
         });
