@@ -17,7 +17,8 @@ public class VisioService {
         JSONObject reponse = new JSONObject();
 
         if (roomName == null || roomName.trim().isEmpty()) {
-            reponse.put("type", "VISIO_ERROR");
+            reponse.put("type", "VISIO_TOKEN_RESPONSE");
+            reponse.put("status", "ERROR");
             reponse.put("message", "⚠️ Le nom de la salle est invalide.");
             return reponse;
         }
@@ -25,7 +26,7 @@ public class VisioService {
         roomName = roomName.trim();
 
         if (!visioDAO.existeEnBdd(roomName)) {
-            System.out.println("✨ Initialisation d'une visioconférence instantanée : " + roomName);
+            System.out.println("✨ Initialisation d'une visioconférence instantanée publique : " + roomName);
             Visio instantAppel = new Visio(roomName, userId, null);
             instantAppel.setStatut(VisioStatut.EN_COURS);
             visioDAO.enregistrerSalonInstantane(instantAppel);
@@ -36,25 +37,18 @@ public class VisioService {
         int codeAcces = visioDAO.verifierAccesSalon(roomName, userId);
 
         if (codeAcces == 1) {
-            try {
-                String tokenJWT = "MOCK_TOKEN_LIVEKIT_FOR_TESTS";
-
-                reponse.put("type", "VISIO_TOKEN_RESPONSE");
-                reponse.put("status", "SUCCESS");
-                reponse.put("token", tokenJWT);
-                reponse.put("roomName", roomName);
-                System.out.println("✅ Accès accordé pour " + userName + " sur le salon [" + roomName + "]");
-
-            } catch (Exception e) {
-                reponse.put("type", "VISIO_ERROR");
-                reponse.put("message", "❌ Erreur critique lors de la génération de la clé de chiffrement.");
-            }
+            reponse.put("type", "VISIO_TOKEN_RESPONSE");
+            reponse.put("status", "SUCCESS");
+            reponse.put("roomName", roomName);
+            System.out.println("✅ Autorisation d'accès BDD accordée pour " + userName + " sur le salon [" + roomName + "]");
 
         } else if (codeAcces == -1) {
-            reponse.put("type", "VISIO_ERROR");
+            reponse.put("type", "VISIO_TOKEN_RESPONSE");
+            reponse.put("status", "ERROR");
             reponse.put("message", "⚠️ Cette réunion est verrouillée. Elle n'ouvrira que quelques minutes avant l'heure prévue.");
         } else {
-            reponse.put("type", "VISIO_ERROR");
+            reponse.put("type", "VISIO_TOKEN_RESPONSE");
+            reponse.put("status", "ERROR");
             reponse.put("message", "❌ Accès refusé : Vous ne figurez pas sur le registre des invités de cette session.");
         }
 
