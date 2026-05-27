@@ -136,33 +136,13 @@ public class WebSocketService {
                         if ("VISIO_TOKEN_RESPONSE".equals(type)) {
                             String token = json.getString("token");
 
-                            Platform.runLater(() -> {
-                                try {
-                                    String urlLiveKit = getDotenv().get("LIVEKIT_SERVER_URL");
-                                    if (urlLiveKit == null || urlLiveKit.isEmpty()) {
-                                        System.err.println("⚠️ Warning : LIVEKIT_SERVER_URL manquant dans le .env. Utilisation de l'IP par défaut.");
-                                        urlLiveKit = "ws://82.65.149.31:7880";
-                                    }
+                            System.out.println("🚀 [WS] Token reçu ! Transfert de l'événement au VisioController...");
 
-                                    String urlAppel = String.format("https://meet.livekit.io/?livekitUrl=%s&token=%s", urlLiveKit, token);
-
-                                    System.out.println("🚀 [WS] Token reçu ! Lancement de la visio : " + urlAppel);
-
-                                    if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
-                                        java.awt.Desktop.getDesktop().browse(new java.net.URI(urlAppel));
-                                    } else {
-                                        Runtime.getRuntime().exec("cmd /c start " + urlAppel);
-                                    }
-
-                                    if (MenuController.getInstance() != null) {
-                                        MenuController.getInstance().chargerPage("home-view");
-                                        MenuController.getInstance().changerTitre("Tableau de bord");
-                                    }
-
-                                } catch (Exception e) {
-                                    System.err.println("❌ Erreur lors du traitement de la réponse visio : " + e.getMessage());
-                                }
-                            });
+                            if (VisioController.getActiveInstance() != null) {
+                                VisioController.getActiveInstance().recevoirTokenEtLancer(token);
+                            } else {
+                                System.err.println("❌ ÉCHEC : VisioController n'a pas d'instance active à l'écran.");
+                            }
                         }
                     } catch (Exception e) {
                         System.err.println("❌ WS_ERR (Parse Msg): " + e.getMessage());

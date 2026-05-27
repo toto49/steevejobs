@@ -65,6 +65,11 @@ public class MenuController {
 
     public void chargerPage(String nomFichier) {
         TicketController.fermerChat();
+
+        if (VisioController.getActiveInstance() != null) {
+            VisioController.getActiveInstance().couperController();
+        }
+
         try {
             String chemin = "/com/eseo/steevejobs/view/" + nomFichier + "-view.fxml";
             FXMLLoader loader = new FXMLLoader(getClass().getResource(chemin));
@@ -83,7 +88,6 @@ public class MenuController {
             System.err.println("ERREUR : Le chemin " + nomFichier + " semble incorrect ou le fichier n'existe pas.");
         }
     }
-
 
     public void allumerBadge(String typeCible, int nombreExact) {
         Platform.runLater(() -> {

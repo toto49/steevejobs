@@ -1,86 +1,108 @@
 package com.eseo.steevejobs.controller;
 
-import fi.iki.elonen.NanoHTTPD;
+import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.service.WebSocketService;
+import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import org.json.JSONObject;
 
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 
 public class VisioController {
 
     private static VisioController activeInstance;
-    private MiniServeurVisio serveurWeb;
+    private static Dotenv dotenv;
+    private boolean attenteTokenVisio = false;
+
+    @FXML
+    private TextField txtRoomName;
+    @FXML
+    private Button btnRejoindre;
+    @FXML
+    private Label lblStatut;
 
     public static VisioController getActiveInstance() {
         return activeInstance;
     }
 
+    private static Dotenv getDotenv() {
+        if (dotenv == null) dotenv = Dotenv.load();
+        return dotenv;
+    }
+
     @FXML
     public void initialize() {
         activeInstance = this;
+        this.attenteTokenVisio = false;
+        if (lblStatut != null) {
+            lblStatut.setText("");
+        }
+    }
+
+    public void couperController() {
+        this.attenteTokenVisio = false;
+        activeInstance = null;
     }
 
     @FXML
     private void demanderConnexion() {
+        String room = txtRoomName.getText().trim();
+        if (room.isEmpty()) {
+            lblStatut.setText("⚠️ Veuillez renseigner un identifiant de salon.");
+            return;
+        }
+
+        this.attenteTokenVisio = true;
+        User currentUser = SessionService.getUtilisateurConnecte();
+        String nomUtilisateur = (currentUser != null) ? currentUser.getNom() : "Tom_Boudaud";
+
         JSONObject requete = new JSONObject();
         requete.put("type", "REQUEST_VISIO_TOKEN");
-        requete.put("roomName", "Salle_De_Crise");
-        requete.put("identity", "Tom_Boudaud");
-        System.out.println("⏳ Demande de token envoyée...");
+        requete.put("roomName", room);
+        requete.put("identity", nomUtilisateur);
+
+        WebSocketService.getInstance().envoyerMessageBrut(requete.toString());
+        lblStatut.setStyle("-fx-text-fill: #3498db;");
+        lblStatut.setText("⏳ Négociation du jeton avec le serveur NAS...");
     }
 
     public void recevoirTokenEtLancer(String tokenJWT) {
+        if (!attenteTokenVisio) return;
+        this.attenteTokenVisio = false;
+
         Platform.runLater(() -> {
             try {
-                if (serveurWeb == null) {
-                    serveurWeb = new MiniServeurVisio(9999);
-                    serveurWeb.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+                String urlFrontNas = getDotenv().get("URL_FRONT_VISIO");
+                String urlLiveKit = getDotenv().get("LIVEKIT_SERVER_URL");
+
+                String urlComplete = String.format("%s?url=%s&token=%s", urlFrontNas, urlLiveKit, tokenJWT);
+                System.out.println("🚀 Lancement de la visio hébergée sur le NAS : " + urlComplete);
+
+                if (lblStatut != null) {
+                    lblStatut.setStyle("-fx-text-fill: #2ecc71;");
+                    lblStatut.setText("✅ Redirection vers le serveur de visio...");
                 }
 
-                String urlLiveKit = "ws://82.65.149.31:7880";
-
-                String urlComplete = String.format("http://localhost:9999/?url=%s&token=%s", urlLiveKit, tokenJWT);
-                System.out.println("🚀 Lancement de la visio via serveur embarqué : " + urlComplete);
-
-                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                    Desktop.getDesktop().browse(new URI(urlComplete));
+                String arch = System.getProperty("os.arch").toLowerCase();
+                if (arch.contains("arm") || arch.contains("aarch64")) {
+                    String commandeEdgeApp = "cmd /c start msedge --app=\"" + urlComplete + "\"";
+                    Runtime.getRuntime().exec(commandeEdgeApp);
                 } else {
-                    Runtime.getRuntime().exec("cmd /c start " + urlComplete);
+                    Desktop.getDesktop().browse(new URI(urlComplete));
                 }
 
             } catch (Exception e) {
-                System.err.println("❌ Erreur lors du lancement du serveur/navigateur : " + e.getMessage());
+                if (lblStatut != null) {
+                    lblStatut.setStyle("-fx-text-fill: #e74c3c;");
+                    lblStatut.setText("❌ Erreur : " + e.getMessage());
+                }
             }
         });
-    }
-
-    private class MiniServeurVisio extends NanoHTTPD {
-        public MiniServeurVisio(int port) {
-            super(port);
-        }
-
-        @Override
-        public Response serve(IHTTPSession session) {
-            try {
-                InputStream is = getClass().getResourceAsStream("/visio.html");
-                if (is == null) {
-                    return newFixedLengthResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "Fichier visio.html introuvable dans les ressources JavaFX");
-                }
-
-                String htmlContenu = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
-                        .lines().collect(Collectors.joining("\n"));
-
-                return newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_HTML, htmlContenu);
-            } catch (Exception e) {
-                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "Erreur serveur : " + e.getMessage());
-            }
-        }
     }
 }
