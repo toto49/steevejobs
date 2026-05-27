@@ -10,7 +10,6 @@ import java.util.List;
 
 public class VisioDAO {
 
-
     public boolean enregistrerSalonInstantane(Visio visio) {
         String sql = "INSERT INTO VISIO (room_name, createur_id, statut, heure_debut) VALUES (?, ?, ?, CURRENT_TIMESTAMP)";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -92,19 +91,20 @@ public class VisioDAO {
                     VisioStatut statut = VisioStatut.valueOf(rs.getString("statut"));
                     int createurId = rs.getInt("createur_id");
                     int estInvite = rs.getInt("est_invite");
+                    Timestamp tsProg = rs.getTimestamp("heure_programmee");
 
+                    if (statut == VisioStatut.EN_COURS && tsProg == null) {
+                        return 1;
+                    }
 
                     if (userId != createurId && estInvite == 0) {
                         return 0;
                     }
 
-                    if (VisioStatut.PROGRAMMEE == statut) {
-                        Timestamp tsProg = rs.getTimestamp("heure_programmee");
-                        if (tsProg != null) {
-                            LocalDateTime heureProgrammee = tsProg.toLocalDateTime();
-                            if (LocalDateTime.now().isBefore(heureProgrammee.minusMinutes(10))) {
-                                return -1;
-                            }
+                    if (VisioStatut.PROGRAMMEE == statut && tsProg != null) {
+                        LocalDateTime heureProgrammee = tsProg.toLocalDateTime();
+                        if (LocalDateTime.now().isBefore(heureProgrammee.minusMinutes(10))) {
+                            return -1;
                         }
                     }
                     return 1;
@@ -169,7 +169,8 @@ public class VisioDAO {
         List<Visio> liste = new ArrayList<>();
         String sql = "SELECT DISTINCT v.* FROM VISIO v " +
                 "LEFT JOIN VISIO_INVITATIONS vi ON v.id = vi.visio_id " +
-                "WHERE (v.createur_id = ? OR vi.employe_id = ?) AND v.statut != 'TERMINE' " +
+                "WHERE (v.createur_id = ? OR vi.employe_id = ? OR (v.statut = 'EN_COURS' AND v.heure_programmee IS NULL)) " +
+                "AND v.statut != 'TERMINE' " +
                 "ORDER BY v.heure_programmee ASC";
 
         try (Connection conn = DatabaseConnection.getConnection();
