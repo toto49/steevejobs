@@ -70,7 +70,6 @@ public class WebSocketService {
         return dotenvInstance;
     }
 
-
     public void envoyerMessageBrut(String message) {
         try {
             if (wsClient != null && wsClient.isOpen() && isConnected.get()) {
@@ -128,20 +127,42 @@ public class WebSocketService {
                     try {
                         JSONObject json = new JSONObject(message);
                         String type = json.optString("type");
-
                         if ("UPDATE_TICKET".equals(type)) {
                             traiterMessageUpdate(json);
-                        }
+                        } else if ("VISIO_TOKEN_RESPONSE".equals(type)) {
+                            String status = json.optString("status", "SUCCESS");
 
-                        if ("VISIO_TOKEN_RESPONSE".equals(type)) {
-                            String token = json.getString("token");
-
-                            System.out.println("🚀 [WS] Token reçu ! Transfert de l'événement au VisioController...");
+                            if ("SUCCESS".equals(status)) {
+                                String token = json.getString("token");
+                                System.out.println("🚀 [WS] Token LiveKit reçu ! Transfert au VisioController...");
+                                if (VisioController.getActiveInstance() != null) {
+                                    VisioController.getActiveInstance().recevoirTokenEtLancer(token);
+                                }
+                            } else {
+                                String messageErreur = json.optString("message", "❌ Accès au salon refusé.");
+                                System.err.println("🛑 [WS] Accès Visio refusé par le serveur : " + messageErreur);
+                                if (VisioController.getActiveInstance() != null) {
+                                    VisioController.getActiveInstance().recevoirErreurVisio(messageErreur);
+                                }
+                            }
+                        } else if ("PLANIF_RESPONSE".equals(type)) {
+                            String status = json.optString("status");
+                            System.out.println("📊 [WS] Retour planification reçu : " + status);
 
                             if (VisioController.getActiveInstance() != null) {
-                                VisioController.getActiveInstance().recevoirTokenEtLancer(token);
-                            } else {
-                                System.err.println("❌ ÉCHEC : VisioController n'a pas d'instance active à l'écran.");
+                                if ("SUCCESS".equals(status)) {
+                                    VisioController.getActiveInstance().recevoirErreurVisio("✅ Réunion planifiée avec succès !");
+                                    VisioController.getActiveInstance().rafraichirListeReunions(); // Recharge le tableau
+                                } else {
+                                    VisioController.getActiveInstance().recevoirErreurVisio("❌ Échec de la planification en BDD.");
+                                }
+                            }
+                        } else if ("MY_VISIOS_RESPONSE".equals(type)) {
+                            JSONArray reunions = json.optJSONArray("reunions");
+                            System.out.println("📊 [WS] Liste des visioconférences reçue (" + (reunions != null ? reunions.length() : 0) + " salons).");
+
+                            if (VisioController.getActiveInstance() != null && reunions != null) {
+                                VisioController.getActiveInstance().recevoirListeReunions(reunions);
                             }
                         }
                     } catch (Exception e) {
@@ -158,7 +179,7 @@ public class WebSocketService {
 
                 @Override
                 public void onError(Exception ex) {
-                    System.err.println("❌ WS_ERR (Erreur de réseau): Le client n'arrive pas à atteindre l'IP " + ip);
+                    System.err.println("❌ WS_ERR (Erreur de réseau): Le client n'arrive pas à atteindre l'IP");
                     isConnected.set(false);
                     isConnecting.set(false);
                 }
@@ -229,7 +250,6 @@ public class WebSocketService {
                         int nombre = "TECH".equals(typeCible) ? HomeController.notificationsTech : HomeController.notificationsAuteur;
                         MenuController.getInstance().allumerBadge(typeCible, nombre);
                     }
-
 
                     if (pushEnabled) {
                         if ("AUTEUR".equals(typeCible)) {
