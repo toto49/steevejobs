@@ -276,8 +276,13 @@ public class HomeController {
                         requete.put("type", "REQUEST_VISIO_TOKEN");
                         requete.put("roomName", "Salle_De_Crise");
 
-                        String nomUtilisateur = (currentUser != null) ? currentUser.getNom() : "Tom_Boudaud";
-                        requete.put("identity", nomUtilisateur);
+                        if (currentUser != null) {
+                            requete.put("identity", String.valueOf(currentUser.getId()));
+                            requete.put("displayName", currentUser.getPrenom() + " " + currentUser.getNom());
+                        } else {
+                            requete.put("identity", "0");
+                            requete.put("displayName", "Invité");
+                        }
                         WebSocketService.getInstance().envoyerMessageBrut(requete.toString());
                         System.out.println("⏳ Requête de token envoyée au NAS Synology...");
 

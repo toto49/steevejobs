@@ -134,9 +134,10 @@ public class WebSocketService {
 
                             if ("SUCCESS".equals(status)) {
                                 String token = json.getString("token");
+                                String roomName = json.optString("roomName", "");
                                 System.out.println("🚀 [WS] Token LiveKit reçu ! Transfert au VisioController...");
                                 if (VisioController.getActiveInstance() != null) {
-                                    VisioController.getActiveInstance().recevoirTokenEtLancer(token);
+                                    VisioController.getActiveInstance().recevoirTokenEtLancer(token, roomName);
                                 }
                             } else {
                                 String messageErreur = json.optString("message", "❌ Accès au salon refusé.");
@@ -163,6 +164,16 @@ public class WebSocketService {
 
                             if (VisioController.getActiveInstance() != null && reunions != null) {
                                 VisioController.getActiveInstance().recevoirListeReunions(reunions);
+                            }
+                        } else if ("DELETE_VISIO_RESPONSE".equals(type)) {
+                            String status = json.optString("status");
+                            message = json.optString("message", "Suppression impossible.");
+                            if (VisioController.getActiveInstance() != null) {
+                                if ("SUCCESS".equals(status)) {
+                                    VisioController.getActiveInstance().recevoirSuppressionSalon("✅ " + message);
+                                } else {
+                                    VisioController.getActiveInstance().recevoirSuppressionSalon("❌ " + message);
+                                }
                             }
                         }
                     } catch (Exception e) {

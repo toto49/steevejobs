@@ -355,7 +355,8 @@
 
 /* Page visio */
 .visio-content {
-    -fx-padding: 40 40 40 40;
+    -fx-padding: 24 40 24 40;
+    -fx-background-color: #DDE8FF;
 }
 
 .visio-subtitle {
@@ -372,6 +373,100 @@
     -fx-background-insets: 0;
     -fx-border-insets: 0;
     -fx-padding: 20 20 20 20;
+    -fx-min-height: 0;
+}
+
+.visio-table {
+    -fx-background-color: white;
+    -fx-border-color: #E5E7EB;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1;
+    -fx-table-cell-border-color: transparent;
+}
+
+.visio-table .column-header-background {
+    -fx-background-color: #F3F4F6;
+    -fx-background-radius: 8 8 0 0;
+    -fx-padding: 0;
+}
+
+.visio-table .column-header,
+.visio-table .filler {
+    -fx-size: 42;
+    -fx-border-color: transparent;
+    -fx-background-color: transparent;
+}
+
+.visio-table .column-header .label {
+    -fx-text-fill: #374151;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.visio-table .table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #F3F4F6;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0;
+}
+
+.visio-table .table-row-cell:odd {
+    -fx-background-color: #FAFBFC;
+}
+
+.visio-table .table-row-cell:selected {
+    -fx-background-color: #E8EEFB;
+}
+
+.visio-table .table-row-cell:empty {
+    -fx-background-color: #FAFBFC;
+    -fx-border-color: #F3F4F6;
+}
+
+.visio-table .table-cell {
+    -fx-padding: 10 12 10 12;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1F2937;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.visio-btn-delete {
+    -fx-background-color: #FEE2E2;
+    -fx-text-fill: #DC2626;
+    -fx-font-size: 14px;
+    -fx-background-radius: 8;
+    -fx-padding: 6 10 6 10;
+    -fx-cursor: hand;
+    -fx-min-width: 36;
+    -fx-min-height: 32;
+}
+
+.visio-btn-delete:hover {
+    -fx-background-color: #FECACA;
+}
+
+.visio-btn-delete-disabled {
+    -fx-background-color: #F3F4F6;
+    -fx-text-fill: #9CA3AF;
+    -fx-font-size: 14px;
+    -fx-background-radius: 8;
+    -fx-padding: 6 10 6 10;
+    -fx-opacity: 0.85;
+    -fx-min-width: 36;
+    -fx-min-height: 32;
+}
+
+.visio-card .tab-pane {
+    -fx-min-height: 0;
+}
+
+.visio-card .tab-pane .tab-content-area {
+    -fx-background-color: white;
+}
+
+.visio-card .tab-pane .tab-header-area {
+    -fx-padding: 0 0 8 0;
 }
 
 .visio-card-title {
