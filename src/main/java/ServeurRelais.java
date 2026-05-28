@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class ServeurRelais extends WebSocketServer {
     private static final Logger logger = LoggerFactory.getLogger(ServeurRelais.class);
@@ -36,6 +37,8 @@ public class ServeurRelais extends WebSocketServer {
     private static final int MAX_CONN_PER_USER = 5;
     private static final int MAX_MSGS_PER_SEC = 20;
     private static final int ROOM_EMPTY_CHECK_DELAY_SEC = 3;
+    // Validation du roomName : alphanumériques, tirets, underscores, 1–100 caractères
+    private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_\\-]{1,100}$");
 
     private final ConcurrentHashMap<String, Set<WebSocket>> connectedUsers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<WebSocket, Integer> rateLimiter = new ConcurrentHashMap<>();
@@ -60,23 +63,20 @@ public class ServeurRelais extends WebSocketServer {
 
         Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
         String secret = trimEnv(dotenv.get("JWT_SECRET"));
-        if (secret == null || secret.isEmpty()) {
+        if (secret == null || secret.isEmpty())
             throw new IllegalStateException("CRITIQUE : JWT_SECRET manquant dans le .env");
-        }
 
         this.livekitApiKey = trimEnv(dotenv.get("API_KEY_VISIO"));
         this.livekitApiSecret = trimEnv(dotenv.get("API_SECRET_VISIO"));
         if (this.livekitApiKey == null || this.livekitApiKey.isEmpty()
-                || this.livekitApiSecret == null || this.livekitApiSecret.isEmpty()) {
+                || this.livekitApiSecret == null || this.livekitApiSecret.isEmpty())
             throw new IllegalStateException("CRITIQUE : API_KEY_VISIO ou API_SECRET_VISIO manquant dans le .env");
-        }
 
         this.dbUrl = trimEnv(dotenv.get("DB_URL"));
         this.dbUser = trimEnv(dotenv.get("DB_USER"));
         this.dbPassword = trimEnv(dotenv.get("DB_PASSWORD"));
-        if (this.dbUrl == null || this.dbUser == null || this.dbPassword == null) {
+        if (this.dbUrl == null || this.dbUser == null || this.dbPassword == null)
             throw new IllegalStateException("CRITIQUE : DB_URL, DB_USER ou DB_PASSWORD manquant dans le .env");
-        }
 
         this.jwtAlgorithm = Algorithm.HMAC256(secret);
         this.jwtVerifier = JWT.require(jwtAlgorithm)
@@ -92,37 +92,43 @@ public class ServeurRelais extends WebSocketServer {
                     : "https://livekit.atomgame.fr";
         }
         this.roomServiceClient = RoomServiceClient.createClient(
-                resolvedLivekitHttpUrl,
-                this.livekitApiKey,
-                this.livekitApiSecret
-        );
+                resolvedLivekitHttpUrl, this.livekitApiKey, this.livekitApiSecret);
 
         scheduler.scheduleAtFixedRate(rateLimiter::clear, 1, 1, TimeUnit.SECONDS);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Utilitaires statiques
+    // ─────────────────────────────────────────────────────────────────────────
 
     private static String trimEnv(String value) {
         return value == null ? null : value.trim();
     }
 
     private static String sanitizeLiveKitIdentity(String identity) {
-        if (identity == null || identity.isBlank()) {
-            return "participant";
-        }
+        if (identity == null || identity.isBlank()) return "participant";
         return identity.trim().replaceAll("[^a-zA-Z0-9_\\-]", "_");
     }
 
+    private static boolean isValidRoomName(String roomName) {
+        return roomName != null && ROOM_NAME_PATTERN.matcher(roomName).matches();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Point d'entrée
+    // ─────────────────────────────────────────────────────────────────────────
+
     public static void main(String[] args) {
         int port = 8887;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        }
+        if (args.length > 0) port = Integer.parseInt(args[0]);
 
         ServeurRelais server = new ServeurRelais(port);
         server.start();
 
         Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
         String httpPortValue = trimEnv(dotenv.get("KICK_HTTP_PORT"));
-        int httpPort = httpPortValue != null && !httpPortValue.isEmpty() ? Integer.parseInt(httpPortValue) : 8889;
+        int httpPort = (httpPortValue != null && !httpPortValue.isEmpty())
+                ? Integer.parseInt(httpPortValue) : 8889;
         server.startVisioHttpServer(httpPort);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -135,6 +141,10 @@ public class ServeurRelais extends WebSocketServer {
             }
         }));
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Serveur HTTP secondaire (kick / end-room)
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void startVisioHttpServer(int port) {
         try {
@@ -149,14 +159,21 @@ public class ServeurRelais extends WebSocketServer {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Base de données
+    // ─────────────────────────────────────────────────────────────────────────
+
     private Connection getDatabaseConnection() throws SQLException {
-        return java.sql.DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+        return DriverManager.getConnection(dbUrl, dbUser, dbPassword);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cycle de vie WebSocket
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         logger.info("Nouvelle connexion entrante : IP={}", conn.getRemoteSocketAddress());
-
         scheduler.schedule(() -> {
             if (conn.isOpen() && conn.getAttachment() == null) {
                 logger.warn("Auth timeout (10s) expire pour IP={}. Fermeture.", conn.getRemoteSocketAddress());
@@ -169,10 +186,10 @@ public class ServeurRelais extends WebSocketServer {
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         String userId = conn.getAttachment();
         if (userId != null) {
-            connectedUsers.computeIfPresent(userId, (key, userSockets) -> {
-                userSockets.remove(conn);
-                logger.info("Deconnexion : UserID={}, Appareils restants={}", userId, userSockets.size());
-                return userSockets.isEmpty() ? null : userSockets;
+            connectedUsers.computeIfPresent(userId, (key, sockets) -> {
+                sockets.remove(conn);
+                logger.info("Deconnexion : UserID={}, Appareils restants={}", userId, sockets.size());
+                return sockets.isEmpty() ? null : sockets;
             });
         }
         rateLimiter.remove(conn);
@@ -180,15 +197,12 @@ public class ServeurRelais extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        int sizeInBytes = message.getBytes(StandardCharsets.UTF_8).length;
-        if (sizeInBytes > MAX_MSG_SIZE_BYTES) {
-            logger.warn("Payload trop lourd ({} bytes). IP={}", sizeInBytes, conn.getRemoteSocketAddress());
+        if (message.getBytes(StandardCharsets.UTF_8).length > MAX_MSG_SIZE_BYTES) {
+            logger.warn("Payload trop lourd. IP={}", conn.getRemoteSocketAddress());
             conn.close(1009, "Message Too Big");
             return;
         }
-
-        int msgCount = rateLimiter.merge(conn, 1, Integer::sum);
-        if (msgCount > MAX_MSGS_PER_SEC) {
+        if (rateLimiter.merge(conn, 1, Integer::sum) > MAX_MSGS_PER_SEC) {
             logger.warn("Rate limit depasse pour IP={}", conn.getRemoteSocketAddress());
             conn.close(1008, "Rate Limit Exceeded");
             return;
@@ -196,34 +210,38 @@ public class ServeurRelais extends WebSocketServer {
 
         try {
             JSONObject json = new JSONObject(message);
-            String type = json.optString("type");
-
-            if ("REGISTER".equals(type)) {
-                handleRegister(conn, json);
-            } else if ("REQUEST_VISIO_TOKEN".equals(type)) {
-                handleRequestVisioToken(conn, json);
-            } else if ("PLANIFY_VISIO".equals(type)) {
-                handlePlanifyVisio(conn, json);
-            } else if ("GET_MY_VISIOS".equals(type)) {
-                handleGetMyVisios(conn);
-            } else if ("DELETE_VISIO".equals(type)) {
-                handleDeleteVisio(conn, json);
-            } else if ("KICK_VISIO_PARTICIPANT".equals(type)) {
-                handleKickVisioParticipant(conn, json);
-            } else if ("NOTIFY".equals(type)) {
-                handleNotify(conn, json);
-            } else {
-                logger.warn("Type de message inconnu recu : {}", type);
+            switch (json.optString("type")) {
+                case "REGISTER" -> handleRegister(conn, json);
+                case "REQUEST_VISIO_TOKEN" -> handleRequestVisioToken(conn, json);
+                case "PLANIFY_VISIO" -> handlePlanifyVisio(conn, json);
+                case "GET_MY_VISIOS" -> handleGetMyVisios(conn);
+                case "DELETE_VISIO" -> handleDeleteVisio(conn, json);
+                case "KICK_VISIO_PARTICIPANT" -> handleKickVisioParticipant(conn, json);
+                case "NOTIFY" -> handleNotify(conn, json);
+                default -> logger.warn("Type de message inconnu : {}", json.optString("type"));
             }
         } catch (Exception e) {
             logger.error("Erreur de parsing JSON : {} | Msg: {}", e.getMessage(), message);
         }
     }
 
-    private void handleRegister(WebSocket conn, JSONObject json) {
-        String token = json.optString("token");
-        String userId = extraireUserIdDuToken(token);
+    @Override
+    public void onError(WebSocket conn, Exception ex) {
+        if (ex.getMessage() != null && !ex.getMessage().contains("Connection reset by peer"))
+            logger.error("Erreur serveur interne : ", ex);
+    }
 
+    @Override
+    public void onStart() {
+        logger.info("Serveur WS demarre sur le port {}", getPort());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Handlers WebSocket
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void handleRegister(WebSocket conn, JSONObject json) {
+        String userId = extraireUserIdDuToken(json.optString("token"));
         if (userId == null) {
             logger.warn("Echec Auth : Token invalide/expire depuis IP={}", conn.getRemoteSocketAddress());
             conn.close(1008, "Unauthorized");
@@ -235,24 +253,26 @@ public class ServeurRelais extends WebSocketServer {
         }
 
         conn.setAttachment(userId);
-        connectedUsers.compute(userId, (k, userSockets) -> {
-            if (userSockets == null) {
-                userSockets = ConcurrentHashMap.newKeySet();
-            }
-
-            if (userSockets.size() >= MAX_CONN_PER_USER) {
+        connectedUsers.compute(userId, (k, sockets) -> {
+            if (sockets == null) sockets = ConcurrentHashMap.newKeySet();
+            if (sockets.size() >= MAX_CONN_PER_USER) {
                 logger.warn("Limite de {} appareils atteinte pour UserID={}", MAX_CONN_PER_USER, userId);
                 conn.close(1008, "Too Many Devices");
-                return userSockets;
+                return sockets;
             }
-
-            userSockets.add(conn);
-            return userSockets;
+            sockets.add(conn);
+            return sockets;
         });
-
         logger.info("Auth reussie : UserID={} est en ligne.", userId);
     }
 
+    /**
+     * Logique d'accès :
+     * - Réunion inexistante     → créée comme INSTANTANEE, accès libre à tous.
+     * - Réunion INSTANTANEE     → accès libre à tous.
+     * - Réunion PLANIFIEE       → accès réservé au créateur + invités,
+     * avec fenêtre de 10 min avant l'heure prévue.
+     */
     private void handleRequestVisioToken(WebSocket conn, JSONObject json) {
         String senderId = conn.getAttachment();
         if (senderId == null) {
@@ -261,127 +281,136 @@ public class ServeurRelais extends WebSocketServer {
         }
 
         int intUserId = Integer.parseInt(senderId);
-        String roomName = json.optString("roomName", "Reunion_Generale").trim();
+        String roomName = json.optString("roomName", "").trim();
         String identity = json.optString("identity", senderId);
         String displayName = json.optString("displayName", "Employe_" + senderId).trim();
-        if (displayName.isBlank()) {
-            displayName = "Employe_" + senderId;
+        if (displayName.isBlank()) displayName = "Employe_" + senderId;
+
+        if (!isValidRoomName(roomName)) {
+            sendError(conn, "VISIO_TOKEN_RESPONSE", "Nom de salon invalide.");
+            return;
         }
 
-        logger.info("Verification des droits visio pour UserID={} (Room: {})", senderId, roomName);
+        logger.info("Demande de token visio : UserID={}, Room={}", senderId, roomName);
 
+        JSONObject reponse = new JSONObject().put("type", "VISIO_TOKEN_RESPONSE");
         try {
-            int codeAcces = 0;
-            boolean existeEnBdd = false;
-            int roomCreateurId = intUserId;
+            // ── Lecture unique de l'état actuel de la réunion ──────────────────
+            String typeReunion = null;   // null = n'existe pas encore
+            String statut = null;
+            int createurId = intUserId;
+            boolean estInvite = false;
+            Timestamp heureProgrammee = null;
 
-            try (Connection connDb = getDatabaseConnection();
-                 PreparedStatement stmtCheck = connDb.prepareStatement(
-                         "SELECT COUNT(*) FROM VISIO WHERE room_name = ? AND statut != 'TERMINE'")) {
-                stmtCheck.setString(1, roomName);
-                try (ResultSet rs = stmtCheck.executeQuery()) {
+            String sqlSelect =
+                    "SELECT v.type_reunion, v.statut, v.heure_programmee, v.createur_id, " +
+                            "  (SELECT COUNT(*) FROM VISIO_INVITATIONS vi " +
+                            "   WHERE vi.visio_id = v.id AND vi.employe_id = ?) AS est_invite " +
+                            "FROM VISIO v " +
+                            "WHERE v.room_name = ? AND v.statut != 'TERMINE' " +
+                            "ORDER BY v.id DESC LIMIT 1";
+
+            try (Connection db = getDatabaseConnection();
+                 PreparedStatement stmt = db.prepareStatement(sqlSelect)) {
+                stmt.setInt(1, intUserId);
+                stmt.setString(2, roomName);
+                try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        existeEnBdd = rs.getInt(1) > 0;
+                        typeReunion = rs.getString("type_reunion");
+                        statut = rs.getString("statut");
+                        createurId = rs.getInt("createur_id");
+                        estInvite = rs.getInt("est_invite") > 0;
+                        heureProgrammee = rs.getTimestamp("heure_programmee");
                     }
                 }
             }
 
-            if (!existeEnBdd) {
+            // ── Si la réunion n'existe pas, création instantanée ────────────────
+            if (typeReunion == null) {
                 logger.info("Creation automatique d'une session instantanee : {}", roomName);
-                try (Connection connDb = getDatabaseConnection();
-                     PreparedStatement stmtInsert = connDb.prepareStatement(
-                             "INSERT INTO VISIO (room_name, createur_id, statut, heure_debut) VALUES (?, ?, 'EN_COURS', CURRENT_TIMESTAMP)")) {
-                    stmtInsert.setString(1, roomName);
-                    stmtInsert.setInt(2, intUserId);
-                    stmtInsert.executeUpdate();
+                try (Connection db = getDatabaseConnection();
+                     PreparedStatement stmt = db.prepareStatement(
+                             "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_debut) " +
+                                     "VALUES (?, ?, 'INSTANTANEE', 'EN_COURS', CURRENT_TIMESTAMP)")) {
+                    stmt.setString(1, roomName);
+                    stmt.setInt(2, intUserId);
+                    stmt.executeUpdate();
                 }
-                codeAcces = 1;
-            } else {
-                String sqlAuth = "SELECT v.statut, v.heure_programmee, v.createur_id, " +
-                        "(SELECT COUNT(*) FROM VISIO_INVITATIONS vi WHERE vi.visio_id = v.id AND vi.employe_id = ?) as est_invite " +
-                        "FROM VISIO v WHERE v.room_name = ? AND v.statut != 'TERMINE'";
+                typeReunion = "INSTANTANEE";
+                statut = "EN_COURS";
+                createurId = intUserId;
+            }
 
-                try (Connection connDb = getDatabaseConnection();
-                     PreparedStatement stmtAuth = connDb.prepareStatement(sqlAuth)) {
-                    stmtAuth.setInt(1, intUserId);
-                    stmtAuth.setString(2, roomName);
+            // ── Vérification des droits ─────────────────────────────────────────
+            // Réunion instantanée : tout le monde peut rejoindre.
+            // Réunion planifiée   : créateur ou invité seulement.
+            boolean accesAutorise = "INSTANTANEE".equals(typeReunion)
+                    || intUserId == createurId
+                    || estInvite;
 
-                    try (ResultSet rs = stmtAuth.executeQuery()) {
-                        if (rs.next()) {
-                            String statut = rs.getString("statut");
-                            int createurId = rs.getInt("createur_id");
-                            roomCreateurId = createurId;
-                            int estInvite = rs.getInt("est_invite");
+            if (!accesAutorise) {
+                reponse.put("status", "ERROR")
+                        .put("message", "Acces refuse : vous ne figurez pas sur la liste des invites de cette reunion.");
+                logger.warn("Acces refuse pour UserID={} sur la room {}", intUserId, roomName);
+                conn.send(reponse.toString());
+                return;
+            }
 
-                            if (intUserId == createurId || estInvite > 0) {
-                                codeAcces = 1;
-
-                                if ("PROGRAMMEE".equals(statut)) {
-                                    Timestamp tsProg = rs.getTimestamp("heure_programmee");
-                                    if (tsProg != null) {
-                                        LocalDateTime heureProgrammee = tsProg.toLocalDateTime();
-                                        if (LocalDateTime.now().isBefore(heureProgrammee.minusMinutes(10))) {
-                                            codeAcces = -1;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            // ── Contrôle de la fenêtre de temps (réunions planifiées uniquement) ─
+            if ("PROGRAMMEE".equals(statut) && heureProgrammee != null) {
+                LocalDateTime hpLdt = heureProgrammee.toLocalDateTime();
+                if (LocalDateTime.now().isBefore(hpLdt.minusMinutes(10))) {
+                    reponse.put("status", "ERROR")
+                            .put("message", "Cette reunion n'a pas encore commence. Revenez quelques minutes avant l'heure prevue.");
+                    logger.warn("Acces anticipe bloque pour la room {}", roomName);
+                    conn.send(reponse.toString());
+                    return;
                 }
             }
 
-            JSONObject reponse = new JSONObject();
-            reponse.put("type", "VISIO_TOKEN_RESPONSE");
-
-            if (codeAcces == 1) {
-                try (Connection connDb = getDatabaseConnection();
-                     PreparedStatement stmtOpen = connDb.prepareStatement(
-                             "UPDATE VISIO SET statut = 'EN_COURS', heure_debut = CURRENT_TIMESTAMP WHERE room_name = ? AND statut = 'PROGRAMMEE'")) {
-                    stmtOpen.setString(1, roomName);
-                    stmtOpen.executeUpdate();
+            // ── Ouverture de la réunion planifiée si c'est le moment ────────────
+            if ("PROGRAMMEE".equals(statut)) {
+                try (Connection db = getDatabaseConnection();
+                     PreparedStatement stmt = db.prepareStatement(
+                             "UPDATE VISIO SET statut = 'EN_COURS', heure_debut = CURRENT_TIMESTAMP " +
+                                     "WHERE room_name = ? AND statut = 'PROGRAMMEE'")) {
+                    stmt.setString(1, roomName);
+                    stmt.executeUpdate();
                 }
-
-                String safeIdentity = sanitizeLiveKitIdentity(identity);
-                AccessToken tokenLiveKit = new AccessToken(livekitApiKey, livekitApiSecret);
-                tokenLiveKit.setIdentity(safeIdentity);
-                tokenLiveKit.setName(displayName);
-                tokenLiveKit.addGrants(
-                        new RoomJoin(true),
-                        new RoomName(roomName),
-                        new CanPublish(true),
-                        new CanSubscribe(true)
-                );
-                tokenLiveKit.setTtl(3600);
-
-                reponse.put("status", "SUCCESS");
-                reponse.put("token", tokenLiveKit.toJwt());
-                reponse.put("roomName", roomName);
-                reponse.put("createurId", roomCreateurId);
-                reponse.put("endToken", genererEndToken(intUserId, roomName));
-                if (intUserId == roomCreateurId) {
-                    reponse.put("kickToken", genererKickToken(intUserId, roomName, roomCreateurId));
-                }
-                logger.info("Token LiveKit genere pour {} dans la room {}", safeIdentity, roomName);
-            } else if (codeAcces == -1) {
-                reponse.put("status", "ERROR");
-                reponse.put("message", "Cette reunion n'a pas encore commence. Revenez quelques minutes avant l'heure prevue.");
-                logger.warn("Acces anticipe bloque pour la room {}", roomName);
-            } else {
-                reponse.put("status", "ERROR");
-                reponse.put("message", "Acces refuse : vous ne figurez pas sur la liste des invites de cette reunion.");
-                logger.warn("Acces refuse pour l'utilisateur {} sur la room {}", intUserId, roomName);
             }
 
-            conn.send(reponse.toString());
+            // ── Génération du token LiveKit ─────────────────────────────────────
+            String safeIdentity = sanitizeLiveKitIdentity(identity);
+            AccessToken tokenLiveKit = new AccessToken(livekitApiKey, livekitApiSecret);
+            tokenLiveKit.setIdentity(safeIdentity);
+            tokenLiveKit.setName(displayName);
+            tokenLiveKit.addGrants(
+                    new RoomJoin(true),
+                    new RoomName(roomName),
+                    new CanPublish(true),
+                    new CanSubscribe(true)
+            );
+            tokenLiveKit.setTtl(3600);
+
+            reponse.put("status", "SUCCESS")
+                    .put("token", tokenLiveKit.toJwt())
+                    .put("roomName", roomName)
+                    .put("createurId", createurId)
+                    .put("typeReunion", typeReunion)
+                    .put("endToken", genererEndToken(intUserId, roomName));
+
+            if (intUserId == createurId) {
+                reponse.put("kickToken", genererKickToken(intUserId, roomName, createurId));
+            }
+            logger.info("Token LiveKit genere pour {} dans la room {} (type={})", safeIdentity, roomName, typeReunion);
+
         } catch (Exception ex) {
-            logger.error("Erreur lors du traitement du token LiveKit : ", ex);
-            JSONObject reponse = new JSONObject();
-            reponse.put("type", "VISIO_TOKEN_RESPONSE");
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Erreur serveur lors de la generation du token LiveKit.");
-            conn.send(reponse.toString());
+            logger.error("Erreur lors de la generation du token LiveKit : ", ex);
+            reponse.put("status", "ERROR")
+                    .put("message", "Erreur serveur lors de la generation du token LiveKit.");
         }
+
+        conn.send(reponse.toString());
     }
 
     private void handlePlanifyVisio(WebSocket conn, JSONObject json) {
@@ -393,68 +422,60 @@ public class ServeurRelais extends WebSocketServer {
 
         int intUserId = Integer.parseInt(senderId);
         String planifRoom = json.getString("roomName").trim();
+
+        if (!isValidRoomName(planifRoom)) {
+            sendError(conn, "PLANIF_RESPONSE", "Nom de salon invalide.");
+            return;
+        }
+
         LocalDateTime heureProg = LocalDateTime.parse(json.getString("heureProgrammee"));
         JSONArray invitesJson = json.optJSONArray("invites");
 
         boolean success = false;
-        Connection connDb = null;
-
-        try {
-            connDb = getDatabaseConnection();
-            connDb.setAutoCommit(false);
-
-            int newVisioId = 0;
-            String sqlVisio = "INSERT INTO VISIO (room_name, createur_id, statut, heure_programmee) VALUES (?, ?, 'PROGRAMMEE', ?)";
-
-            try (PreparedStatement stmtV = connDb.prepareStatement(sqlVisio, Statement.RETURN_GENERATED_KEYS)) {
-                stmtV.setString(1, planifRoom);
-                stmtV.setInt(2, intUserId);
-                stmtV.setTimestamp(3, Timestamp.valueOf(heureProg));
-                stmtV.executeUpdate();
-
-                try (ResultSet generatedKeys = stmtV.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        newVisioId = generatedKeys.getInt(1);
+        try (Connection db = getDatabaseConnection()) {
+            db.setAutoCommit(false);
+            try {
+                int newVisioId = 0;
+                try (PreparedStatement stmt = db.prepareStatement(
+                        "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_programmee) " +
+                                "VALUES (?, ?, 'PLANIFIEE', 'PROGRAMMEE', ?)",
+                        Statement.RETURN_GENERATED_KEYS)) {
+                    stmt.setString(1, planifRoom);
+                    stmt.setInt(2, intUserId);
+                    stmt.setTimestamp(3, Timestamp.valueOf(heureProg));
+                    stmt.executeUpdate();
+                    try (ResultSet gk = stmt.getGeneratedKeys()) {
+                        if (gk.next()) newVisioId = gk.getInt(1);
                     }
                 }
-            }
 
-            if (newVisioId > 0 && invitesJson != null && invitesJson.length() > 0) {
-                String sqlInvite = "INSERT INTO VISIO_INVITATIONS (visio_id, employe_id) VALUES (?, ?)";
-                try (PreparedStatement stmtI = connDb.prepareStatement(sqlInvite)) {
-                    for (int i = 0; i < invitesJson.length(); i++) {
-                        stmtI.setInt(1, newVisioId);
-                        stmtI.setInt(2, invitesJson.getInt(i));
-                        stmtI.addBatch();
+                if (newVisioId > 0 && invitesJson != null && invitesJson.length() > 0) {
+                    try (PreparedStatement stmtI = db.prepareStatement(
+                            "INSERT INTO VISIO_INVITATIONS (visio_id, employe_id) VALUES (?, ?)")) {
+                        for (int i = 0; i < invitesJson.length(); i++) {
+                            stmtI.setInt(1, newVisioId);
+                            stmtI.setInt(2, invitesJson.getInt(i));
+                            stmtI.addBatch();
+                        }
+                        stmtI.executeBatch();
                     }
-                    stmtI.executeBatch();
                 }
-            }
 
-            connDb.commit();
-            success = true;
-            logger.info("Nouvelle reunion planifiee : ID_Visio={}, Salle={}", newVisioId, planifRoom);
+                db.commit();
+                success = true;
+                logger.info("Nouvelle reunion planifiee : ID={}, Salle={}", newVisioId, planifRoom);
+            } catch (Exception ex) {
+                db.rollback();
+                logger.error("Echec de la transaction de planification : ", ex);
+            }
         } catch (Exception ex) {
-            if (connDb != null) {
-                try {
-                    connDb.rollback();
-                } catch (SQLException ignored) {
-                }
-            }
-            logger.error("Echec de la transaction de planification : ", ex);
-        } finally {
-            if (connDb != null) {
-                try {
-                    connDb.close();
-                } catch (SQLException ignored) {
-                }
-            }
+            logger.error("Erreur de connexion BDD lors de la planification : ", ex);
         }
 
-        JSONObject reponsePlanif = new JSONObject();
-        reponsePlanif.put("type", "PLANIF_RESPONSE");
-        reponsePlanif.put("status", success ? "SUCCESS" : "ERROR");
-        conn.send(reponsePlanif.toString());
+        conn.send(new JSONObject()
+                .put("type", "PLANIF_RESPONSE")
+                .put("status", success ? "SUCCESS" : "ERROR")
+                .toString());
     }
 
     private void handleGetMyVisios(WebSocket conn) {
@@ -465,37 +486,38 @@ public class ServeurRelais extends WebSocketServer {
         }
 
         int intUserId = Integer.parseInt(senderId);
-        JSONObject reponseListe = new JSONObject();
-        reponseListe.put("type", "MY_VISIOS_RESPONSE");
         JSONArray jArray = new JSONArray();
 
-        String sqlList = "SELECT DISTINCT v.* FROM VISIO v LEFT JOIN VISIO_INVITATIONS vi ON v.id = vi.visio_id " +
-                "WHERE (v.createur_id = ? OR vi.employe_id = ?) ORDER BY v.heure_programmee DESC";
+        String sql =
+                "SELECT DISTINCT v.id, v.room_name, v.createur_id, v.type_reunion, v.statut, v.heure_programmee " +
+                        "FROM VISIO v LEFT JOIN VISIO_INVITATIONS vi ON v.id = vi.visio_id " +
+                        "WHERE (v.createur_id = ? OR vi.employe_id = ?) " +
+                        "ORDER BY v.heure_programmee DESC";
 
-        try (Connection connDb = getDatabaseConnection();
-             PreparedStatement stmt = connDb.prepareStatement(sqlList)) {
+        try (Connection db = getDatabaseConnection();
+             PreparedStatement stmt = db.prepareStatement(sql)) {
             stmt.setInt(1, intUserId);
             stmt.setInt(2, intUserId);
-
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    JSONObject jVisio = new JSONObject();
-                    jVisio.put("id", rs.getInt("id"));
-                    jVisio.put("roomName", rs.getString("room_name"));
-                    jVisio.put("createurId", rs.getInt("createur_id"));
-                    jVisio.put("statut", rs.getString("statut"));
-
                     Timestamp ts = rs.getTimestamp("heure_programmee");
-                    jVisio.put("heureProgrammee", ts != null ? ts.toLocalDateTime().toString() : "");
-                    jArray.put(jVisio);
+                    jArray.put(new JSONObject()
+                            .put("id", rs.getInt("id"))
+                            .put("roomName", rs.getString("room_name"))
+                            .put("createurId", rs.getInt("createur_id"))
+                            .put("typeReunion", rs.getString("type_reunion"))
+                            .put("statut", rs.getString("statut"))
+                            .put("heureProgrammee", ts != null ? ts.toLocalDateTime().toString() : ""));
                 }
             }
         } catch (Exception ex) {
-            logger.error("Erreur lors de la recuperation de la liste des visios : ", ex);
+            logger.error("Erreur lors de la recuperation des visios : ", ex);
         }
 
-        reponseListe.put("reunions", jArray);
-        conn.send(reponseListe.toString());
+        conn.send(new JSONObject()
+                .put("type", "MY_VISIOS_RESPONSE")
+                .put("reunions", jArray)
+                .toString());
     }
 
     private void handleDeleteVisio(WebSocket conn, JSONObject json) {
@@ -508,136 +530,160 @@ public class ServeurRelais extends WebSocketServer {
         int intUserId = Integer.parseInt(senderId);
         String roomName = json.optString("roomName", "").trim();
 
-        JSONObject reponse = new JSONObject();
-        reponse.put("type", "DELETE_VISIO_RESPONSE");
-
-        if (roomName.isEmpty()) {
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Nom de salon manquant.");
-            conn.send(reponse.toString());
+        if (!isValidRoomName(roomName)) {
+            sendError(conn, "DELETE_VISIO_RESPONSE", "Nom de salon invalide.");
             return;
         }
 
-        try (Connection connDb = getDatabaseConnection()) {
-            int createurId;
+        JSONObject reponse = new JSONObject().put("type", "DELETE_VISIO_RESPONSE");
+        try (Connection db = getDatabaseConnection()) {
             int visioId;
+            int createurId;
 
-            try (PreparedStatement stmtFind = connDb.prepareStatement(
+            try (PreparedStatement stmt = db.prepareStatement(
                     "SELECT id, createur_id FROM VISIO WHERE room_name = ?")) {
-                stmtFind.setString(1, roomName);
-                try (ResultSet rs = stmtFind.executeQuery()) {
+                stmt.setString(1, roomName);
+                try (ResultSet rs = stmt.executeQuery()) {
                     if (!rs.next()) {
-                        reponse.put("status", "ERROR");
-                        reponse.put("message", "Salon introuvable.");
-                        conn.send(reponse.toString());
+                        conn.send(reponse.put("status", "ERROR").put("message", "Salon introuvable.").toString());
                         return;
                     }
-                    visioId = rs.getInt("id");
+                    visioId    = rs.getInt("id");
                     createurId = rs.getInt("createur_id");
                 }
             }
 
             if (createurId != intUserId) {
-                reponse.put("status", "ERROR");
-                reponse.put("message", "Seul le createur peut supprimer ce salon.");
-                conn.send(reponse.toString());
+                conn.send(reponse.put("status", "ERROR").put("message", "Seul le createur peut supprimer ce salon.").toString());
                 return;
             }
 
-            try (PreparedStatement stmtInv = connDb.prepareStatement(
+            try (PreparedStatement stmt = db.prepareStatement(
                     "DELETE FROM VISIO_INVITATIONS WHERE visio_id = ?")) {
-                stmtInv.setInt(1, visioId);
-                stmtInv.executeUpdate();
+                stmt.setInt(1, visioId);
+                stmt.executeUpdate();
             }
-
-            try (PreparedStatement stmtDelete = connDb.prepareStatement(
+            try (PreparedStatement stmt = db.prepareStatement(
                     "UPDATE VISIO SET statut = 'TERMINE', heure_fin = CURRENT_TIMESTAMP WHERE id = ?")) {
-                stmtDelete.setInt(1, visioId);
-                stmtDelete.executeUpdate();
+                stmt.setInt(1, visioId);
+                stmt.executeUpdate();
             }
 
-            reponse.put("status", "SUCCESS");
-            reponse.put("message", "Salon supprime avec succes.");
             notifierChangementStatutVisio(roomName);
+            conn.send(reponse.put("status", "SUCCESS").put("message", "Salon supprime avec succes.").toString());
         } catch (Exception ex) {
             logger.error("Erreur lors de la suppression du salon {} : ", roomName, ex);
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Erreur lors de la suppression du salon.");
+            conn.send(reponse.put("status", "ERROR").put("message", "Erreur lors de la suppression du salon.").toString());
         }
-
-        conn.send(reponse.toString());
     }
 
     private void handleKickVisioParticipant(WebSocket conn, JSONObject json) {
-        JSONObject reponse = new JSONObject();
-        reponse.put("type", "KICK_VISIO_RESPONSE");
-
+        JSONObject reponse = new JSONObject().put("type", "KICK_VISIO_RESPONSE");
         try {
             JSONObject result = executerKickParticipant(
                     json.optString("kickToken", ""),
                     json.optString("roomName", "").trim(),
                     json.optString("targetIdentity", "").trim(),
-                    conn.getAttachment()
-            );
-            reponse.put("status", result.getString("status"));
-            reponse.put("message", result.getString("message"));
+                    conn.getAttachment());
+            reponse.put("status", result.getString("status"))
+                    .put("message", result.getString("message"));
         } catch (Exception ex) {
-            logger.error("Erreur lors de l'expulsion visio via WS : ", ex);
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Impossible d'expulser ce participant.");
+            logger.error("Erreur kick WS : ", ex);
+            reponse.put("status", "ERROR").put("message", "Impossible d'expulser ce participant.");
         }
-
         conn.send(reponse.toString());
     }
 
+    private void handleNotify(WebSocket conn, JSONObject json) {
+        String senderId = conn.getAttachment();
+        if (senderId == null) {
+            conn.close(1008, "Not Authenticated");
+            return;
+        }
+
+        JSONObject payload = json.optJSONObject("payload");
+        JSONArray targets = json.optJSONArray("targets");
+        if (payload == null || targets == null || targets.length() > 100) {
+            logger.warn("Payload invalide ou broadcast abusif par UserID={}", senderId);
+            return;
+        }
+
+        String eventId = json.optString("eventId");
+        if (eventId == null || eventId.trim().isEmpty()) eventId = UUID.randomUUID().toString();
+
+        String msg = new JSONObject()
+                .put("type", "UPDATE_TICKET")
+                .put("eventId", eventId)
+                .put("payload", payload)
+                .toString();
+
+        for (int i = 0; i < targets.length(); i++) {
+            String targetId = String.valueOf(targets.getInt(i));
+            Set<WebSocket> sockets = connectedUsers.get(targetId);
+            if (sockets == null) continue;
+
+            for (WebSocket s : new ArrayList<>(sockets)) {
+                if (!s.isOpen()) {
+                    sockets.remove(s);
+                    continue;
+                }
+                try {
+                    s.send(msg);
+                } catch (Exception ex) {
+                    logger.error("Erreur d'envoi a UserID={}. Nettoyage.", targetId);
+                    sockets.remove(s);
+                }
+            }
+        }
+        logger.info("NOTIFY par UserID={} vers {} cibles (EventID={})", senderId, targets.length(), eventId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Handlers HTTP
+    // ─────────────────────────────────────────────────────────────────────────
+
     private void handleKickHttp(HttpExchange exchange) throws IOException {
         applyVisioCorsHeaders(exchange);
-
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
             exchange.close();
             return;
         }
-
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendJsonResponse(exchange, 405, errorJson("Methode non autorisee.").toString());
             return;
         }
-
         try {
-            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            JSONObject json = new JSONObject(body);
+            JSONObject json = new JSONObject(new String(
+                    exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             JSONObject result = executerKickParticipant(
                     json.optString("kickToken", ""),
                     json.optString("roomName", "").trim(),
                     json.optString("targetIdentity", "").trim(),
-                    null
-            );
-            int statusCode = "SUCCESS".equals(result.getString("status")) ? 200 : 403;
-            sendJsonResponse(exchange, statusCode, result.toString());
+                    null);
+            sendJsonResponse(exchange,
+                    "SUCCESS".equals(result.getString("status")) ? 200 : 403,
+                    result.toString());
         } catch (Exception ex) {
-            logger.error("Erreur lors de l'expulsion visio via HTTP : ", ex);
+            logger.error("Erreur kick HTTP : ", ex);
             sendJsonResponse(exchange, 500, errorJson("Impossible d'expulser ce participant.").toString());
         }
     }
 
     private void handleEndRoomHttp(HttpExchange exchange) throws IOException {
         applyVisioCorsHeaders(exchange);
-
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
             exchange.close();
             return;
         }
-
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendJsonResponse(exchange, 405, errorJson("Methode non autorisee.").toString());
             return;
         }
-
         try {
-            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            JSONObject json = new JSONObject(body);
+            JSONObject json = new JSONObject(new String(
+                    exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             String roomName = json.optString("roomName", "").trim();
             String endToken = json.optString("endToken", "").trim();
 
@@ -645,107 +691,78 @@ public class ServeurRelais extends WebSocketServer {
                 sendJsonResponse(exchange, 400, errorJson("Parametres end-room manquants.").toString());
                 return;
             }
-
             verifierEndToken(endToken, roomName);
             planifierVerificationSalleVide(roomName);
-
-            JSONObject result = new JSONObject();
-            result.put("status", "SUCCESS");
-            result.put("message", "Verification de fermeture planifiee.");
-            sendJsonResponse(exchange, 202, result.toString());
+            sendJsonResponse(exchange, 202,
+                    new JSONObject().put("status", "SUCCESS")
+                            .put("message", "Verification de fermeture planifiee.").toString());
         } catch (JWTVerificationException ex) {
             sendJsonResponse(exchange, 403, errorJson("Token end-room invalide.").toString());
         } catch (Exception ex) {
-            logger.error("Erreur lors de la demande de fermeture visio via HTTP : ", ex);
+            logger.error("Erreur end-room HTTP : ", ex);
             sendJsonResponse(exchange, 500, errorJson("Impossible de fermer le salon.").toString());
         }
     }
 
-    private JSONObject executerKickParticipant(
-            String kickToken,
-            String roomName,
-            String targetIdentity,
-            String wsSenderId
-    ) throws Exception {
-        JSONObject reponse = new JSONObject();
+    // ─────────────────────────────────────────────────────────────────────────
+    // Logique métier partagée
+    // ─────────────────────────────────────────────────────────────────────────
 
-        if (kickToken.isBlank() || roomName.isBlank() || targetIdentity.isBlank()) {
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Parametres de kick manquants.");
-            return reponse;
-        }
+    private JSONObject executerKickParticipant(
+            String kickToken, String roomName, String targetIdentity, String wsSenderId) throws Exception {
+
+        if (kickToken.isBlank() || roomName.isBlank() || targetIdentity.isBlank())
+            return errorJson("Parametres de kick manquants.");
 
         DecodedJWT jwt = verifierKickToken(kickToken, roomName);
         String creatorId = jwt.getSubject();
-        String safeTargetIdentity = sanitizeLiveKitIdentity(targetIdentity);
+        String safeTarget = sanitizeLiveKitIdentity(targetIdentity);
 
-        if (safeTargetIdentity.equals(creatorId)) {
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Vous ne pouvez pas vous expulser vous-meme.");
-            return reponse;
-        }
+        if (safeTarget.equals(creatorId))
+            return errorJson("Vous ne pouvez pas vous expulser vous-meme.");
+        if (wsSenderId != null && !wsSenderId.equals(creatorId))
+            return errorJson("Seul le createur peut expulser un participant.");
+        if (!estCreateurActif(roomName, Integer.parseInt(creatorId)))
+            return errorJson("Seul le createur peut expulser un participant.");
 
-        if (wsSenderId != null && !wsSenderId.equals(creatorId)) {
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Seul le createur peut expulser un participant.");
-            return reponse;
-        }
+        roomServiceClient.removeParticipant(roomName, safeTarget).execute();
+        logger.info("Participant {} expulse de {} par {}", safeTarget, roomName, creatorId);
 
-        if (!estCreateurActif(roomName, Integer.parseInt(creatorId))) {
-            reponse.put("status", "ERROR");
-            reponse.put("message", "Seul le createur peut expulser un participant.");
-            return reponse;
-        }
-
-        roomServiceClient.removeParticipant(roomName, safeTargetIdentity).execute();
-        logger.info("Participant {} expulse de la room {} par createur {}", safeTargetIdentity, roomName, creatorId);
-
-        reponse.put("status", "SUCCESS");
-        reponse.put("message", "Participant expulse.");
-        return reponse;
+        return new JSONObject().put("status", "SUCCESS").put("message", "Participant expulse.");
     }
 
     private DecodedJWT verifierKickToken(String kickToken, String roomName) throws JWTVerificationException {
         DecodedJWT jwt = jwtVerifier.verify(kickToken);
-        if (!"visio_kick".equals(jwt.getClaim("purpose").asString())) {
+        if (!"visio_kick".equals(jwt.getClaim("purpose").asString()))
             throw new JWTVerificationException("Token kick invalide.");
-        }
-        if (!roomName.equals(jwt.getClaim("room").asString())) {
+        if (!roomName.equals(jwt.getClaim("room").asString()))
             throw new JWTVerificationException("Salle invalide pour ce token kick.");
-        }
         return jwt;
     }
 
     private void verifierEndToken(String endToken, String roomName) throws JWTVerificationException {
         DecodedJWT jwt = jwtVerifier.verify(endToken);
-        if (!"visio_end".equals(jwt.getClaim("purpose").asString())) {
+        if (!"visio_end".equals(jwt.getClaim("purpose").asString()))
             throw new JWTVerificationException("Token end-room invalide.");
-        }
-        if (!roomName.equals(jwt.getClaim("room").asString())) {
+        if (!roomName.equals(jwt.getClaim("room").asString()))
             throw new JWTVerificationException("Salle invalide pour ce token end-room.");
-        }
     }
 
     private void planifierVerificationSalleVide(String roomName) {
-        scheduler.schedule(
-                () -> verifierEtTerminerSalonSiVide(roomName),
-                ROOM_EMPTY_CHECK_DELAY_SEC,
-                TimeUnit.SECONDS
-        );
+        scheduler.schedule(() -> verifierEtTerminerSalonSiVide(roomName),
+                ROOM_EMPTY_CHECK_DELAY_SEC, TimeUnit.SECONDS);
     }
 
     private void verifierEtTerminerSalonSiVide(String roomName) {
         try {
-            Response<List<LivekitModels.ParticipantInfo>> response = roomServiceClient.listParticipants(roomName).execute();
+            Response<List<LivekitModels.ParticipantInfo>> response =
+                    roomServiceClient.listParticipants(roomName).execute();
 
             if (!response.isSuccessful()) {
-                if (response.code() == 404) {
-                    if (terminerSalonEnBdd(roomName)) {
-                        notifierChangementStatutVisio(roomName);
-                    }
-                } else {
-                    logger.warn("Impossible de lister les participants pour {} : HTTP {}", roomName, response.code());
-                }
+                if (response.code() == 404 && terminerSalonEnBdd(roomName))
+                    notifierChangementStatutVisio(roomName);
+                else
+                    logger.warn("Impossible de lister les participants de {} : HTTP {}", roomName, response.code());
                 return;
             }
 
@@ -756,22 +773,22 @@ public class ServeurRelais extends WebSocketServer {
             }
 
             if (terminerSalonEnBdd(roomName)) {
-                try {
-                    roomServiceClient.deleteRoom(roomName).execute();
+                try { roomServiceClient.deleteRoom(roomName).execute();
                 } catch (Exception ex) {
-                    logger.debug("deleteRoom LiveKit ignore pour {} : {}", roomName, ex.getMessage());
+                    logger.debug("deleteRoom ignore pour {} : {}", roomName, ex.getMessage());
                 }
                 notifierChangementStatutVisio(roomName);
             }
         } catch (Exception ex) {
-            logger.error("Erreur lors de la verification de salle vide pour {} : ", roomName, ex);
+            logger.error("Erreur verification salle vide pour {} : ", roomName, ex);
         }
     }
 
     private boolean terminerSalonEnBdd(String roomName) throws SQLException {
-        try (Connection connDb = getDatabaseConnection();
-             PreparedStatement stmt = connDb.prepareStatement(
-                     "UPDATE VISIO SET statut = 'TERMINE', heure_fin = CURRENT_TIMESTAMP WHERE room_name = ? AND statut = 'EN_COURS'")) {
+        try (Connection db = getDatabaseConnection();
+             PreparedStatement stmt = db.prepareStatement(
+                     "UPDATE VISIO SET statut = 'TERMINE', heure_fin = CURRENT_TIMESTAMP " +
+                             "WHERE room_name = ? AND statut = 'EN_COURS'")) {
             stmt.setString(1, roomName);
             int updated = stmt.executeUpdate();
             if (updated > 0) {
@@ -783,30 +800,31 @@ public class ServeurRelais extends WebSocketServer {
     }
 
     private void notifierChangementStatutVisio(String roomName) {
-        JSONObject notification = new JSONObject();
-        notification.put("type", "VISIO_STATUS_CHANGED");
-        notification.put("roomName", roomName);
-        notification.put("statut", "TERMINE");
+        String msg = new JSONObject()
+                .put("type", "VISIO_STATUS_CHANGED")
+                .put("roomName", roomName)
+                .put("statut", "TERMINE")
+                .toString();
 
-        for (Set<WebSocket> sockets : connectedUsers.values()) {
-            for (WebSocket socket : sockets) {
-                if (socket.isOpen()) {
-                    socket.send(notification.toString());
-                }
-            }
-        }
+        connectedUsers.values().forEach(sockets ->
+                sockets.stream().filter(WebSocket::isOpen).forEach(s -> s.send(msg)));
     }
 
     private boolean estCreateurActif(String roomName, int creatorId) throws SQLException {
-        try (Connection connDb = getDatabaseConnection();
-             PreparedStatement stmt = connDb.prepareStatement(
-                     "SELECT createur_id FROM VISIO WHERE room_name = ? AND statut != 'TERMINE' ORDER BY id DESC LIMIT 1")) {
+        try (Connection db = getDatabaseConnection();
+             PreparedStatement stmt = db.prepareStatement(
+                     "SELECT createur_id FROM VISIO WHERE room_name = ? AND statut != 'TERMINE' " +
+                             "ORDER BY id DESC LIMIT 1")) {
             stmt.setString(1, roomName);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next() && rs.getInt("createur_id") == creatorId;
             }
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Utilitaires
+    // ─────────────────────────────────────────────────────────────────────────
 
     private String genererKickToken(int userId, String roomName, int createurId) {
         return JWT.create()
@@ -830,10 +848,15 @@ public class ServeurRelais extends WebSocketServer {
     }
 
     private JSONObject errorJson(String message) {
-        JSONObject json = new JSONObject();
-        json.put("status", "ERROR");
-        json.put("message", message);
-        return json;
+        return new JSONObject().put("status", "ERROR").put("message", message);
+    }
+
+    private void sendError(WebSocket conn, String type, String message) {
+        conn.send(new JSONObject()
+                .put("type", type)
+                .put("status", "ERROR")
+                .put("message", message)
+                .toString());
     }
 
     private void applyVisioCorsHeaders(HttpExchange exchange) {
@@ -852,88 +875,21 @@ public class ServeurRelais extends WebSocketServer {
         }
     }
 
-    private void handleNotify(WebSocket conn, JSONObject json) {
-        String senderId = conn.getAttachment();
-        if (senderId == null) {
-            conn.close(1008, "Not Authenticated");
-            return;
-        }
-
-        JSONObject payload = json.optJSONObject("payload");
-        JSONArray targets = json.optJSONArray("targets");
-        if (payload == null || targets == null || targets.length() > 100) {
-            logger.warn("Payload invalide ou broadcast abusif par UserID={}", senderId);
-            return;
-        }
-
-        String eventId = json.optString("eventId");
-        if (eventId == null || eventId.trim().isEmpty()) {
-            eventId = UUID.randomUUID().toString();
-        }
-
-        JSONObject updateMsg = new JSONObject();
-        updateMsg.put("type", "UPDATE_TICKET");
-        updateMsg.put("eventId", eventId);
-        updateMsg.put("payload", payload);
-        String messageAEnvoyer = updateMsg.toString();
-
-        for (int i = 0; i < targets.length(); i++) {
-            String targetId = String.valueOf(targets.getInt(i));
-            Set<WebSocket> targetSockets = connectedUsers.get(targetId);
-
-            if (targetSockets != null) {
-                List<WebSocket> socketsCopy = new ArrayList<>(targetSockets);
-
-                for (WebSocket targetConn : socketsCopy) {
-                    if (!targetConn.isOpen()) {
-                        targetSockets.remove(targetConn);
-                        continue;
-                    }
-                    try {
-                        targetConn.send(messageAEnvoyer);
-                    } catch (Exception ex) {
-                        logger.error("Erreur d'envoi a la socket UserID={}. Nettoyage.", targetId);
-                        targetSockets.remove(targetConn);
-                    }
-                }
-            }
-        }
-
-        logger.info("NOTIFY relaye par UserID={} vers {} cibles (EventID: {})", senderId, targets.length(), eventId);
-    }
-
-    @Override
-    public void onError(WebSocket conn, Exception ex) {
-        if (ex.getMessage() != null && !ex.getMessage().contains("Connection reset by peer")) {
-            logger.error("Erreur serveur interne : ", ex);
-        }
-    }
-
-    @Override
-    public void onStart() {
-        logger.info("Serveur WS demarre sur le port {}", getPort());
-    }
-
     private String extraireUserIdDuToken(String token) {
-        if (token == null || token.trim().isEmpty()) {
-            return null;
-        }
-
+        if (token == null || token.trim().isEmpty()) return null;
         try {
             DecodedJWT jwt = jwtVerifier.verify(token);
             String userId = jwt.getSubject();
             if (userId == null && !jwt.getClaim("userId").isNull()) {
                 userId = jwt.getClaim("userId").asString();
-                if (userId == null) {
-                    userId = String.valueOf(jwt.getClaim("userId").asInt());
-                }
+                if (userId == null) userId = String.valueOf(jwt.getClaim("userId").asInt());
             }
             return userId;
-        } catch (JWTVerificationException exception) {
-            logger.warn("JWT refuse : {}", exception.getMessage());
+        } catch (JWTVerificationException ex) {
+            logger.warn("JWT refuse : {}", ex.getMessage());
             return null;
-        } catch (Exception e) {
-            logger.error("Erreur lecture JWT : ", e);
+        } catch (Exception ex) {
+            logger.error("Erreur lecture JWT : ", ex);
             return null;
         }
     }
