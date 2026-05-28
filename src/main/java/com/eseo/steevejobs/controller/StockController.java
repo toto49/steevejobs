@@ -49,6 +49,15 @@ public class StockController {
     private final ObservableList<Produit> data               = FXCollections.observableArrayList();
     private       Produit                 produitSelectionne = null;
 
+
+    private void applyCSS(Scene scene) {
+        java.net.URL styleUrl = getClass().getResource("/style/style.css");
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+
+        if (styleUrl != null) scene.getStylesheets().add(styleUrl.toExternalForm());
+        if (popupUrl != null) scene.getStylesheets().add(popupUrl.toExternalForm());
+    }
+
     // ──────────────────────────────────────────────────────────────
     @FXML
     public void initialize() {
@@ -132,14 +141,6 @@ public class StockController {
         };
     }
 
-    private String couleurStatut(String statut) {
-        return switch (statut) {
-            case "En stock"      -> "#27ae60";
-            case "A recommander" -> "#f39c12";
-            default              -> "#e74c3c";
-        };
-    }
-
     // ─────────────────────────────────────────────────────────────
     // Fiche produit
     // ─────────────────────────────────────────────────────────────
@@ -156,6 +157,11 @@ public class StockController {
         btnFicheAjuster.setDisable(!actif);
         btnFicheModifier.setDisable(!actif);
 
+        // Réinitialise les classes de statut
+        ficheStatut.getStyleClass().removeAll(
+                "fiche-statut-en-stock", "fiche-statut-a-recommander",
+                "fiche-statut-rupture",  "fiche-statut-defaut");
+
         if (!actif) {
             ficheNom.setText("Aucun produit sélectionné");
             fichePrix.setText("—");
@@ -164,7 +170,7 @@ public class StockController {
             fichePoids.setText("—");
             ficheSeuilAlerte.setText("—");
             ficheStatut.setText("—");
-            ficheStatut.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2d3450;");
+            ficheStatut.getStyleClass().addAll("fiche-statut-base", "fiche-statut-defaut");
             return;
         }
 
@@ -177,8 +183,15 @@ public class StockController {
 
         String statut = calculerStatut(p);
         ficheStatut.setText(statut);
-        ficheStatut.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: "
-                + couleurStatut(statut) + ";");
+        ficheStatut.getStyleClass().addAll("fiche-statut-base", cssStatutFiche(statut));
+    }
+
+    private String cssStatutFiche(String statut) {
+        return switch (statut) {
+            case "En stock"      -> "fiche-statut-en-stock";
+            case "A recommander" -> "fiche-statut-a-recommander";
+            default              -> "fiche-statut-rupture";
+        };
     }
 
     @FXML private void onFicheEntree()  { if (produitSelectionne != null) entreeDepuisLigne(produitSelectionne); }
@@ -199,29 +212,11 @@ public class StockController {
         popup.setMinHeight(400);
 
         // ── Champs ────────────────────────────────────────────────
-        String styleChamp = "-fx-background-radius: 25; -fx-border-radius: 25; " +
-                "-fx-border-color: #000000; -fx-background-color: transparent; " +
-                "-fx-pref-height: 38; -fx-font-family: Arial;";
-
-        TextField champNom   = new TextField();
-        champNom.setPromptText("Ex : Briques, Câble électrique...");
-        champNom.setStyle(styleChamp);
-
-        TextField champPrix  = new TextField();
-        champPrix.setPromptText("Ex : 29.90");
-        champPrix.setStyle(styleChamp);
-
-        TextField champTva   = new TextField();
-        champTva.setPromptText("Ex : 20");
-        champTva.setStyle(styleChamp);
-
-        TextField champPoids = new TextField();
-        champPoids.setPromptText("Laisser vide si produit unitaire");
-        champPoids.setStyle(styleChamp);
-
-        TextField champSeuil = new TextField();
-        champSeuil.setPromptText("Ex : 5");
-        champSeuil.setStyle(styleChamp);
+        TextField champNom   = champForm("Ex : Briques, Câble électrique...");
+        TextField champPrix  = champForm("Ex : 29.90");
+        TextField champTva   = champForm("Ex : 20");
+        TextField champPoids = champForm("Laisser vide si produit unitaire");
+        TextField champSeuil = champForm("Ex : 5");
 
         // Labels d'erreur
         Label errNom   = erreurLabel();
@@ -231,20 +226,11 @@ public class StockController {
         Label errSeuil = erreurLabel();
 
         // ── Header ────────────────────────────────────────────────
-        HBox header = new HBox();
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(14, 20, 14, 20));
-        header.setStyle("-fx-background-color: #82A9F1;");
-        Label titrePopup = new Label("Nouveau Produit");
-        titrePopup.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; " +
-                "-fx-font-family: 'Comic Sans MS'; -fx-text-fill: white;");
-        header.getChildren().add(titrePopup);
+        HBox header = buildHeader("Nouveau Produit");
 
         // ── Carte formulaire ──────────────────────────────────────
         VBox carte = new VBox(14);
-        carte.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
-                "-fx-border-color: #CCCCCC; -fx-border-radius: 10; -fx-padding: 20;");
-
+        carte.getStyleClass().add("popup-carte");
         carte.getChildren().addAll(
                 labelChamp("Nom du produit *"),  champNom,   errNom,
                 labelChamp("Prix HT (€)"),        champPrix,  errPrix,
@@ -256,135 +242,89 @@ public class StockController {
 
         // ── Boutons ───────────────────────────────────────────────
         Button btnAnnuler = new Button("Annuler");
-        btnAnnuler.setStyle("-fx-background-color: white; -fx-text-fill: #5584D5; " +
-                "-fx-border-color: #5584D5; -fx-border-width: 1; " +
-                "-fx-background-radius: 8; -fx-border-radius: 8; " +
-                "-fx-padding: 9 20; -fx-cursor: hand;");
+        btnAnnuler.getStyleClass().add("button-cancel");
 
         Button btnCreer = new Button("Créer le produit");
-        btnCreer.setStyle("-fx-background-color: #5584D5; -fx-text-fill: white; " +
-                "-fx-font-weight: bold; -fx-background-radius: 8; -fx-border-radius: 8; " +
-                "-fx-padding: 9 20; -fx-cursor: hand;");
+        btnCreer.getStyleClass().add("button-ok");
 
         HBox boutons = new HBox(12, btnAnnuler, btnCreer);
         boutons.setAlignment(Pos.CENTER_RIGHT);
 
         // ── Contenu scrollable ────────────────────────────────────
         VBox contenu = new VBox(16, carte, boutons);
-        contenu.setStyle("-fx-background-color: #DDE8FF;");
-        contenu.setPadding(new Insets(20));
+        contenu.getStyleClass().add("popup-contenu");
 
         ScrollPane scroll = new ScrollPane(contenu);
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: #DDE8FF; -fx-background: #DDE8FF; " +
-                "-fx-border-color: transparent;");
         scroll.getStyleClass().add("rounded-scroll-pane");
 
         VBox root = new VBox(header, scroll);
         VBox.setVgrow(scroll, Priority.ALWAYS);
-        root.setStyle("-fx-background-color: #DDE8FF;");
+        root.getStyleClass().add("popup-root");
 
         // ── Actions ───────────────────────────────────────────────
         btnAnnuler.setOnAction(e -> popup.close());
 
         btnCreer.setOnAction(e -> {
-            // Reset erreurs
             errNom.setText(""); errPrix.setText(""); errTva.setText("");
             errPoids.setText(""); errSeuil.setText("");
 
             boolean valide = true;
 
-            // Validation nom
             String nom = champNom.getText().trim();
-            if (nom.isEmpty()) {
-                errNom.setText("Le nom est obligatoire.");
-                valide = false;
-            }
+            if (nom.isEmpty()) { errNom.setText("Le nom est obligatoire."); valide = false; }
 
-            // Validation prix
             BigDecimal prix = BigDecimal.ZERO;
             try {
-                String txtPrix = champPrix.getText().trim().replace(',', '.');
-                if (!txtPrix.isEmpty()) {
-                    prix = new BigDecimal(txtPrix);
+                String txt = champPrix.getText().trim().replace(',', '.');
+                if (!txt.isEmpty()) {
+                    prix = new BigDecimal(txt);
                     if (prix.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
                 }
-            } catch (NumberFormatException ex) {
-                errPrix.setText("Prix invalide (ex : 29.90).");
-                valide = false;
-            }
+            } catch (NumberFormatException ex) { errPrix.setText("Prix invalide (ex : 29.90)."); valide = false; }
 
-            // Validation TVA
             BigDecimal tva = BigDecimal.ZERO;
             try {
-                String txtTva = champTva.getText().trim().replace(',', '.');
-                if (!txtTva.isEmpty()) {
-                    tva = new BigDecimal(txtTva);
+                String txt = champTva.getText().trim().replace(',', '.');
+                if (!txt.isEmpty()) {
+                    tva = new BigDecimal(txt);
                     if (tva.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
                 }
-            } catch (NumberFormatException ex) {
-                errTva.setText("TVA invalide (ex : 20).");
-                valide = false;
-            }
+            } catch (NumberFormatException ex) { errTva.setText("TVA invalide (ex : 20)."); valide = false; }
 
-            // Validation poids (optionnel)
             BigDecimal poids = null;
             String txtPoids = champPoids.getText().trim().replace(',', '.');
             if (!txtPoids.isEmpty()) {
                 try {
                     poids = new BigDecimal(txtPoids);
                     if (poids.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
-                } catch (NumberFormatException ex) {
-                    errPoids.setText("Poids invalide (ex : 1000.00).");
-                    valide = false;
-                }
+                } catch (NumberFormatException ex) { errPoids.setText("Poids invalide (ex : 1000.00)."); valide = false; }
             }
 
-            // Validation seuil
             int seuil = 0;
             try {
-                String txtSeuil = champSeuil.getText().trim();
-                if (!txtSeuil.isEmpty()) {
-                    seuil = Integer.parseInt(txtSeuil);
+                String txt = champSeuil.getText().trim();
+                if (!txt.isEmpty()) {
+                    seuil = Integer.parseInt(txt);
                     if (seuil < 0) throw new NumberFormatException();
                 }
-            } catch (NumberFormatException ex) {
-                errSeuil.setText("Seuil invalide (entier positif).");
-                valide = false;
-            }
+            } catch (NumberFormatException ex) { errSeuil.setText("Seuil invalide (entier positif)."); valide = false; }
 
             if (!valide) return;
 
-            // Création du produit
             Produit nouveau = new Produit(0, nom, prix, tva, 0, poids, true, seuil);
-
             try {
                 produitService.ajouterProduit(nouveau);
                 popup.close();
                 refreshTable();
-            } catch (Exception ex) {
-                errNom.setText("Erreur : " + ex.getMessage());
-            }
+            } catch (Exception ex) { errNom.setText("Erreur : " + ex.getMessage()); }
         });
 
         // ── Affichage ─────────────────────────────────────────────
         Scene scene = new Scene(root, 460, 580);
+        applyCSS(scene);
         popup.setScene(scene);
         popup.showAndWait();
-    }
-
-    // ── Helpers UI ────────────────────────────────────────────────
-
-    private Label labelChamp(String texte) {
-        Label l = new Label(texte);
-        l.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1e2545;");
-        return l;
-    }
-
-    private Label erreurLabel() {
-        Label l = new Label("");
-        l.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 11px;");
-        return l;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -403,26 +343,13 @@ public class StockController {
         popup.setMinWidth(380);
         popup.setMinHeight(400);
 
-        // ── Champs (pré-remplis avec les valeurs actuelles) ───────
-        String styleChamp = "-fx-background-radius: 25; -fx-border-radius: 25; " +
-                "-fx-border-color: #000000; -fx-background-color: transparent; " +
-                "-fx-pref-height: 38; -fx-font-family: Arial;";
-
-        TextField champNom   = new TextField(p.getNom());
-        champNom.setStyle(styleChamp);
-
-        TextField champPrix  = new TextField(p.getPrix() != null ? p.getPrix().toPlainString() : "");
-        champPrix.setStyle(styleChamp);
-
-        TextField champTva   = new TextField(p.getTauxTva() != null ? p.getTauxTva().toPlainString() : "");
-        champTva.setStyle(styleChamp);
-
-        TextField champPoids = new TextField(p.getPoid() != null ? p.getPoid().toPlainString() : "");
+        // ── Champs (pré-remplis) ──────────────────────────────────
+        TextField champNom   = champFormValeur(p.getNom());
+        TextField champPrix  = champFormValeur(p.getPrix()    != null ? p.getPrix().toPlainString()    : "");
+        TextField champTva   = champFormValeur(p.getTauxTva() != null ? p.getTauxTva().toPlainString() : "");
+        TextField champPoids = champFormValeur(p.getPoid()    != null ? p.getPoid().toPlainString()    : "");
         champPoids.setPromptText("Laisser vide si produit unitaire");
-        champPoids.setStyle(styleChamp);
-
-        TextField champSeuil = new TextField(String.valueOf(p.getSeuilAlerte()));
-        champSeuil.setStyle(styleChamp);
+        TextField champSeuil = champFormValeur(String.valueOf(p.getSeuilAlerte()));
 
         // Labels d'erreur
         Label errNom   = erreurLabel();
@@ -432,20 +359,11 @@ public class StockController {
         Label errSeuil = erreurLabel();
 
         // ── Header ────────────────────────────────────────────────
-        HBox header = new HBox();
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(14, 20, 14, 20));
-        header.setStyle("-fx-background-color: #82A9F1;");
-        Label titrePopup = new Label("Modifier : " + p.getNom());
-        titrePopup.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; " +
-                "-fx-font-family: 'Comic Sans MS'; -fx-text-fill: white;");
-        header.getChildren().add(titrePopup);
+        HBox header = buildHeader("Modifier : " + p.getNom());
 
         // ── Carte formulaire ──────────────────────────────────────
         VBox carte = new VBox(14);
-        carte.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
-                "-fx-border-color: #CCCCCC; -fx-border-radius: 10; -fx-padding: 20;");
-
+        carte.getStyleClass().add("popup-carte");
         carte.getChildren().addAll(
                 labelChamp("Nom du produit *"),  champNom,   errNom,
                 labelChamp("Prix HT (€) *"),      champPrix,  errPrix,
@@ -456,34 +374,26 @@ public class StockController {
         );
 
         // ── Boutons ───────────────────────────────────────────────
-        Button btnAnnuler = new Button("Annuler");
-        btnAnnuler.setStyle("-fx-background-color: white; -fx-text-fill: #5584D5; " +
-                "-fx-border-color: #5584D5; -fx-border-width: 1; " +
-                "-fx-background-radius: 8; -fx-border-radius: 8; " +
-                "-fx-padding: 9 20; -fx-cursor: hand;");
+        Button btnAnnuler      = new Button("Annuler");
+        btnAnnuler.getStyleClass().add("button-annuler");
 
-        Button btnEnregistrer = new Button("Enregistrer les modifications");
-        btnEnregistrer.setStyle("-fx-background-color: #5584D5; -fx-text-fill: white; " +
-                "-fx-font-weight: bold; -fx-background-radius: 8; -fx-border-radius: 8; " +
-                "-fx-padding: 9 20; -fx-cursor: hand;");
+        Button btnEnregistrer  = new Button("Enregistrer les modifications");
+        btnEnregistrer.getStyleClass().add("button-primary");
 
         HBox boutons = new HBox(12, btnAnnuler, btnEnregistrer);
         boutons.setAlignment(Pos.CENTER_RIGHT);
 
         // ── Contenu scrollable ────────────────────────────────────
         VBox contenu = new VBox(16, carte, boutons);
-        contenu.setStyle("-fx-background-color: #DDE8FF;");
-        contenu.setPadding(new Insets(20));
+        contenu.getStyleClass().add("popup-contenu");
 
         ScrollPane scroll = new ScrollPane(contenu);
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: #DDE8FF; -fx-background: #DDE8FF; " +
-                "-fx-border-color: transparent;");
         scroll.getStyleClass().add("rounded-scroll-pane");
 
         VBox root = new VBox(header, scroll);
         VBox.setVgrow(scroll, Priority.ALWAYS);
-        root.setStyle("-fx-background-color: #DDE8FF;");
+        root.getStyleClass().add("popup-root");
 
         // ── Actions ───────────────────────────────────────────────
         btnAnnuler.setOnAction(e -> popup.close());
@@ -519,9 +429,9 @@ public class StockController {
 
             int seuil = 0;
             try {
-                String txtSeuil = champSeuil.getText().trim();
-                if (!txtSeuil.isEmpty()) {
-                    seuil = Integer.parseInt(txtSeuil);
+                String txt = champSeuil.getText().trim();
+                if (!txt.isEmpty()) {
+                    seuil = Integer.parseInt(txt);
                     if (seuil < 0) throw new NumberFormatException();
                 }
             } catch (NumberFormatException ex) { errSeuil.setText("Seuil invalide (entier positif)."); valide = false; }
@@ -539,14 +449,54 @@ public class StockController {
                 popup.close();
                 refreshTable();
                 rafraichirFiche(p);
-            } catch (Exception ex) {
-                errNom.setText("Erreur : " + ex.getMessage());
-            }
+            } catch (Exception ex) { errNom.setText("Erreur : " + ex.getMessage()); }
         });
 
         Scene scene = new Scene(root, 460, 580);
+        applyCSS(scene);
         popup.setScene(scene);
         popup.showAndWait();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers UI (plus de setStyle inline)
+    // ─────────────────────────────────────────────────────────────
+
+
+    private TextField champForm(String prompt) {
+        TextField tf = new TextField();
+        tf.setPromptText(prompt);
+        tf.getStyleClass().add("champform");
+        return tf;
+    }
+
+
+    private TextField champFormValeur(String valeur) {
+        TextField tf = new TextField(valeur);
+        tf.getStyleClass().add("champform");
+        return tf;
+    }
+
+    private HBox buildHeader(String titre) {
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("popup-header");
+        Label titreLabel = new Label(titre);
+        titreLabel.getStyleClass().add("popup-header-title");
+        header.getChildren().add(titreLabel);
+        return header;
+    }
+
+    private Label labelChamp(String texte) {
+        Label l = new Label(texte);
+        l.getStyleClass().add("label-style");   // classe existante dans popup.css
+        return l;
+    }
+
+    private Label erreurLabel() {
+        Label l = new Label("");
+        l.getStyleClass().addAll("label-style", "label-erreur");  // label-erreur reste dans style.css
+        return l;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -651,6 +601,7 @@ public class StockController {
     private Integer askPositiveInt(String title, String msg) {
         TextInputDialog d = new TextInputDialog();
         d.setTitle(title); d.setHeaderText(null); d.setContentText(msg);
+        appliquerStyleDialog(d.getDialogPane());
         Optional<String> r = d.showAndWait();
         if (r.isEmpty()) return null;
         try {
@@ -665,6 +616,7 @@ public class StockController {
     private BigDecimal askPositiveBigDecimal(String title, String msg) {
         TextInputDialog d = new TextInputDialog();
         d.setTitle(title); d.setHeaderText(null); d.setContentText(msg);
+        appliquerStyleDialog(d.getDialogPane());
         Optional<String> r = d.showAndWait();
         if (r.isEmpty()) return null;
         try {
@@ -678,11 +630,26 @@ public class StockController {
 
     private void showError(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.ERROR);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg);
+        appliquerStyleDialog(a.getDialogPane());
+        a.showAndWait();
     }
 
     private void showInfo(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg);
+        appliquerStyleDialog(a.getDialogPane());
+        a.showAndWait();
+    }
+
+    private void appliquerStyleDialog(DialogPane dp) {
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
     }
 }
