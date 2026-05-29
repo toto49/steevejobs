@@ -279,7 +279,7 @@ public class HomeController {
                 ((ParametrizedController) controller).initData(parametre);
             }
             MenuController.getInstance().setCenterView(view);
-            MenuController.getInstance().changerTitre(titreCard);
+            MenuController.getInstance().changerTitre(formaterTitreModule(titreCard));
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -341,7 +341,7 @@ public class HomeController {
                     chargerPageAvecParametre(chemin, parametreFacultatif, title);
                 } else {
                     MenuController.getInstance().chargerPage(chemin);
-                    MenuController.getInstance().changerTitre(title);
+                    MenuController.getInstance().changerTitre(formaterTitreModule(title));
                 }
             } else {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
@@ -353,5 +353,12 @@ public class HomeController {
 
     private boolean hasPermission(String requiredPermission) {
         return currentUserPermissions != null && currentUserPermissions.contains(requiredPermission);
+    }
+
+    private String formaterTitreModule(String title) {
+        if (title == null) {
+            return "";
+        }
+        return title.replace('\n', ' ').replaceAll("\\s+", " ").trim();
     }
 }

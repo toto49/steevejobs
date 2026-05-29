@@ -10,12 +10,16 @@
             fx:controller="com.eseo.steevejobs.controller.FichePayeController">
 
     <top>
-        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" spacing="15.0" style="-fx-background-color: #4B78CC;">
             <padding><Insets left="20.0" right="20.0"/></padding>
             <Label text="GESTION DES FICHES DE PAIE" textFill="WHITE">
                 <font><Font name="System Bold" size="24.0"/></font>
             </Label>
-
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button onAction="#ouvrirCalendrierRh" prefHeight="40.0" prefWidth="180.0"
+                    text="📅 Calendrier RH"
+                    style="-fx-background-color: white; -fx-text-fill: #4B78CC; -fx-font-weight: bold;
+                           -fx-background-radius: 20; -fx-cursor: hand;"/>
         </HBox>
     </top>
 

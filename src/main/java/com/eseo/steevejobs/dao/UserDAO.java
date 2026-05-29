@@ -218,13 +218,28 @@ public class UserDAO {
     }
 
     public List<User> searchByName(String searchTerm) throws SQLException {
+        return searchByName(searchTerm, 50);
+    }
+
+    public List<User> searchByName(String searchTerm, int maxResults) throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM USER WHERE nom LIKE ? OR prenom LIKE ? ORDER BY nom, prenom";
+        if (searchTerm == null || searchTerm.trim().length() < 2) {
+            return users;
+        }
+
+        String sql = "SELECT * FROM USER WHERE actif = 1 AND ("
+                + "nom LIKE ? ESCAPE '\\\\' OR prenom LIKE ? ESCAPE '\\\\' OR email LIKE ? ESCAPE '\\\\' "
+                + "OR CONCAT(prenom, ' ', nom) LIKE ? ESCAPE '\\\\' OR CONCAT(nom, ' ', prenom) LIKE ? ESCAPE '\\\\'"
+                + ") ORDER BY nom, prenom LIMIT ?";
+
+        String pattern = toLikePattern(searchTerm.trim());
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            String pattern = "%" + searchTerm + "%";
-            stmt.setString(1, pattern);
-            stmt.setString(2, pattern);
+            for (int i = 1; i <= 5; i++) {
+                stmt.setString(i, pattern);
+            }
+            stmt.setInt(6, Math.max(1, maxResults));
+
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     users.add(mapUser(rs));
@@ -232,6 +247,14 @@ public class UserDAO {
             }
         }
         return users;
+    }
+
+    private String toLikePattern(String searchTerm) {
+        String escaped = searchTerm
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+        return "%" + escaped + "%";
     }
 
     public boolean deactivateUser(int id) throws SQLException {
