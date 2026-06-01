@@ -13,6 +13,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -20,6 +21,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 import java.sql.SQLException;
 import java.time.DayOfWeek;
@@ -392,31 +395,37 @@ public class CalendrierController {
 
     private void afficherFormulaire(Planning eventToEdit) {
         boolean isEdit = (eventToEdit != null);
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(isEdit ? "Modifier l'événement" : "Ajouter un événement");
+        String titreFenetre = isEdit ? "Modifier l'événement" : "Ajouter un événement";
 
-        DialogPane dp = dialog.getDialogPane();
-        dp.getButtonTypes().add(ButtonType.OK);
-        dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+        Stage popup = new Stage();
+        popup.initModality(Modality.APPLICATION_MODAL);
+        popup.setTitle(titreFenetre);
+        popup.setResizable(true);
+        popup.setMinWidth(400);
+        popup.setMinHeight(380);
 
-        Button okButton = (Button) dp.lookupButton(ButtonType.OK);
-        okButton.getStyleClass().add("button-ok");
-        okButton.setText(isEdit ? "Enregistrer" : "Ajouter");
-
-        GridPane grid = new GridPane();
-        grid.setHgap(20); grid.setVgap(15); grid.setPrefWidth(450);
-
+        // ── Champs ────────────────────────────────────────────────
         ComboBox<String> typeBox = new ComboBox<>();
         typeBox.getItems().addAll("Cours", "Réunion", "Vacances", "Autre");
         typeBox.setMaxWidth(Double.MAX_VALUE);
-
-        ColorPicker colorPicker = new ColorPicker();
+        typeBox.getStyleClass().add("champform");
 
         TextField descField = new TextField();
+        descField.getStyleClass().add("champform");
+
         DatePicker dDP = new DatePicker();
-        TextField hDF = new TextField(); hDF.setPrefWidth(80);
+        dDP.getStyleClass().add("date-picker-custom");
+        TextField hDF = new TextField();
+        hDF.setPrefWidth(90);
+        hDF.getStyleClass().add("champform");
+
         DatePicker dFP = new DatePicker();
-        TextField hFF = new TextField(); hFF.setPrefWidth(80);
+        dFP.getStyleClass().add("date-picker-custom");
+        TextField hFF = new TextField();
+        hFF.setPrefWidth(90);
+        hFF.getStyleClass().add("champform");
+
+        ColorPicker colorPicker = new ColorPicker();
 
         if (isEdit) {
             typeBox.setValue(eventToEdit.getType());
@@ -425,10 +434,7 @@ public class CalendrierController {
             hDF.setText(eventToEdit.getJourDebut().format(DateTimeFormatter.ofPattern("HH:mm")));
             dFP.setValue(eventToEdit.getJourFin().toLocalDate());
             hFF.setText(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
-
-            if (eventToEdit.getCouleur() != null) {
-                colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
-            }
+            if (eventToEdit.getCouleur() != null) colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
         } else {
             typeBox.setValue("Réunion");
             colorPicker.setValue(Color.web("#7298E0"));
@@ -438,35 +444,101 @@ public class CalendrierController {
             hFF.setText("10:00");
         }
 
-        ajouterLigneForm(grid, "TYPE :", typeBox, 0);
-        ajouterLigneForm(grid, "DESCRIPTION :", descField, 1);
-        ajouterLigneForm(grid, "DÉBUT :", new HBox(10, dDP, hDF), 2);
-        ajouterLigneForm(grid, "FIN :", new HBox(10, dFP, hFF), 3);
-        ajouterLigneForm(grid, "COULEUR :", colorPicker, 4);
+        Label errLabel = new Label("");
+        errLabel.getStyleClass().addAll("label-erreur");
 
-        dp.setContent(grid);
+        // ── Header ────────────────────────────────────────────────
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("popup-header");
+        Label titreLabel = new Label(titreFenetre);
+        titreLabel.getStyleClass().add("popup-header-title");
+        header.getChildren().add(titreLabel);
 
-        dialog.showAndWait().ifPresent(res -> {
-            if (res == ButtonType.OK) {
-                try {
-                    LocalDateTime start = LocalDateTime.of(dDP.getValue(), LocalTime.parse(hDF.getText()));
-                    LocalDateTime end = LocalDateTime.of(dFP.getValue(), LocalTime.parse(hFF.getText()));
+        // ── Carte formulaire ──────────────────────────────────────
+        VBox carte = new VBox(14);
+        carte.getStyleClass().add("popup-carte");
 
-                    String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
+        Label lblType  = labelChamp("Type");
+        Label lblDesc  = labelChamp("Description");
+        Label lblDebut = labelChamp("Début");
+        Label lblFin   = labelChamp("Fin");
+        Label lblCoul  = labelChamp("Couleur");
 
-                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor, isEdit ? eventToEdit.getId() : -1);
-                } catch (Exception e) {
-                    e.printStackTrace();
+        HBox ligneDebut = new HBox(10, dDP, hDF);
+        ligneDebut.setAlignment(Pos.CENTER_LEFT);
+        HBox ligneFin = new HBox(10, dFP, hFF);
+        ligneFin.setAlignment(Pos.CENTER_LEFT);
+
+        carte.getChildren().addAll(
+                lblType,   typeBox,
+                lblDesc,   descField,
+                lblDebut,  ligneDebut,
+                lblFin,    ligneFin,
+                lblCoul,   colorPicker,
+                errLabel
+        );
+
+        // ── Boutons ───────────────────────────────────────────────
+        Button btnAnnuler = new Button("Annuler");
+        btnAnnuler.getStyleClass().add("button-annuler");
+
+        Button btnValider = new Button(isEdit ? "Enregistrer" : "Ajouter");
+        btnValider.getStyleClass().add("button-primary");
+
+        HBox boutons = new HBox(12, btnAnnuler, btnValider);
+        boutons.setAlignment(Pos.CENTER_RIGHT);
+
+        // ── Contenu scrollable ────────────────────────────────────
+        VBox contenu = new VBox(16, carte, boutons);
+        contenu.getStyleClass().add("popup-contenu");
+
+        ScrollPane scroll = new ScrollPane(contenu);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("rounded-scroll-pane");
+
+        VBox root = new VBox(header, scroll);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        root.getStyleClass().add("popup-root");
+
+        // ── Actions ───────────────────────────────────────────────
+        btnAnnuler.setOnAction(e -> popup.close());
+
+        btnValider.setOnAction(e -> {
+            errLabel.setText("");
+            try {
+                if (dDP.getValue() == null || dFP.getValue() == null) {
+                    errLabel.setText("Les dates sont obligatoires."); return;
                 }
+                LocalDateTime start = LocalDateTime.of(dDP.getValue(), LocalTime.parse(hDF.getText().trim()));
+                LocalDateTime end   = LocalDateTime.of(dFP.getValue(), LocalTime.parse(hFF.getText().trim()));
+                if (end.isBefore(start)) {
+                    errLabel.setText("La date de fin doit être après le début."); return;
+                }
+                String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
+                traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor, isEdit ? eventToEdit.getId() : -1);
+                popup.close();
+            } catch (java.time.format.DateTimeParseException ex) {
+                errLabel.setText("Format d'heure invalide (ex : 08:00).");
+            } catch (Exception ex) {
+                errLabel.setText("Erreur : " + ex.getMessage());
             }
         });
+
+        // ── Affichage ─────────────────────────────────────────────
+        Scene scene = new Scene(root, 460, 520);
+        java.net.URL styleUrl = getClass().getResource("/style/style.css");
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (styleUrl != null) scene.getStylesheets().add(styleUrl.toExternalForm());
+        if (popupUrl != null) scene.getStylesheets().add(popupUrl.toExternalForm());
+        popup.setScene(scene);
+        popup.showAndWait();
     }
 
-    private void ajouterLigneForm(GridPane g, String label, Node field, int row) {
-        Label lbl = new Label(label);
-        lbl.getStyleClass().add("label-style");
-        g.add(lbl, 0, row);
-        g.add(field, 1, row);
+    private Label labelChamp(String texte) {
+        Label l = new Label(texte);
+        l.getStyleClass().add("label-champ");
+        return l;
     }
 
     private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, String couleur, int idToDelete) throws SQLException {
