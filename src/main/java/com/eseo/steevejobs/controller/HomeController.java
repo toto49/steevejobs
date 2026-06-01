@@ -3,10 +3,7 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.PermissionService;
-import com.eseo.steevejobs.service.SessionService;
-import com.eseo.steevejobs.service.TicketService;
-import com.eseo.steevejobs.service.TicketServiceImpl;
+import com.eseo.steevejobs.service.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
@@ -20,6 +17,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -115,6 +113,7 @@ public class HomeController {
             TicketService ticketService = new TicketServiceImpl();
             int nTech = 0;
             if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
+                // CORRECTION : Utilisation de currentUser au lieu de user
                 nTech = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId());
             }
             int nAuteur = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
@@ -337,6 +336,34 @@ public class HomeController {
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
             if (MenuController.getInstance() != null) {
+                if ("APP_VISO_VIEW".equals(codeAction)) {
+                    try {
+                        JSONObject requete = new JSONObject();
+                        requete.put("type", "REQUEST_VISIO_TOKEN");
+                        requete.put("roomName", "Salle_De_Crise");
+
+                        if (currentUser != null) {
+                            requete.put("identity", String.valueOf(currentUser.getId()));
+                            requete.put("displayName", currentUser.getPrenom() + " " + currentUser.getNom());
+                        } else {
+                            requete.put("identity", "0");
+                            requete.put("displayName", "Invité");
+                        }
+                        WebSocketService.getInstance().envoyerMessageBrut(requete.toString());
+                        System.out.println("⏳ Requête de token envoyée au NAS Synology...");
+
+                        if (parametreFacultatif != null) {
+                            chargerPageAvecParametre(chemin, parametreFacultatif, title);
+                        } else {
+                            MenuController.getInstance().chargerPage(chemin);
+                            MenuController.getInstance().changerTitre(title);
+                        }
+
+                    } catch (Exception ex) {
+                        System.err.println("❌ Erreur lors de l'action sur la carte Visio : " + ex.getMessage());
+                    }
+                }
+
                 if (parametreFacultatif != null) {
                     chargerPageAvecParametre(chemin, parametreFacultatif, title);
                 } else {

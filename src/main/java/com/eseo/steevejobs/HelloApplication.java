@@ -107,7 +107,7 @@ public class HelloApplication extends Application {
         if (arrondir) {
             rootGlobal.setStyle("-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #555555; -fx-border-width: 1; -fx-background-color: -color-bg-default;");
             if (headerGlobal != null) {
-                headerGlobal.setStyle("-fx-background-color: #ffffff; -fx-padding: 0 0 0 8; -fx-background-radius: 11 11 0 0;");
+                headerGlobal.setStyle("-fx-background-color: #4b78cc; -fx-padding: 0 0 0 8; -fx-background-radius: 11 11 0 0;");
             }
             Rectangle masque = new Rectangle();
             masque.widthProperty().bind(rootGlobal.widthProperty());
@@ -120,7 +120,7 @@ public class HelloApplication extends Application {
         } else {
             rootGlobal.setStyle("-fx-background-radius: 0; -fx-border-radius: 0; -fx-border-width: 0; -fx-background-color: -color-bg-default;");
             if (headerGlobal != null) {
-                headerGlobal.setStyle("-fx-background-color: #ffffff; -fx-padding: 0 0 0 8; -fx-background-radius: 0;");
+                headerGlobal.setStyle("-fx-background-color: #4b78cc; -fx-padding: 0 0 0 8; -fx-background-radius: 0;");
             }
             rootGlobal.setClip(null);
         }

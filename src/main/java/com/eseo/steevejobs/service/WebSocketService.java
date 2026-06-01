@@ -70,6 +70,18 @@ public class WebSocketService {
         return dotenvInstance;
     }
 
+    public void envoyerMessageBrut(String message) {
+        try {
+            if (wsClient != null && wsClient.isOpen() && isConnected.get()) {
+                wsClient.send(message);
+            } else {
+                System.err.println("⚠️ Impossible d'envoyer le message : Le WebSocket n'est pas connecté au serveur.");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Erreur d'envoi de message brut : " + e.getMessage());
+        }
+    }
+
     public void connecter() {
         if (isConnected.get() || !isConnecting.compareAndSet(false, true)) return;
 
@@ -85,12 +97,10 @@ public class WebSocketService {
             }
 
             lastUri = new URI("ws://" + ip + ":" + port);
-            System.out.println("⏳ Tentative de connexion WS vers : " + lastUri);
 
             wsClient = new WebSocketClient(lastUri) {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
-                    System.out.println("✅ WS Connecté au NAS ! Envoi du Token VIP...");
                     isConnected.set(true);
                     isConnecting.set(false);
 
@@ -115,10 +125,55 @@ public class WebSocketService {
                     try {
                         System.out.println("[WS] Message reçu : " + message);
                         JSONObject json = new JSONObject(message);
-                        if ("UPDATE_TICKET".equals(json.optString("type"))) {
+                        String type = json.optString("type");
+                        if ("UPDATE_TICKET".equals(type)) {
                             traiterMessageUpdate(json);
-                        } else {
-                            System.out.println("[WS] Type ignoré : " + json.optString("type"));
+                        } else if ("VISIO_TOKEN_RESPONSE".equals(type)) {
+                            String status = json.optString("status", "SUCCESS");
+
+                            if ("SUCCESS".equals(status)) {
+                                String token = json.getString("token");
+                                String roomName = json.optString("roomName", "");
+                                if (VisioController.getActiveInstance() != null) {
+                                    VisioController.getActiveInstance().recevoirTokenEtLancer(token, roomName);
+                                }
+                            } else {
+                                String messageErreur = json.optString("message", "❌ Accès au salon refusé.");
+                                System.err.println("🛑 [WS] Accès Visio refusé par le serveur : " + messageErreur);
+                                if (VisioController.getActiveInstance() != null) {
+                                    VisioController.getActiveInstance().recevoirErreurVisio(messageErreur);
+                                }
+                            }
+                        } else if ("PLANIF_RESPONSE".equals(type)) {
+                            String status = json.optString("status");
+                            System.out.println("📊 [WS] Retour planification reçu : " + status);
+
+                            if (VisioController.getActiveInstance() != null) {
+                                if ("SUCCESS".equals(status)) {
+                                    VisioController.getActiveInstance().recevoirErreurVisio("✅ Réunion planifiée avec succès !");
+                                    VisioController.getActiveInstance().rafraichirListeReunions(); // Recharge le tableau
+                                } else {
+                                    String messageErreur = json.optString("message",
+                                            "❌ Échec de la planification en BDD.");
+                                    VisioController.getActiveInstance().recevoirErreurVisio(messageErreur);
+                                }
+                            }
+                        } else if ("MY_VISIOS_RESPONSE".equals(type)) {
+                            JSONArray reunions = json.optJSONArray("reunions");
+
+                            if (VisioController.getActiveInstance() != null && reunions != null) {
+                                VisioController.getActiveInstance().recevoirListeReunions(reunions);
+                            }
+                        } else if ("DELETE_VISIO_RESPONSE".equals(type)) {
+                            String status = json.optString("status");
+                            message = json.optString("message", "Suppression impossible.");
+                            if (VisioController.getActiveInstance() != null) {
+                                if ("SUCCESS".equals(status)) {
+                                    VisioController.getActiveInstance().recevoirSuppressionSalon("✅ " + message);
+                                } else {
+                                    VisioController.getActiveInstance().recevoirSuppressionSalon("❌ " + message);
+                                }
+                            }
                         }
                     } catch (Exception e) {
                         System.err.println("❌ WS_ERR (Parse Msg): " + e.getMessage());
@@ -134,7 +189,7 @@ public class WebSocketService {
 
                 @Override
                 public void onError(Exception ex) {
-                    System.err.println("❌ WS_ERR (Erreur de réseau): Le client n'arrive pas à atteindre l'IP " + ip);
+                    System.err.println("❌ WS_ERR (Erreur de réseau): Le client n'arrive pas à atteindre l'IP");
                     isConnected.set(false);
                     isConnecting.set(false);
                 }

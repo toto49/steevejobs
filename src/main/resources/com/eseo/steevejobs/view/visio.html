@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Visio SteeveJobs</title>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            font-family: sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #video-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            flex-grow: 1;
+            justify-content: center;
+            align-items: center;
+        }
+
+        video {
+            width: 45%;
+            max-height: 80vh;
+            background-color: #000;
+            border-radius: 8px;
+            transform: scaleX(-1); /* Effet miroir pour la webcam */
+        }
+    </style>
+</head>
+<body>
+<div id="video-grid"></div>
+
+<script>
+    window.addEventListener('DOMContentLoaded', async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlServeur = urlParams.get('url');
+        const tokenJWT = urlParams.get('token');
+
+        if (!urlServeur || !tokenJWT) {
+            console.error("Paramètres de connexion manquants !");
+            return;
+        }
+
+        const grid = document.getElementById('video-grid');
+
+        const room = new LiveKitClient.Room();
+        await room.connect(urlServeur, tokenJWT);
+        console.log("✅ Connecté au NAS !");
+
+        await room.localParticipant.enableCameraAndMicrophone();
+
+        room.on(LiveKitClient.RoomEvent.TrackSubscribed, (track) => {
+            if (track.kind === "video") {
+                grid.appendChild(track.attach());
+            }
+        });
+    });
+</script>
+</body>
+</html>
