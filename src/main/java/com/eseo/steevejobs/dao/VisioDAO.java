@@ -12,14 +12,15 @@ import java.util.List;
 public class VisioDAO {
 
     public boolean enregistrerSalonInstantane(Visio visio) {
-        String sql = "INSERT INTO VISIO (room_name, createur_id, statut, heure_debut) VALUES (?, ?, ?, CURRENT_TIMESTAMP)";
+        String sql = "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_debut) "
+                + "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, visio.getRoom_name());
             stmt.setInt(2, visio.getCreateur_id());
-            stmt.setString(3, VisioStatut.EN_COURS.name());
-            stmt.setString(4, ReunionType.INSTANTANEE.name());
+            stmt.setString(3, ReunionType.INSTANTANEE.name());
+            stmt.setString(4, VisioStatut.EN_COURS.name());
 
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -161,8 +162,9 @@ public class VisioDAO {
         }
     }
 
-    public void terminerSalon(String roomName) {
-        String sql = "UPDATE VISIO SET statut = ?, heure_fin = CURRENT_TIMESTAMP WHERE room_name = ? AND statut = 'EN_COURS'";
+    public void terminerSalonPlanifie(String roomName) {
+        String sql = "UPDATE VISIO SET statut = ?, heure_fin = CURRENT_TIMESTAMP "
+                + "WHERE room_name = ? AND statut = 'EN_COURS' AND type_reunion = 'PLANIFIEE'";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, VisioStatut.TERMINE.name());
@@ -170,6 +172,85 @@ public class VisioDAO {
             stmt.executeUpdate();
         } catch (Exception ignored) {
         }
+    }
+
+    public boolean supprimerSalonInstantane(String roomName) {
+        if (roomName == null || roomName.isBlank()) {
+            return false;
+        }
+
+        String selectSql = "SELECT id FROM VISIO WHERE room_name = ? "
+                + "AND (type_reunion = 'INSTANTANEE' OR (type_reunion IS NULL AND heure_programmee IS NULL))";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            int visioId = -1;
+            try (PreparedStatement sel = conn.prepareStatement(selectSql)) {
+                sel.setString(1, roomName.trim());
+                try (ResultSet rs = sel.executeQuery()) {
+                    if (rs.next()) {
+                        visioId = rs.getInt("id");
+                    }
+                }
+            }
+
+            if (visioId < 0) {
+                return false;
+            }
+
+            try (PreparedStatement inv = conn.prepareStatement(
+                    "DELETE FROM VISIO_INVITATIONS WHERE visio_id = ?")) {
+                inv.setInt(1, visioId);
+                inv.executeUpdate();
+            }
+
+            try (PreparedStatement del = conn.prepareStatement("DELETE FROM VISIO WHERE id = ?")) {
+                del.setInt(1, visioId);
+                int deleted = del.executeUpdate();
+                if (deleted > 0) {
+                    System.out.println("🗑️ Salon instantané supprimé de la BDD : " + roomName.trim());
+                }
+                return deleted > 0;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Erreur DAO lors de la suppression du salon instantané : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean cloturerSalon(String roomName) {
+        if (roomName == null || roomName.isBlank()) {
+            return false;
+        }
+
+        String typeSql = "SELECT type_reunion, heure_programmee FROM VISIO "
+                + "WHERE room_name = ? AND statut = 'EN_COURS' ORDER BY id DESC LIMIT 1";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(typeSql)) {
+            stmt.setString(1, roomName.trim());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return supprimerSalonInstantane(roomName);
+                }
+
+                String typeReunion = rs.getString("type_reunion");
+                Timestamp heureProgrammee = rs.getTimestamp("heure_programmee");
+                if (estSalonInstantane(typeReunion, heureProgrammee)) {
+                    return supprimerSalonInstantane(roomName);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Erreur DAO lors de la clôture du salon : " + e.getMessage());
+            return false;
+        }
+
+        terminerSalonPlanifie(roomName);
+        return true;
+    }
+
+    private static boolean estSalonInstantane(String typeReunion, Timestamp heureProgrammee) {
+        return ReunionType.INSTANTANEE.name().equals(typeReunion)
+                || (typeReunion == null && heureProgrammee == null);
     }
 
     public List<Visio> listerReunionsDisponibles(int userId) {

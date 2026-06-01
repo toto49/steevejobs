@@ -75,8 +75,8 @@ public class VisioService {
 
     public void couperSalonDefinitif(String roomName, int userId) {
         if (visioDAO.isCreateur(roomName, userId)) {
-            visioDAO.terminerSalon(roomName);
-            System.out.println("🔒 Le créateur a révoqué l'accès au salon : " + roomName);
+            visioDAO.cloturerSalon(roomName);
+            System.out.println("🔒 Salon clôturé : " + roomName);
         }
     }
 }
