@@ -1,3 +1,4 @@
+
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -23,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
@@ -95,6 +97,8 @@ public class ServeurRelais extends WebSocketServer {
 
         scheduler.scheduleAtFixedRate(rateLimiter::clear, 1, 1, TimeUnit.SECONDS);
     }
+
+
     private static String trimEnv(String value) {
         if (value == null) {
             return null;
@@ -164,7 +168,6 @@ public class ServeurRelais extends WebSocketServer {
             throw new IllegalStateException("Impossible de demarrer l'API visio sur le port " + port, ex);
         }
     }
-
 
     private Connection getDatabaseConnection() throws SQLException {
         return DriverManager.getConnection(dbUrl, dbUser, dbPassword);
@@ -236,6 +239,7 @@ public class ServeurRelais extends WebSocketServer {
         logger.info("Serveur WS demarre sur le port {}", getPort());
     }
 
+
     private void handleRegister(WebSocket conn, JSONObject json) {
         String userId = extraireUserIdDuToken(json.optString("token"));
         if (userId == null) {
@@ -263,246 +267,26 @@ public class ServeurRelais extends WebSocketServer {
     }
 
 
-    private void handleRequestVisioToken(WebSocket conn, JSONObject json) {
-        String senderId = conn.getAttachment();
-        if (senderId == null) {
-            conn.close(1008, "Not Authenticated");
-            return;
+    private static LocalDateTime timestampVersLocal(Timestamp timestamp) {
+        if (timestamp == null) {
+            return null;
         }
-
-        int intUserId = Integer.parseInt(senderId);
-        String roomName = json.optString("roomName", "").trim();
-        String identity = json.optString("identity", senderId);
-        String displayName = json.optString("displayName", "Employe_" + senderId).trim();
-        if (displayName.isBlank()) displayName = "Employe_" + senderId;
-
-        if (!isValidRoomName(roomName)) {
-            sendError(conn, "VISIO_TOKEN_RESPONSE", "Nom de salon invalide.");
-            return;
-        }
-
-        logger.info("Demande de token visio : UserID={}, Room={}", senderId, roomName);
-
-        JSONObject reponse = new JSONObject().put("type", "VISIO_TOKEN_RESPONSE");
-        try {
-            String typeReunion = null;   // null = n'existe pas encore
-            String statut = null;
-            int createurId = intUserId;
-            boolean estInvite = false;
-            Timestamp heureProgrammee = null;
-
-            String sqlSelect =
-                    "SELECT v.type_reunion, v.statut, v.heure_programmee, v.createur_id, " +
-                            "  (SELECT COUNT(*) FROM VISIO_INVITATIONS vi " +
-                            "   WHERE vi.visio_id = v.id AND vi.employe_id = ?) AS est_invite " +
-                            "FROM VISIO v " +
-                            "WHERE v.room_name = ? AND v.statut != 'TERMINE' " +
-                            "ORDER BY v.id DESC LIMIT 1";
-
-            try (Connection db = getDatabaseConnection();
-                 PreparedStatement stmt = db.prepareStatement(sqlSelect)) {
-                stmt.setInt(1, intUserId);
-                stmt.setString(2, roomName);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        typeReunion = rs.getString("type_reunion");
-                        statut = rs.getString("statut");
-                        createurId = rs.getInt("createur_id");
-                        estInvite = rs.getInt("est_invite") > 0;
-                        heureProgrammee = rs.getTimestamp("heure_programmee");
-                    }
-                }
-            }
-
-            if (typeReunion == null) {
-                logger.info("Creation automatique d'une session instantanee : {}", roomName);
-                try (Connection db = getDatabaseConnection()) {
-                    purgerReliquatsSalonInstantane(db, roomName);
-                    try (PreparedStatement stmt = db.prepareStatement(
-                            "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_debut) " +
-                                    "VALUES (?, ?, 'INSTANTANEE', 'EN_COURS', CURRENT_TIMESTAMP)")) {
-                        stmt.setString(1, roomName);
-                        stmt.setInt(2, intUserId);
-                        stmt.executeUpdate();
-                    }
-                }
-                typeReunion = "INSTANTANEE";
-                statut = "EN_COURS";
-                createurId = intUserId;
-            }
-
-            boolean accesAutorise = "INSTANTANEE".equals(typeReunion)
-                    || intUserId == createurId
-                    || estInvite;
-
-            if (!accesAutorise) {
-                reponse.put("status", "ERROR")
-                        .put("message", "Acces refuse : vous ne figurez pas sur la liste des invites de cette reunion.");
-                logger.warn("Acces refuse pour UserID={} sur la room {}", intUserId, roomName);
-                conn.send(reponse.toString());
-                return;
-            }
-
-
-            if ("PROGRAMMEE".equals(statut) && heureProgrammee != null) {
-                LocalDateTime hpLdt = heureProgrammee.toLocalDateTime();
-                if (LocalDateTime.now().isBefore(hpLdt.minusMinutes(10))) {
-                    reponse.put("status", "ERROR")
-                            .put("message", "Cette reunion n'a pas encore commence. Revenez quelques minutes avant l'heure prevue.");
-                    logger.warn("Acces anticipe bloque pour la room {}", roomName);
-                    conn.send(reponse.toString());
-                    return;
-                }
-            }
-
-            if ("PROGRAMMEE".equals(statut)) {
-                try (Connection db = getDatabaseConnection();
-                     PreparedStatement stmt = db.prepareStatement(
-                             "UPDATE VISIO SET statut = 'EN_COURS', heure_debut = CURRENT_TIMESTAMP " +
-                                     "WHERE room_name = ? AND statut = 'PROGRAMMEE'")) {
-                    stmt.setString(1, roomName);
-                    stmt.executeUpdate();
-                }
-            }
-
-            String safeIdentity = sanitizeLiveKitIdentity(identity);
-            AccessToken tokenLiveKit = new AccessToken(livekitApiKey, livekitApiSecret);
-            tokenLiveKit.setIdentity(safeIdentity);
-            tokenLiveKit.setName(displayName);
-            tokenLiveKit.addGrants(
-                    new RoomJoin(true),
-                    new RoomName(roomName),
-                    new CanPublish(true),
-                    new CanSubscribe(true)
-            );
-            tokenLiveKit.setTtl(3600);
-
-            reponse.put("status", "SUCCESS")
-                    .put("token", tokenLiveKit.toJwt())
-                    .put("roomName", roomName)
-                    .put("createurId", createurId)
-                    .put("typeReunion", typeReunion)
-                    .put("endToken", genererEndToken(intUserId, roomName));
-
-            if (intUserId == createurId) {
-                reponse.put("kickToken", genererKickToken(intUserId, roomName, createurId));
-            }
-            logger.info("Token LiveKit genere pour {} dans la room {} (type={})", safeIdentity, roomName, typeReunion);
-
-        } catch (Exception ex) {
-            logger.error("Erreur lors de la generation du token LiveKit : ", ex);
-            reponse.put("status", "ERROR")
-                    .put("message", "Erreur serveur lors de la generation du token LiveKit : " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));
-        }
-
-        conn.send(reponse.toString());
+        return timestamp.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
-    private void handlePlanifyVisio(WebSocket conn, JSONObject json) {
-        String senderId = conn.getAttachment();
-        if (senderId == null) {
-            conn.close(1008, "Not Authenticated");
-            return;
-        }
-
-        int intUserId = Integer.parseInt(senderId);
-        String planifRoom = json.getString("roomName").trim();
-
-        if (!isValidRoomName(planifRoom)) {
-            sendError(conn, "PLANIF_RESPONSE", "Nom de salon invalide.");
-            return;
-        }
-
-        LocalDateTime heureProg = LocalDateTime.parse(json.getString("heureProgrammee"));
-        JSONArray invitesJson = json.optJSONArray("invites");
-
-        boolean success = false;
-        try (Connection db = getDatabaseConnection()) {
-            db.setAutoCommit(false);
-            try {
-                int newVisioId = 0;
-                try (PreparedStatement stmt = db.prepareStatement(
-                        "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_programmee) " +
-                                "VALUES (?, ?, 'PLANIFIEE', 'PROGRAMMEE', ?)",
-                        Statement.RETURN_GENERATED_KEYS)) {
-                    stmt.setString(1, planifRoom);
-                    stmt.setInt(2, intUserId);
-                    stmt.setTimestamp(3, Timestamp.valueOf(heureProg));
-                    stmt.executeUpdate();
-                    try (ResultSet gk = stmt.getGeneratedKeys()) {
-                        if (gk.next()) newVisioId = gk.getInt(1);
-                    }
-                }
-
-                if (newVisioId > 0 && invitesJson != null && invitesJson.length() > 0) {
-                    try (PreparedStatement stmtI = db.prepareStatement(
-                            "INSERT INTO VISIO_INVITATIONS (visio_id, employe_id) VALUES (?, ?)")) {
-                        for (int i = 0; i < invitesJson.length(); i++) {
-                            stmtI.setInt(1, newVisioId);
-                            stmtI.setInt(2, invitesJson.getInt(i));
-                            stmtI.addBatch();
-                        }
-                        stmtI.executeBatch();
-                    }
-                }
-
-                db.commit();
-                success = true;
-                logger.info("Nouvelle reunion planifiee : ID={}, Salle={}", newVisioId, planifRoom);
-            } catch (Exception ex) {
-                db.rollback();
-                logger.error("Echec de la transaction de planification : ", ex);
-            }
-        } catch (Exception ex) {
-            logger.error("Erreur de connexion BDD lors de la planification : ", ex);
-        }
-
-        conn.send(new JSONObject()
-                .put("type", "PLANIF_RESPONSE")
-                .put("status", success ? "SUCCESS" : "ERROR")
-                .toString());
+    private static Timestamp localVersTimestamp(LocalDateTime dateHeure) {
+        return Timestamp.from(dateHeure.atZone(ZoneId.systemDefault()).toInstant());
     }
 
-    private void handleGetMyVisios(WebSocket conn) {
-        String senderId = conn.getAttachment();
-        if (senderId == null) {
-            conn.close(1008, "Not Authenticated");
-            return;
-        }
-
-        int intUserId = Integer.parseInt(senderId);
-        JSONArray jArray = new JSONArray();
-
-        String sql =
-                "SELECT DISTINCT v.id, v.room_name, v.createur_id, v.type_reunion, v.statut, v.heure_programmee " +
-                        "FROM VISIO v LEFT JOIN VISIO_INVITATIONS vi ON v.id = vi.visio_id " +
-                        "WHERE (v.createur_id = ? OR vi.employe_id = ?) " +
-                        "ORDER BY v.heure_programmee DESC";
-
-        try (Connection db = getDatabaseConnection();
-             PreparedStatement stmt = db.prepareStatement(sql)) {
-            stmt.setInt(1, intUserId);
-            stmt.setInt(2, intUserId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Timestamp ts = rs.getTimestamp("heure_programmee");
-                    jArray.put(new JSONObject()
-                            .put("id", rs.getInt("id"))
-                            .put("roomName", rs.getString("room_name"))
-                            .put("createurId", rs.getInt("createur_id"))
-                            .put("typeReunion", rs.getString("type_reunion"))
-                            .put("statut", rs.getString("statut"))
-                            .put("heureProgrammee", ts != null ? ts.toLocalDateTime().toString() : ""));
-                }
+    private static String messageErreurSql(Exception ex) {
+        if (ex instanceof SQLException sqlEx && sqlEx.getMessage() != null) {
+            String msg = sqlEx.getMessage();
+            if (msg.contains("Duplicate") || msg.contains("duplicate")) {
+                return "Un salon avec ce nom existe deja.";
             }
-        } catch (Exception ex) {
-            logger.error("Erreur lors de la recuperation des visios : ", ex);
+            return msg;
         }
-
-        conn.send(new JSONObject()
-                .put("type", "MY_VISIOS_RESPONSE")
-                .put("reunions", jArray)
-                .toString());
+        return ex.getMessage() != null ? ex.getMessage() : "Erreur base de donnees.";
     }
 
     private void handleDeleteVisio(WebSocket conn, JSONObject json) {
@@ -768,6 +552,303 @@ public class ServeurRelais extends WebSocketServer {
     private boolean estSalonInstantane(String typeReunion, Timestamp heureProgrammee) {
         return "INSTANTANEE".equals(typeReunion)
                 || (typeReunion == null && heureProgrammee == null);
+    }
+
+    private void handleRequestVisioToken(WebSocket conn, JSONObject json) {
+        String senderId = conn.getAttachment();
+        if (senderId == null) {
+            conn.close(1008, "Not Authenticated");
+            return;
+        }
+
+        int intUserId = Integer.parseInt(senderId);
+        String roomName = json.optString("roomName", "").trim();
+        String identity = json.optString("identity", senderId);
+        String displayName = json.optString("displayName", "Employe_" + senderId).trim();
+        if (displayName.isBlank()) displayName = "Employe_" + senderId;
+
+        if (!isValidRoomName(roomName)) {
+            sendError(conn, "VISIO_TOKEN_RESPONSE", "Nom de salon invalide.");
+            return;
+        }
+
+        logger.info("Demande de token visio : UserID={}, Room={}", senderId, roomName);
+
+        JSONObject reponse = new JSONObject().put("type", "VISIO_TOKEN_RESPONSE");
+        try {
+            String typeReunion = null;
+            String statut = null;
+            int createurId = intUserId;
+            boolean estInvite = false;
+
+            String sqlSelect =
+                    "SELECT v.type_reunion, v.statut, v.createur_id, " +
+                            "  (SELECT COUNT(*) FROM VISIO_INVITATIONS vi " +
+                            "   WHERE vi.visio_id = v.id AND vi.employe_id = ?) AS est_invite " +
+                            "FROM VISIO v " +
+                            "WHERE v.room_name = ? AND v.statut != 'TERMINE' " +
+                            "ORDER BY v.id DESC LIMIT 1";
+
+            try (Connection db = getDatabaseConnection();
+                 PreparedStatement stmt = db.prepareStatement(sqlSelect)) {
+                stmt.setInt(1, intUserId);
+                stmt.setString(2, roomName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        typeReunion = rs.getString("type_reunion");
+                        statut = rs.getString("statut");
+                        createurId = rs.getInt("createur_id");
+                        estInvite = rs.getInt("est_invite") > 0;
+                    }
+                }
+            }
+            if (typeReunion == null) {
+                logger.info("Creation automatique d'une session instantanee : {}", roomName);
+                try (Connection db = getDatabaseConnection()) {
+                    purgerReliquatsSalonInstantane(db, roomName);
+                    try (PreparedStatement stmt = db.prepareStatement(
+                            "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_debut) " +
+                                    "VALUES (?, ?, 'INSTANTANEE', 'EN_COURS', CURRENT_TIMESTAMP)")) {
+                        stmt.setString(1, roomName);
+                        stmt.setInt(2, intUserId);
+                        stmt.executeUpdate();
+                    }
+                }
+                typeReunion = "INSTANTANEE";
+                statut = "EN_COURS";
+                createurId = intUserId;
+            }
+
+            boolean accesAutorise = "INSTANTANEE".equals(typeReunion)
+                    || intUserId == createurId
+                    || estInvite;
+
+            if (!accesAutorise) {
+                reponse.put("status", "ERROR")
+                        .put("message", "Acces refuse : vous ne figurez pas sur la liste des invites de cette reunion.");
+                logger.warn("Acces refuse pour UserID={} sur la room {}", intUserId, roomName);
+                conn.send(reponse.toString());
+                return;
+            }
+
+            try (Connection db = getDatabaseConnection()) {
+                activerReunionsPlanifieesEligibles(db);
+                if ("PROGRAMMEE".equals(statut)) {
+                    try (PreparedStatement stmt = db.prepareStatement(
+                            "UPDATE VISIO SET statut = 'EN_COURS', heure_debut = CURRENT_TIMESTAMP "
+                                    + "WHERE room_name = ? AND statut = 'PROGRAMMEE'")) {
+                        stmt.setString(1, roomName);
+                        stmt.executeUpdate();
+                    }
+                }
+            }
+
+            String safeIdentity = sanitizeLiveKitIdentity(identity);
+            AccessToken tokenLiveKit = new AccessToken(livekitApiKey, livekitApiSecret);
+            tokenLiveKit.setIdentity(safeIdentity);
+            tokenLiveKit.setName(displayName);
+            tokenLiveKit.addGrants(
+                    new RoomJoin(true),
+                    new RoomName(roomName),
+                    new CanPublish(true),
+                    new CanSubscribe(true)
+            );
+            tokenLiveKit.setTtl(3600);
+
+            reponse.put("status", "SUCCESS")
+                    .put("token", tokenLiveKit.toJwt())
+                    .put("roomName", roomName)
+                    .put("createurId", createurId)
+                    .put("typeReunion", typeReunion)
+                    .put("endToken", genererEndToken(intUserId, roomName));
+
+            if (intUserId == createurId) {
+                reponse.put("kickToken", genererKickToken(intUserId, roomName, createurId));
+            }
+            logger.info("Token LiveKit genere pour {} dans la room {} (type={})", safeIdentity, roomName, typeReunion);
+
+        } catch (Exception ex) {
+            logger.error("Erreur lors de la generation du token LiveKit : ", ex);
+            reponse.put("status", "ERROR")
+                    .put("message", "Erreur serveur lors de la generation du token LiveKit : " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));
+        }
+
+        conn.send(reponse.toString());
+    }
+
+    private void handlePlanifyVisio(WebSocket conn, JSONObject json) {
+        String senderId = conn.getAttachment();
+        if (senderId == null) {
+            conn.close(1008, "Not Authenticated");
+            return;
+        }
+
+        int intUserId = Integer.parseInt(senderId);
+        String planifRoom = json.optString("roomName", "").trim();
+
+        if (!isValidRoomName(planifRoom)) {
+            sendError(conn, "PLANIF_RESPONSE", "Nom de salon invalide.");
+            return;
+        }
+
+        String heureProgStr = json.optString("heureProgrammee", "").trim();
+        if (heureProgStr.isEmpty()) {
+            sendError(conn, "PLANIF_RESPONSE", "Date et heure obligatoires.");
+            return;
+        }
+
+        LocalDateTime heureProg;
+        try {
+            heureProg = LocalDateTime.parse(heureProgStr);
+        } catch (Exception ex) {
+            sendError(conn, "PLANIF_RESPONSE", "Format de date/heure invalide.");
+            return;
+        }
+
+        JSONArray invitesJson = json.optJSONArray("invites");
+        JSONObject reponse = new JSONObject().put("type", "PLANIF_RESPONSE");
+
+        try (Connection db = getDatabaseConnection()) {
+            if (salonActifExiste(db, planifRoom)) {
+                reponse.put("status", "ERROR")
+                        .put("message", "Un salon actif porte deja ce nom. Choisissez un autre identifiant.");
+                conn.send(reponse.toString());
+                return;
+            }
+
+            db.setAutoCommit(false);
+            try {
+                int newVisioId = insererReunionPlanifiee(db, planifRoom, intUserId, heureProg);
+                if (newVisioId <= 0) {
+                    throw new SQLException("Impossible de creer la reunion en base.");
+                }
+
+                if (invitesJson != null && invitesJson.length() > 0) {
+                    try (PreparedStatement stmtI = db.prepareStatement(
+                            "INSERT INTO VISIO_INVITATIONS (visio_id, employe_id) VALUES (?, ?)")) {
+                        for (int i = 0; i < invitesJson.length(); i++) {
+                            stmtI.setInt(1, newVisioId);
+                            stmtI.setInt(2, invitesJson.getInt(i));
+                            stmtI.addBatch();
+                        }
+                        stmtI.executeBatch();
+                    }
+                }
+
+                db.commit();
+                activerReunionsPlanifieesEligibles(db);
+                reponse.put("status", "SUCCESS");
+                logger.info("Nouvelle reunion planifiee : ID={}, Salle={}, heure={}", newVisioId, planifRoom, heureProg);
+            } catch (Exception ex) {
+                db.rollback();
+                logger.error("Echec de la transaction de planification : ", ex);
+                reponse.put("status", "ERROR").put("message", messageErreurSql(ex));
+            }
+        } catch (Exception ex) {
+            logger.error("Erreur de connexion BDD lors de la planification : ", ex);
+            reponse.put("status", "ERROR").put("message", messageErreurSql(ex));
+        }
+
+        conn.send(reponse.toString());
+    }
+
+    private void handleGetMyVisios(WebSocket conn) {
+        String senderId = conn.getAttachment();
+        if (senderId == null) {
+            conn.close(1008, "Not Authenticated");
+            return;
+        }
+
+        int intUserId = Integer.parseInt(senderId);
+        JSONArray jArray = new JSONArray();
+
+        String sql =
+                "SELECT DISTINCT v.id, v.room_name, v.createur_id, v.type_reunion, v.statut, v.heure_programmee " +
+                        "FROM VISIO v LEFT JOIN VISIO_INVITATIONS vi ON v.id = vi.visio_id " +
+                        "WHERE (v.createur_id = ? OR vi.employe_id = ?) AND v.statut != 'TERMINE' " +
+                        "ORDER BY v.heure_programmee DESC";
+
+        try (Connection db = getDatabaseConnection()) {
+            activerReunionsPlanifieesEligibles(db);
+            try (PreparedStatement stmt = db.prepareStatement(sql)) {
+                stmt.setInt(1, intUserId);
+                stmt.setInt(2, intUserId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        Timestamp ts = rs.getTimestamp("heure_programmee");
+                        LocalDateTime hp = ts != null ? timestampVersLocal(ts) : null;
+                        jArray.put(new JSONObject()
+                                .put("id", rs.getInt("id"))
+                                .put("roomName", rs.getString("room_name"))
+                                .put("createurId", rs.getInt("createur_id"))
+                                .put("typeReunion", rs.getString("type_reunion"))
+                                .put("statut", rs.getString("statut"))
+                                .put("heureProgrammee", hp != null ? hp.toString() : ""));
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            logger.error("Erreur lors de la recuperation des visios : ", ex);
+        }
+
+        conn.send(new JSONObject()
+                .put("type", "MY_VISIOS_RESPONSE")
+                .put("reunions", jArray)
+                .toString());
+    }
+
+    private boolean salonActifExiste(Connection db, String roomName) throws SQLException {
+        try (PreparedStatement stmt = db.prepareStatement(
+                "SELECT COUNT(*) FROM VISIO WHERE room_name = ? AND statut != 'TERMINE'")) {
+            stmt.setString(1, roomName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    private void activerReunionsPlanifieesEligibles(Connection db) throws SQLException {
+        LocalDateTime maintenant = LocalDateTime.now(ZoneId.systemDefault());
+        try (PreparedStatement stmt = db.prepareStatement(
+                "UPDATE VISIO SET statut = 'EN_COURS', heure_debut = CURRENT_TIMESTAMP "
+                        + "WHERE statut = 'PROGRAMMEE' AND heure_programmee IS NOT NULL "
+                        + "AND heure_programmee <= ?")) {
+            stmt.setTimestamp(1, localVersTimestamp(maintenant));
+            int updated = stmt.executeUpdate();
+            if (updated > 0) {
+                logger.info("{} reunion(s) planifiee(s) passee(s) en EN_COURS.", updated);
+            }
+        }
+    }
+
+    private int insererReunionPlanifiee(Connection db, String roomName, int createurId, LocalDateTime heureProg)
+            throws SQLException {
+        String sqlAvecType = "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_programmee) "
+                + "VALUES (?, ?, 'PLANIFIEE', 'PROGRAMMEE', ?)";
+        String sqlSansType = "INSERT INTO VISIO (room_name, createur_id, statut, heure_programmee) "
+                + "VALUES (?, ?, 'PROGRAMMEE', ?)";
+        try {
+            return executerInsertVisio(db, sqlAvecType, roomName, createurId, heureProg);
+        } catch (SQLException ex) {
+            logger.warn("Insert avec type_reunion echoue, retry sans type : {}", ex.getMessage());
+            return executerInsertVisio(db, sqlSansType, roomName, createurId, heureProg);
+        }
+    }
+
+    private int executerInsertVisio(Connection db, String sql, String roomName, int createurId, LocalDateTime heureProg)
+            throws SQLException {
+        try (PreparedStatement stmt = db.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, roomName);
+            stmt.setInt(2, createurId);
+            stmt.setTimestamp(3, localVersTimestamp(heureProg));
+            stmt.executeUpdate();
+            try (ResultSet gk = stmt.getGeneratedKeys()) {
+                if (gk.next()) {
+                    return gk.getInt(1);
+                }
+            }
+        }
+        return 0;
     }
 
     private void supprimerSalonVisioParId(Connection db, int visioId) throws SQLException {
