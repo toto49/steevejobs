@@ -123,7 +123,6 @@ public class WebSocketService {
                 @Override
                 public void onMessage(String message) {
                     try {
-                        System.out.println("[WS] Message reçu : " + message);
                         JSONObject json = new JSONObject(message);
                         String type = json.optString("type");
                         if ("UPDATE_TICKET".equals(type)) {
@@ -146,7 +145,6 @@ public class WebSocketService {
                             }
                         } else if ("PLANIF_RESPONSE".equals(type)) {
                             String status = json.optString("status");
-                            System.out.println("📊 [WS] Retour planification reçu : " + status);
 
                             if (VisioController.getActiveInstance() != null) {
                                 if ("SUCCESS".equals(status)) {
