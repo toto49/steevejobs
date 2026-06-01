@@ -155,7 +155,9 @@ public class WebSocketService {
                                     VisioController.getActiveInstance().recevoirErreurVisio("✅ Réunion planifiée avec succès !");
                                     VisioController.getActiveInstance().rafraichirListeReunions(); // Recharge le tableau
                                 } else {
-                                    VisioController.getActiveInstance().recevoirErreurVisio("❌ Échec de la planification en BDD.");
+                                    String messageErreur = json.optString("message",
+                                            "❌ Échec de la planification en BDD.");
+                                    VisioController.getActiveInstance().recevoirErreurVisio(messageErreur);
                                 }
                             }
                         } else if ("MY_VISIOS_RESPONSE".equals(type)) {

@@ -36,9 +36,17 @@
     -fx-wrap-text: true;
 }
 
-.visio-left-column,
+.visio-left-column {
+    -fx-background-color: transparent;
+    -fx-padding: 0 12 0 0;
+}
+
 .visio-right-column {
     -fx-background-color: transparent;
+}
+
+.visio-card.visio-right-column {
+    -fx-padding: 20 20 20 32;
 }
 
 .visio-splitpane {
@@ -50,7 +58,7 @@
 
 .visio-splitpane > .split-pane-divider {
     -fx-background-color: transparent;
-    -fx-padding: 0 1 0 1;
+    -fx-padding: 0 14 0 14;
 }
 
 .visio-splitpane > .split-pane-divider > .horizontal-grabber,
@@ -91,7 +99,6 @@
 .visio-field,
 .visio-card .text-field,
 .visio-card .password-field,
-.visio-card .date-picker,
 .visio-card .spinner,
 .visio-card .combo-box,
 .champform {
@@ -110,7 +117,6 @@
 .visio-field:focused,
 .visio-card .text-field:focused,
 .visio-card .password-field:focused,
-.visio-card .date-picker:focused,
 .visio-card .spinner:focused,
 .visio-card .combo-box:focused,
 .champform:focused {
@@ -167,69 +173,6 @@
 .text-area .viewport,
 .text-area .scroll-pane {
     -fx-background-color: transparent;
-}
-
-
-.visio-card .date-picker > .text-field {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-padding: 0;
-}
-
-.visio-card .date-picker .arrow-button {
-    -fx-background-color: #EAF2FF;
-    -fx-background-radius: 10;
-    -fx-padding: 0 10 0 10;
-}
-
-.visio-card .date-picker .arrow-button:hover {
-    -fx-background-color: #DDE9FF;
-}
-
-.visio-card .date-picker .arrow {
-    -fx-background-color: #4D73CA;
-}
-
-.date-picker-popup {
-    -fx-background-color: white;
-    -fx-border-color: #D8E5FA;
-    -fx-border-radius: 16;
-    -fx-background-radius: 16;
-    -fx-effect: dropshadow(three-pass-box, rgba(50, 70, 120, 0.16), 18, 0, 0, 5);
-}
-
-.date-picker-popup > .month-year-pane {
-    -fx-background-color: #F5F9FF;
-}
-
-.date-picker-popup > .month-year-pane .label {
-    -fx-text-fill: #375AA0;
-    -fx-font-weight: bold;
-}
-
-.date-picker-popup .spinner .label,
-.date-picker-popup .spinner .text-field {
-    -fx-text-fill: #2C3E5F;
-}
-
-.date-picker-popup .day-cell {
-    -fx-background-color: transparent;
-    -fx-text-fill: #2E3F5F;
-    -fx-background-radius: 10;
-}
-
-.date-picker-popup .day-cell:hover {
-    -fx-background-color: #EAF2FF;
-}
-
-.date-picker-popup .day-cell:selected {
-    -fx-background-color: #5E86DE;
-    -fx-text-fill: white;
-}
-
-.date-picker-popup .today {
-    -fx-border-color: #7EA2EA;
-    -fx-border-radius: 10;
 }
 
 
@@ -436,6 +379,8 @@
     -fx-border-width: 1;
     -fx-table-cell-border-color: transparent;
     -fx-padding: 0;
+    -fx-max-height: infinity;
+    -fx-min-height: 120;
 }
 
 .table-view .column-header-background,

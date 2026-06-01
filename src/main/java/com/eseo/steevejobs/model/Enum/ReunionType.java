@@ -14,8 +14,12 @@ public enum ReunionType {
     }
 
     public static ReunionType fromValeur(String valeur) {
+        if (valeur == null || valeur.isBlank()) {
+            return null;
+        }
+
         for (ReunionType type : values()) {
-            if (type.valeur.equals(valeur)) {
+            if (type.valeur.equalsIgnoreCase(valeur) || type.name().equalsIgnoreCase(valeur)) {
                 return type;
             }
         }

@@ -5,6 +5,7 @@ import com.eseo.steevejobs.model.Enum.VisioStatut;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.model.Visio;
 import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.service.VisioService;
 import com.eseo.steevejobs.service.WebSocketService;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Platform;
@@ -23,6 +24,7 @@ import javafx.util.StringConverter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -33,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.IntConsumer;
 
 public class VisioController {
 
@@ -41,9 +44,6 @@ public class VisioController {
     private static final int MAX_SUGGESTIONS = 8;
     private static final double HAUTEUR_LIGNE_TABLE = 46;
     private static final double LARGEUR_COL_SUPPRESSION = 52;
-
-    private static final String STYLE_STATUT_OK = "-fx-text-fill: #10B981;";
-    private static final String STYLE_STATUT_ERREUR = "-fx-text-fill: #EF4444;";
 
     private static final String TYPE_DELETE_VISIO = "DELETE_VISIO";
     private static final String TYPE_REQUEST_VISIO_TOKEN = "REQUEST_VISIO_TOKEN";
@@ -57,6 +57,7 @@ public class VisioController {
     private static Dotenv dotenv;
 
     private final UserDAO userDAO = new UserDAO();
+    private final VisioService visioService = new VisioService();
     private final ContextMenu menuSuggestions = new ContextMenu();
 
     private final List<Integer> listeIdInvitesSelectionnes = new ArrayList<>();
@@ -70,7 +71,6 @@ public class VisioController {
 
     @FXML private TextField txtRoomName;
     @FXML private Button btnRejoindre;
-    @FXML private Label lblStatut;
 
     @FXML private TextField txtPlanifRoomName;
     @FXML private DatePicker datePlanif;
@@ -97,6 +97,8 @@ public class VisioController {
     private TableColumn<Visio, String> colDateArchive;
     @FXML
     private Pagination paginationReunions;
+    @FXML
+    private Pagination paginationReunionsArchives;
 
     @FXML
     private TextField txtRechercheInvite;
@@ -120,9 +122,9 @@ public class VisioController {
         attenteTokenVisio = false;
 
         initialiserMenuSuggestions();
-        afficherStatut("Prêt.", false);
 
         initialiserTablesEtPagination();
+        initialiserDatePicker();
         initialiserDateEtHeure();
         chargerEmployes();
         initialiserRechercheInvites();
@@ -182,6 +184,7 @@ public class VisioController {
     private void initialiserTablesEtPagination() {
         initialiserTableActives();
         initialiserTableArchives();
+        initialiserPaginationArchives();
     }
 
     private void initialiserTableActives() {
@@ -213,6 +216,12 @@ public class VisioController {
         }
     }
 
+    private void initialiserPaginationArchives() {
+        if (paginationReunionsArchives != null) {
+            paginationReunionsArchives.setPageFactory(this::creerPageReunionsArchives);
+        }
+    }
+
     private void initialiserTableArchives() {
         if (tableReunionsArchives == null) {
             return;
@@ -232,7 +241,6 @@ public class VisioController {
 
         configurerTableVisio(tableReunionsArchives);
         ajouterColonneSuppressionSiAbsente(tableReunionsArchives);
-        tableReunionsArchives.setItems(listeReunionsArchives);
     }
 
     private void configurerTableVisio(TableView<Visio> table) {
@@ -371,39 +379,85 @@ public class VisioController {
         return new VBox();
     }
 
+    private Node creerPageReunionsArchives(int pageIndex) {
+        afficherPageReunionsArchives(pageIndex);
+        return new VBox();
+    }
+
     private void afficherPageReunions(int pageIndex) {
         if (tableReunionsActives == null) {
             return;
         }
 
-        int fromIndex = pageIndex * ITEMS_PER_PAGE;
-        if (fromIndex >= listeReunionsActives.size()) {
-            tableReunionsActives.setItems(FXCollections.observableArrayList());
-            return;
-        }
-
-        int toIndex = Math.min(fromIndex + ITEMS_PER_PAGE, listeReunionsActives.size());
-        tableReunionsActives.setItems(
-                FXCollections.observableArrayList(listeReunionsActives.subList(fromIndex, toIndex))
+        appliquerPageTable(
+                tableReunionsActives,
+                listeReunionsActives,
+                pageIndex
         );
     }
 
-    private void mettreAJourPagination() {
-        if (paginationReunions == null) {
+    private void afficherPageReunionsArchives(int pageIndex) {
+        if (tableReunionsArchives == null) {
             return;
         }
 
-        int pageCount = Math.max(1, (int) Math.ceil((double) listeReunionsActives.size() / ITEMS_PER_PAGE));
-        int pageCourante = paginationReunions.getCurrentPageIndex();
+        appliquerPageTable(
+                tableReunionsArchives,
+                listeReunionsArchives,
+                pageIndex
+        );
+    }
 
-        paginationReunions.setPageCount(pageCount);
-
-        if (pageCourante >= pageCount) {
-            pageCourante = 0;
-            paginationReunions.setCurrentPageIndex(0);
+    private void appliquerPageTable(TableView<Visio> table, List<Visio> source, int pageIndex) {
+        int fromIndex = pageIndex * ITEMS_PER_PAGE;
+        if (fromIndex >= source.size()) {
+            table.setItems(FXCollections.observableArrayList());
+            return;
         }
 
-        afficherPageReunions(pageCourante);
+        int toIndex = Math.min(fromIndex + ITEMS_PER_PAGE, source.size());
+        table.setItems(FXCollections.observableArrayList(source.subList(fromIndex, toIndex)));
+    }
+
+    private void mettreAJourPagination() {
+        mettreAJourPaginationListe(
+                paginationReunions,
+                listeReunionsActives,
+                this::afficherPageReunions
+        );
+        mettreAJourPaginationListe(
+                paginationReunionsArchives,
+                listeReunionsArchives,
+                this::afficherPageReunionsArchives
+        );
+    }
+
+    private void mettreAJourPaginationListe(
+            Pagination pagination,
+            List<Visio> source,
+            IntConsumer afficherPage
+    ) {
+        if (pagination == null) {
+            return;
+        }
+
+        int taille = source.size();
+        boolean pageSuivanteDisponible = taille > ITEMS_PER_PAGE;
+        int pageCount = pageSuivanteDisponible
+                ? (int) Math.ceil((double) taille / ITEMS_PER_PAGE)
+                : 1;
+
+        pagination.setVisible(pageSuivanteDisponible);
+        pagination.setManaged(pageSuivanteDisponible);
+        pagination.setPageCount(pageCount);
+
+        int pageCourante = pagination.getCurrentPageIndex();
+        if (pageCourante >= pageCount) {
+            pageCourante = 0;
+            pagination.setCurrentPageIndex(0);
+        }
+
+        afficherPage.accept(pageCourante);
     }
 
     private void gererMenuSuggestionsEnTempsReel(String saisie) {
@@ -667,8 +721,8 @@ public class VisioController {
         }
 
         String room = txtPlanifRoomName.getText().trim();
-        if (room.isEmpty() || datePlanif.getValue() == null) {
-            afficherStatut("Nom de salle et date obligatoires.", true);
+        if (datePlanif.getValue() == null) {
+            afficherStatut("Date obligatoire.", true);
             return;
         }
 
@@ -680,6 +734,12 @@ public class VisioController {
         }
 
         LocalDateTime heurePro = LocalDateTime.of(datePlanif.getValue(), LocalTime.of(heure, minute));
+
+        Optional<String> erreurPlanif = visioService.validerPlanification(room, heurePro);
+        if (erreurPlanif.isPresent()) {
+            afficherStatut(erreurPlanif.get(), true);
+            return;
+        }
 
         JSONArray invitesArray = new JSONArray();
         for (int idInvite : listeIdInvitesSelectionnes) {
@@ -849,8 +909,28 @@ public class VisioController {
         return visio;
     }
 
+    private void initialiserDatePicker() {
+        if (datePlanif == null) {
+            return;
+        }
+
+        if (!datePlanif.getStyleClass().contains("date-picker-custom")) {
+            datePlanif.getStyleClass().add("date-picker-custom");
+        }
+
+        URL popupCss = getClass().getResource("/style/popup.css");
+        if (popupCss == null) {
+            return;
+        }
+
+        String popupCssUrl = popupCss.toExternalForm();
+        if (!datePlanif.getStylesheets().contains(popupCssUrl)) {
+            datePlanif.getStylesheets().add(popupCssUrl);
+        }
+    }
+
     private void initialiserDateEtHeure() {
-        LocalDateTime maintenant = LocalDateTime.now().plusMinutes(15);
+        LocalDateTime maintenant = LocalDateTime.now();
 
         if (datePlanif != null) {
             datePlanif.setValue(maintenant.toLocalDate());
@@ -917,11 +997,14 @@ public class VisioController {
     }
 
     private void afficherStatut(String message, boolean erreur) {
-        if (lblStatut == null) {
+        if (!erreur || message == null || message.isBlank()) {
             return;
         }
 
-        lblStatut.setStyle(erreur ? STYLE_STATUT_ERREUR : STYLE_STATUT_OK);
-        lblStatut.setText(message != null ? message : "");
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Visioconférence");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

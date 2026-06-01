@@ -92,4 +92,12 @@ public class Visio {
     public void setHeure_debut(LocalDateTime heure_debut) {
         this.heure_debut = heure_debut;
     }
+
+    public ReunionType getType_reunion() {
+        return type_reunion;
+    }
+
+    public void setType_reunion(ReunionType type_reunion) {
+        this.type_reunion = type_reunion;
+    }
 }

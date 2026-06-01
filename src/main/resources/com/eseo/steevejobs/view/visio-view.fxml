@@ -127,7 +127,7 @@
                                                 <Label text="Date" styleClass="visio-field-label"/>
                                                 <DatePicker fx:id="datePlanif"
                                                             promptText="jj/mm/aaaa"
-                                                            styleClass="visio-field"
+                                                            styleClass="date-picker-custom"
                                                             prefHeight="40.0"
                                                             maxWidth="1.7976931348623157E308"
                                                             stylesheets="@/style/popup.css"/>
@@ -286,6 +286,10 @@
                                                                        styleClass="visio-placeholder"/>
                                                             </placeholder>
                                                         </TableView>
+
+                                                        <Pagination fx:id="paginationReunionsArchives"
+                                                                    pageCount="1"
+                                                                    maxPageIndicatorCount="5"/>
                                                     </children>
                                                 </VBox>
                                             </content>
@@ -300,15 +304,6 @@
                                                 onAction="#rejoindreSalonSelectionne"
                                                 styleClass="visio-btn-primary"
                                                 text="Rejoindre la sélection (Actif)"/>
-                                    </children>
-                                </HBox>
-
-                                <HBox styleClass="visio-status-bar">
-                                    <children>
-                                        <Label fx:id="lblStatut"
-                                               text="Prêt."
-                                               wrapText="true"
-                                               styleClass="visio-status-text"/>
                                     </children>
                                 </HBox>
                             </children>

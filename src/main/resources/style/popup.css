@@ -153,13 +153,36 @@
     -fx-background-radius: 10 10 0 0; /* Arrondi seulement en haut */
 }
 
-/* Le texte de l'en-tête (Mois et Année) */
-.date-picker-popup .month-year-pane .label {
+/* Le texte de l'en-tête (hors sélecteurs blancs mois/année) */
+.date-picker-popup .month-year-pane > .label {
     -fx-text-fill: white;
     -fx-font-weight: bold;
 }
 
-/* Les petites flèches pour changer de mois */
+/* Sélecteurs mois / année (fond blanc dans le bandeau bleu) */
+.date-picker-popup .month-year-pane .spinner {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+}
+
+.date-picker-popup .month-year-pane .spinner .label,
+.date-picker-popup .month-year-pane .spinner .text-field {
+    -fx-text-fill: #1e293b;
+    -fx-background-color: transparent;
+    -fx-font-weight: bold;
+}
+
+.date-picker-popup .month-year-pane .spinner .increment-arrow-button,
+.date-picker-popup .month-year-pane .spinner .decrement-arrow-button {
+    -fx-background-color: transparent;
+}
+
+.date-picker-popup .month-year-pane .spinner .increment-arrow,
+.date-picker-popup .month-year-pane .spinner .decrement-arrow {
+    -fx-background-color: black;
+}
+
+/* Flèches de navigation du bandeau */
 .date-picker-popup .month-year-pane .left-button .left-arrow,
 .date-picker-popup .month-year-pane .right-button .right-arrow {
     -fx-background-color: white;
