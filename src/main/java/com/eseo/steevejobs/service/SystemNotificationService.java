@@ -15,16 +15,19 @@ public class SystemNotificationService {
             try {
                 if (os.contains("win")) {
                     String psCommand = String.format(
-                            "$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02);" +
+                            "Add-Type -AssemblyName System.Runtime.WindowsRuntime;" +
+                                    "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime];" +
+                                    "[Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType=WindowsRuntime];" +
+                                    "[void][Windows.UI.Notifications.ToastTemplateType];" +
+                                    "$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02);" +
                                     "$textNodes = $template.GetElementsByTagName('text');" +
-                                    "$textNodes.Item(0).AppendChild($template.CreateTextNode('%s'));" +
-                                    "$textNodes.Item(1).AppendChild($template.CreateTextNode('%s'));" +
+                                    "$textNodes.Item(0).AppendChild($template.CreateTextNode('%s')) | Out-Null;" +
+                                    "$textNodes.Item(1).AppendChild($template.CreateTextNode('%s')) | Out-Null;" +
                                     "$toast = [Windows.UI.Notifications.ToastNotification]::new($template);" +
                                     "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('SteeveJobs').Show($toast);",
                             title.replace("'", "''"), message.replace("'", "''")
                     );
                     pb = new ProcessBuilder("powershell", "-NoProfile", "-Command", psCommand);
-
                 } else if (os.contains("mac")) {
                     String script = String.format("display notification \"%s\" with title \"%s\"",
                             message.replace("\"", "\\\""), title.replace("\"", "\\\""));
