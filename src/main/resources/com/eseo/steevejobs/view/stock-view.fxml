@@ -1,29 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
+<?import javafx.scene.text.Font?>
 <BorderPane xmlns:fx="http://javafx.com/fxml/1"
             prefHeight="768.0" prefWidth="1200.0"
             styleClass="root-pane"
             stylesheets="@../../../../style/style.css"
             xmlns="http://javafx.com/javafx/17.0.12"
             fx:controller="com.eseo.steevejobs.controller.StockController">
-
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
+            <padding>
+                <Insets left="20.0" right="20.0"/>
+            </padding>
+            <Label fx:id="titlepageticket" style="-fx-text-fill: white" text="STOCKS">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
+        </HBox>
+    </top>
     <center>
         <VBox style="-fx-background-color: #DDE8FF;" BorderPane.alignment="CENTER">
 
-            <!-- HEADER -->
-            <HBox alignment="CENTER_LEFT" prefHeight="80.0"
-                  style="-fx-background-color: #82A9F1;">
-                <padding><Insets left="20.0" right="20.0"/></padding>
-                <Label style="-fx-font-size: 24px; -fx-font-weight: bold;
-                  -fx-font-family: 'Comic Sans MS';"
-                       text="&lt; STOCKS" textFill="WHITE"/>
-            </HBox>
 
-            <!-- CORPS -->
+        <!-- CORPS -->
             <HBox VBox.vgrow="ALWAYS" spacing="0">
 
                 <!-- PANNEAU GAUCHE -->

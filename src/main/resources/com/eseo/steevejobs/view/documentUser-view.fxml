@@ -4,62 +4,70 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
-      style="-fx-background-color: #f4f5f7;" stylesheets="@../../../../style/style.css" xmlns="http://javafx.com/javafx/21"
-      fx:controller="com.eseo.steevejobs.controller.DocumentUserController">
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            xmlns="http://javafx.com/javafx/21"
+            prefHeight="600.0" prefWidth="800.0"
+            style="-fx-background-color: #f4f5f7;"
+            stylesheets="@../../../../style/style.css"
+            fx:controller="com.eseo.steevejobs.controller.DocumentUserController">
 
-    <children>
-        <HBox alignment="CENTER_LEFT" prefHeight="80.0"
-              style="-fx-background-color: #7A9FE0; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+    <!-- HEADER -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
             <padding>
-                <Insets left="40.0" right="40.0"/>
+                <Insets left="20.0" right="20.0"/>
             </padding>
-            <children>
-                <Label fx:id="titlepageticket" text="Mes Fiches de Paie"
-                       style="-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold;"/>
-            </children>
+            <Label text="MES FICHES DE PAIE" textFill="WHITE">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
         </HBox>
+    </top>
 
+    <!-- CONTENU PRINCIPAL -->
+    <center>
         <VBox spacing="20.0" VBox.vgrow="ALWAYS">
             <padding>
                 <Insets bottom="30.0" left="40.0" right="40.0" top="30.0"/>
             </padding>
-            <children>
 
-                <HBox alignment="CENTER_LEFT">
-                    <Label fx:id="lblMessage" text="Chargement de vos documents..." textFill="#6b7280">
-                        <font>
-                            <Font name="System Italic" size="14.0"/>
-                        </font>
-                    </Label>
-                </HBox>
 
-                <TableView fx:id="tableFiches" prefHeight="400.0"
-                           style="-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #d1d5db; -fx-background-color: white;"
-                           VBox.vgrow="ALWAYS">
-                    <columns>
-                        <TableColumn fx:id="colPeriode" prefWidth="700.0" style="-fx-alignment: CENTER;"
-                                     text="Période (Mois)"/>
-                    </columns>
-                    <columnResizePolicy>
-                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
-                    </columnResizePolicy>
-                </TableView>
+            <!-- Message -->
+            <HBox alignment="CENTER_LEFT">
+                <Label fx:id="lblMessage" text="Chargement de vos documents..." textFill="#6b7280">
+                    <font>
+                        <Font name="System Italic" size="14.0"/>
+                    </font>
+                </Label>
+            </HBox>
 
-                <HBox alignment="CENTER_RIGHT" prefHeight="50.0" spacing="20.0">
-                    <children>
-                        <Button fx:id="btnOuvrirPdf" mnemonicParsing="false" onAction="#ouvrirPdf" prefHeight="40.0"
-                                prefWidth="220.0"
-                                style="-fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"
-                                text="📥 Télécharger / Ouvrir">
-                            <font>
-                                <Font name="System Bold" size="14.0"/>
-                            </font>
-                        </Button>
-                    </children>
-                </HBox>
+            <!-- Table -->
+            <TableView fx:id="tableFiches" prefHeight="400.0"
+                       style="-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #d1d5db; -fx-background-color: white;"
+                       VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colPeriode" prefWidth="700.0" style="-fx-alignment: CENTER;"
+                                 text="Période (Mois)"/>
+                </columns>
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                </columnResizePolicy>
+            </TableView>
 
-            </children>
+            <!-- Bouton -->
+            <HBox alignment="CENTER_RIGHT" prefHeight="50.0" spacing="20.0">
+                <Button fx:id="btnOuvrirPdf" mnemonicParsing="false" onAction="#ouvrirPdf"
+                        prefHeight="40.0" prefWidth="220.0"
+                        style="-fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"
+                        text="📥 Télécharger / Ouvrir">
+                    <font>
+                        <Font name="System Bold" size="14.0"/>
+                    </font>
+                </Button>
+            </HBox>
+
         </VBox>
-    </children>
-</VBox>
+    </center>
+
+</BorderPane>
