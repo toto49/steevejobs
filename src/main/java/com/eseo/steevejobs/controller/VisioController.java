@@ -23,7 +23,6 @@ import javafx.util.StringConverter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -766,24 +765,20 @@ public class VisioController {
     }
 
     private void ouvrirNavigateur(String url) throws Exception {
-        if (java.awt.Desktop.isDesktopSupported()
-                && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
-            java.awt.Desktop.getDesktop().browse(new URI(url));
-            return;
-        }
-
         String os = System.getProperty("os.name").toLowerCase();
-        Runtime runtime = Runtime.getRuntime();
-
+        ProcessBuilder pb;
         if (os.contains("win")) {
-            runtime.exec(new String[]{"rundll32", "url.dll,FileProtocolHandler", url});
+            pb = new ProcessBuilder("cmd", "/c", "start", "", url);
         } else if (os.contains("mac")) {
-            runtime.exec(new String[]{"open", url});
-        } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
-            runtime.exec(new String[]{"xdg-open", url});
+            pb = new ProcessBuilder("open", url);
         } else {
-            throw new UnsupportedOperationException("Système d'exploitation non reconnu : " + os);
+            pb = new ProcessBuilder("xdg-open", url);
         }
+
+        pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+        pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+        pb.environment().putAll(System.getenv());
+        pb.start();
     }
 
     public void recevoirErreurVisio(String messageErreur) {
