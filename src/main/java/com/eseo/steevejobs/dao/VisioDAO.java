@@ -1,5 +1,6 @@
 package com.eseo.steevejobs.dao;
 
+import com.eseo.steevejobs.model.Enum.ReunionType;
 import com.eseo.steevejobs.model.Enum.VisioStatut;
 import com.eseo.steevejobs.model.Visio;
 
@@ -18,6 +19,7 @@ public class VisioDAO {
             stmt.setString(1, visio.getRoom_name());
             stmt.setInt(2, visio.getCreateur_id());
             stmt.setString(3, VisioStatut.EN_COURS.name());
+            stmt.setString(4, ReunionType.INSTANTANEE.name());
 
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -76,7 +78,7 @@ public class VisioDAO {
     }
 
     public int verifierAccesSalon(String roomName, int userId) {
-        String query = "SELECT v.statut, v.heure_programmee, v.createur_id, " +
+        String query = "SELECT v.statut, v.type_reunion, v.heure_programmee, v.createur_id, " +
                 "(SELECT COUNT(*) FROM VISIO_INVITATIONS vi WHERE vi.visio_id = v.id AND vi.employe_id = ?) as est_invite " +
                 "FROM VISIO v WHERE v.room_name = ? AND v.statut != 'TERMINE'";
 
@@ -89,9 +91,13 @@ public class VisioDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     VisioStatut statut = VisioStatut.valueOf(rs.getString("statut"));
+                    ReunionType type = ReunionType.fromValeur(rs.getString("type_reunion"));
                     int createurId = rs.getInt("createur_id");
                     int estInvite = rs.getInt("est_invite");
                     Timestamp tsProg = rs.getTimestamp("heure_programmee");
+                    if (type == ReunionType.INSTANTANEE) {
+                        return 1;
+                    }
 
                     if (statut == VisioStatut.EN_COURS && tsProg == null) {
                         return 1;
@@ -109,6 +115,7 @@ public class VisioDAO {
                     }
                     return 1;
                 }
+
             }
         } catch (Exception e) {
             System.err.println("❌ Erreur DAO lors du contrôle d'accès : " + e.getMessage());

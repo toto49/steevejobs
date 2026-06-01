@@ -1,5 +1,6 @@
 package com.eseo.steevejobs.model;
 
+import com.eseo.steevejobs.model.Enum.ReunionType;
 import com.eseo.steevejobs.model.Enum.VisioStatut;
 
 import java.time.LocalDateTime;
@@ -12,15 +13,17 @@ public class Visio {
     private LocalDateTime heure_programmee;
     private LocalDateTime heure_debut;
     private LocalDateTime heure_fin;
+    private ReunionType type_reunion;
 
     public Visio() {
     }
 
-    public Visio(int id, String room_name, int createur_id, VisioStatut statut, LocalDateTime heure_debut, LocalDateTime heure_programmee, LocalDateTime heure_fin) {
+    public Visio(int id, String room_name, int createur_id, VisioStatut statut, ReunionType type_reunion, LocalDateTime heure_debut, LocalDateTime heure_programmee, LocalDateTime heure_fin) {
         this.id = id;
         this.room_name = room_name;
         this.createur_id = createur_id;
         this.statut = statut;
+        this.type_reunion = type_reunion;
         this.heure_debut = heure_debut;
         this.heure_programmee = heure_programmee;
         this.heure_fin = heure_fin;
@@ -31,6 +34,7 @@ public class Visio {
         this.createur_id = createur_id;
         this.heure_programmee = heure_programmee;
         this.statut = VisioStatut.PROGRAMMEE;
+        this.type_reunion = ReunionType.PLANIFIEE;
     }
 
     public String getRoom_name() {
