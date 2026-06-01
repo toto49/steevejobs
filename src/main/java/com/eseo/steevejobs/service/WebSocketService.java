@@ -97,12 +97,10 @@ public class WebSocketService {
             }
 
             lastUri = new URI("ws://" + ip + ":" + port);
-            System.out.println("⏳ Tentative de connexion WS vers : " + lastUri);
 
             wsClient = new WebSocketClient(lastUri) {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
-                    System.out.println("✅ WS Connecté au NAS ! Envoi du Token VIP...");
                     isConnected.set(true);
                     isConnecting.set(false);
 
@@ -135,7 +133,6 @@ public class WebSocketService {
                             if ("SUCCESS".equals(status)) {
                                 String token = json.getString("token");
                                 String roomName = json.optString("roomName", "");
-                                System.out.println("🚀 [WS] Token LiveKit reçu ! Transfert au VisioController...");
                                 if (VisioController.getActiveInstance() != null) {
                                     VisioController.getActiveInstance().recevoirTokenEtLancer(token, roomName);
                                 }
@@ -162,7 +159,6 @@ public class WebSocketService {
                             }
                         } else if ("MY_VISIOS_RESPONSE".equals(type)) {
                             JSONArray reunions = json.optJSONArray("reunions");
-                            System.out.println("📊 [WS] Liste des visioconférences reçue (" + (reunions != null ? reunions.length() : 0) + " salons).");
 
                             if (VisioController.getActiveInstance() != null && reunions != null) {
                                 VisioController.getActiveInstance().recevoirListeReunions(reunions);
