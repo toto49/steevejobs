@@ -9,12 +9,16 @@ import java.time.LocalTime;
 
 public class HeuresTravailDAO {
 
-    public boolean sauvegarder(int idUser, LocalDate dateJour, LocalTime debutM, LocalTime finM, LocalTime debutA, LocalTime finA, LocalTime total) throws SQLException {
-        // Ajout de heures_total dans l'INSERT et le UPDATE
-        String sql = "INSERT INTO HEURES_TRAVAIL (id_user, date_jour, heure_debut_matin, heure_fin_matin, heure_debut_aprem, heure_fin_aprem, heures_total) " +
+    public boolean sauvegarder(int idUser, LocalDate dateJour, LocalTime debutM, LocalTime finM,
+                               LocalTime debutA, LocalTime finA, LocalTime total) throws SQLException {
+        String sql = "INSERT INTO HEURES_TRAVAIL (id_user, date_jour, heure_debut_matin, heure_fin_matin, " +
+                "heure_debut_aprem, heure_fin_aprem, heures_total) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE heure_debut_matin = VALUES(heure_debut_matin), heure_fin_matin = VALUES(heure_fin_matin), " +
-                "heure_debut_aprem = VALUES(heure_debut_aprem), heure_fin_aprem = VALUES(heure_fin_aprem), heures_total = VALUES(heures_total)";
+                "ON DUPLICATE KEY UPDATE heure_debut_matin = VALUES(heure_debut_matin), " +
+                "heure_fin_matin = VALUES(heure_fin_matin), " +
+                "heure_debut_aprem = VALUES(heure_debut_aprem), " +
+                "heure_fin_aprem = VALUES(heure_fin_aprem), " +
+                "heures_total = VALUES(heures_total)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -25,13 +29,10 @@ public class HeuresTravailDAO {
             setTimeOrNull(stmt, 4, finM);
             setTimeOrNull(stmt, 5, debutA);
             setTimeOrNull(stmt, 6, finA);
-            setTimeOrNull(stmt, 7, total); // Enregistrement du total
+            setTimeOrNull(stmt, 7, total);
 
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
         }
     }
 
@@ -57,6 +58,7 @@ public class HeuresTravailDAO {
                             getLocalTime(rs, "heure_fin_matin"),
                             getLocalTime(rs, "heure_debut_aprem"),
                             getLocalTime(rs, "heure_fin_aprem"),
+                            getLocalTime(rs, "heures_total"),
                             user
                     );
                 }

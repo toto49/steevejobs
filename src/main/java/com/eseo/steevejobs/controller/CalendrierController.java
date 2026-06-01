@@ -1,15 +1,25 @@
 package com.eseo.steevejobs.controller;
 
+import com.eseo.steevejobs.config.ColorContrastUtil;
 import com.eseo.steevejobs.dao.PlanningDAO;
+import com.eseo.steevejobs.dao.UserDAO;
+import com.eseo.steevejobs.model.DemandeConge;
 import com.eseo.steevejobs.model.HeuresTravail;
 import com.eseo.steevejobs.model.Planning;
+import com.eseo.steevejobs.model.SoldeConge;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.service.CongeUtil;
+import com.eseo.steevejobs.service.DemandeCongeService;
 import com.eseo.steevejobs.service.HeuresTravailService;
 import com.eseo.steevejobs.service.PlanningService;
 import com.eseo.steevejobs.service.SessionService;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.util.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -37,6 +47,8 @@ public class CalendrierController {
     // --- STYLES ---
     private static final String STYLE_ACTIF = "-fx-background-color: #e1f5fe; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20; -fx-background-radius: 20; -fx-font-size: 12; -fx-cursor: hand;";
     private static final String STYLE_INACTIF = "-fx-background-color: #e0e0e0; -fx-text-fill: #a0a0a0; -fx-background-radius: 20; -fx-font-size: 12;";
+    private static final int RECHERCHE_EMPLOYE_MIN_CHARS = 2;
+    private static final int RECHERCHE_EMPLOYE_MAX_SUGGESTIONS = 8;
 
     @FXML
     private Label lundiLabel, mardiLabel, mercrediLabel, jeudiLabel, vendrediLabel, samediLabel, dimancheLabel;
@@ -47,13 +59,21 @@ public class CalendrierController {
     @FXML
     private DatePicker datePickerSemaine;
     @FXML
+    private ComboBox<User> comboEmploye;
+    @FXML
     private GridPane gridPlanning;
 
     private LocalDate dateDebutSemaineAffichee;
     private List<Planning> events;
-    private User utilisateur;
+    private User utilisateurConnecte;
+    private User utilisateurAffiche;
     private PlanningService planningService;
     private HeuresTravailService heuresTravailService;
+    private DemandeCongeService demandeCongeService;
+    private UserDAO userDAO;
+    private boolean miseAJourRechercheEmploye;
+    private int employeSelectionneId = -1;
+    private List<DemandeConge> demandesEnAttente = new ArrayList<>();
 
 
     // ==========================================
@@ -65,10 +85,26 @@ public class CalendrierController {
         PlanningDAO planningDAO = new PlanningDAO();
         planningService = new PlanningService(planningDAO);
         heuresTravailService = new HeuresTravailService();
-        utilisateur = SessionService.getUtilisateurConnecte();
+        demandeCongeService = new DemandeCongeService();
+        utilisateurConnecte = SessionService.getUtilisateurConnecte();
 
-        events = initEvent();
         dateDebutSemaineAffichee = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        if (comboEmploye != null) {
+            utilisateurAffiche = null;
+            events = new ArrayList<>();
+            initialiserSelecteurEmploye();
+        } else {
+            if (utilisateurConnecte != null) {
+                utilisateurAffiche = utilisateurConnecte;
+                rechargerDonneesPlanning();
+            } else {
+                utilisateurAffiche = null;
+                events = new ArrayList<>();
+                demandesEnAttente = new ArrayList<>();
+            }
+        }
+
         rafraichirCalendrier();
 
         datePickerSemaine.setOnAction(event -> {
@@ -81,7 +117,201 @@ public class CalendrierController {
     }
 
     public List<Planning> initEvent() throws SQLException {
-        return planningService.findByUserId(utilisateur.getId());
+        if (utilisateurAffiche == null) {
+            return new ArrayList<>();
+        }
+        return planningService.obtenirPlanningsParUtilisateur(utilisateurAffiche.getId());
+    }
+
+    private void rechargerDonneesPlanning() throws SQLException {
+        events = initEvent();
+        if (estCalendrierEmploye() && utilisateurAffiche != null) {
+            demandesEnAttente = demandeCongeService.listerEnAttenteParEmploye(utilisateurAffiche.getId());
+        } else {
+            demandesEnAttente = new ArrayList<>();
+        }
+    }
+
+    private boolean estCalendrierEmploye() {
+        return comboEmploye == null;
+    }
+
+    private boolean estEvenementConge(Planning event) {
+        return event != null && CongeUtil.estTypeConge(event.getType());
+    }
+
+    private void initialiserSelecteurEmploye() {
+        userDAO = new UserDAO();
+        comboEmploye.setEditable(true);
+        comboEmploye.setItems(FXCollections.observableArrayList());
+        comboEmploye.setPromptText("Nom, prénom ou email…");
+        comboEmploye.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(User user) {
+                return formaterNomEmploye(user);
+            }
+
+            @Override
+            public User fromString(String string) {
+                if (string == null || string.isBlank()) {
+                    return null;
+                }
+                String recherche = string.trim();
+                for (User user : comboEmploye.getItems()) {
+                    if (formaterNomEmploye(user).equalsIgnoreCase(recherche)) {
+                        return user;
+                    }
+                }
+                return null;
+            }
+        });
+
+        miseAJourRechercheEmploye = true;
+        comboEmploye.setValue(null);
+        comboEmploye.getEditor().clear();
+        employeSelectionneId = -1;
+        miseAJourRechercheEmploye = false;
+
+        comboEmploye.getEditor().textProperty().addListener((obs, oldText, newText) -> {
+            if (miseAJourRechercheEmploye) {
+                return;
+            }
+            if (utilisateurAffiche != null && newText != null
+                    && formaterNomEmploye(utilisateurAffiche).equalsIgnoreCase(newText.trim())) {
+                return;
+            }
+            if (newText == null || newText.isBlank()) {
+                reinitialiserSelectionEmploye();
+                return;
+            }
+            proposerEmployesCorrespondants(newText);
+        });
+
+        comboEmploye.getSelectionModel().selectedItemProperty().addListener((obs, ancien, selection) -> {
+            if (miseAJourRechercheEmploye || selection == null) {
+                return;
+            }
+            try {
+                appliquerEmployeSelectionne(selection);
+            } catch (SQLException e) {
+                afficherErreur("Impossible de charger le planning : " + e.getMessage());
+            }
+        });
+    }
+
+    private void reinitialiserSelectionEmploye() {
+        utilisateurAffiche = null;
+        employeSelectionneId = -1;
+        events = new ArrayList<>();
+        comboEmploye.getItems().clear();
+        comboEmploye.hide();
+        try {
+            rafraichirCalendrier();
+        } catch (SQLException e) {
+            afficherErreur("Impossible de rafraîchir le calendrier : " + e.getMessage());
+        }
+    }
+
+    private boolean employeRhSelectionne() {
+        if (comboEmploye == null) {
+            return true;
+        }
+        if (utilisateurAffiche != null) {
+            return true;
+        }
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Employé requis");
+        alert.setHeaderText(null);
+        alert.setContentText("Recherchez et sélectionnez un employé pour afficher son planning.");
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
+        return false;
+    }
+
+    private void proposerEmployesCorrespondants(String saisie) {
+        if (saisie == null || saisie.trim().length() < RECHERCHE_EMPLOYE_MIN_CHARS) {
+            Platform.runLater(() -> {
+                if (!miseAJourRechercheEmploye) {
+                    comboEmploye.getItems().clear();
+                    comboEmploye.hide();
+                }
+            });
+            return;
+        }
+
+        final String terme = saisie.trim();
+        Thread recherche = new Thread(() -> {
+            try {
+                List<User> resultats = userDAO.searchByName(terme, RECHERCHE_EMPLOYE_MAX_SUGGESTIONS);
+                Platform.runLater(() -> {
+                    if (miseAJourRechercheEmploye) {
+                        return;
+                    }
+                    String saisieActuelle = comboEmploye.getEditor().getText();
+                    if (saisieActuelle == null || !saisieActuelle.trim().equals(terme)) {
+                        return;
+                    }
+                    comboEmploye.getItems().setAll(resultats);
+                    if (resultats.isEmpty()) {
+                        comboEmploye.hide();
+                    } else {
+                        comboEmploye.show();
+                    }
+                });
+            } catch (SQLException e) {
+                Platform.runLater(() -> afficherErreur("Recherche employé impossible : " + e.getMessage()));
+            }
+        }, "recherche-employe-rh");
+        recherche.setDaemon(true);
+        recherche.start();
+    }
+
+    private void appliquerEmployeSelectionne(User employe) throws SQLException {
+        if (employe == null || employe.getId() == employeSelectionneId) {
+            return;
+        }
+
+        employeSelectionneId = employe.getId();
+        utilisateurAffiche = employe;
+        events = initEvent();
+        demandesEnAttente = new ArrayList<>();
+        rafraichirCalendrier();
+
+        String nomAffiche = formaterNomEmploye(employe);
+        miseAJourRechercheEmploye = true;
+        comboEmploye.getItems().setAll(employe);
+        comboEmploye.getSelectionModel().select(employe);
+        comboEmploye.setValue(employe);
+        comboEmploye.getEditor().setText(nomAffiche);
+        comboEmploye.hide();
+
+        Platform.runLater(() -> {
+            comboEmploye.hide();
+            if (gridPlanning != null) {
+                gridPlanning.requestFocus();
+            } else if (comboEmploye.getScene() != null) {
+                comboEmploye.getScene().getRoot().requestFocus();
+            }
+            miseAJourRechercheEmploye = false;
+        });
+    }
+
+    private String formaterNomEmploye(User user) {
+        if (user == null) {
+            return "";
+        }
+        String prenom = user.getPrenom() != null ? user.getPrenom().trim() : "";
+        String nom = user.getNom() != null ? user.getNom().trim() : "";
+        return (prenom + " " + nom).trim();
+    }
+
+    private void afficherErreur(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Erreur");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
     }
 
     public void nextWeek(ActionEvent e) throws SQLException {
@@ -124,13 +354,63 @@ public class CalendrierController {
     // ==========================================
 
     @FXML
+    public void ouvrirPopupDemandesConge(ActionEvent event) {
+        if (comboEmploye == null) {
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                    "/com/eseo/steevejobs/view/demandes-conge-popup.fxml"));
+            VBox contenu = loader.load();
+            DemandesCongeController controller = loader.getController();
+            controller.setOnDemandeTraitee(() -> {
+                try {
+                    if (utilisateurAffiche != null) {
+                        events = initEvent();
+                        rafraichirCalendrier();
+                    }
+                } catch (SQLException e) {
+                    afficherErreur("Impossible de rafraîchir le planning : " + e.getMessage());
+                }
+            });
+
+            Dialog<Void> dialog = new Dialog<>();
+            dialog.setTitle("Demandes de congés");
+            dialog.setResizable(true);
+
+            DialogPane dp = dialog.getDialogPane();
+            dp.setContent(contenu);
+            dp.getButtonTypes().add(ButtonType.CLOSE);
+            dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+            dp.setMinWidth(1080);
+            dp.setPrefWidth(1120);
+            dp.setMinHeight(640);
+            dp.setPrefHeight(660);
+
+            Button btnFermer = (Button) dp.lookupButton(ButtonType.CLOSE);
+            if (btnFermer != null) {
+                btnFermer.setText("Fermer");
+                btnFermer.getStyleClass().add("button-cancel");
+            }
+
+            dialog.showAndWait();
+        } catch (Exception e) {
+            afficherErreur("Impossible d'ouvrir les demandes de congés : " + e.getMessage());
+        }
+    }
+
+    @FXML
     public void ouvrirPopupHeures(ActionEvent event) {
+        if (!employeRhSelectionne()) {
+            return;
+        }
         Node source = (Node) event.getSource();
         int dayIndex = Integer.parseInt(source.getUserData().toString());
         LocalDate dateCible = dateDebutSemaineAffichee.plusDays(dayIndex);
 
         // --- DÉTECTION DU MODE LECTURE SEULE ---
-        boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
+        final boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
 
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(isReadOnly ? "Consultation des heures" : "Saisie des heures");
@@ -143,7 +423,7 @@ public class CalendrierController {
         // 1. récupération BDD
         HeuresTravail hr = null;
         try {
-            hr = heuresTravailService.getHeuresParDate(utilisateur.getId(), dateCible);
+            hr = heuresTravailService.getHeuresParDate(utilisateurAffiche.getId(), dateCible);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -254,7 +534,7 @@ public class CalendrierController {
                     LocalTime tTotal = LocalTime.of((int) (totalMinutes / 60), (int) (totalMinutes % 60));
 
                     // N'oublie pas d'ajouter tTotal dans les paramètres de ta méthode Service et DAO !
-                    heuresTravailService.sauvegarderHeures(utilisateur.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
+                    heuresTravailService.sauvegarderHeures(utilisateurAffiche.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -265,7 +545,7 @@ public class CalendrierController {
     // --- CORRECTION : Tranches de 15 minutes ---
     private ComboBox<String> creerComboBoxTemps(String moment) {
         ComboBox<String> cb = new ComboBox<>();
-        if (moment == "matin"){
+        if (moment.equals("matin")){
             for (int h = 6; h <= 14; h++) {
                 cb.getItems().add(String.format("%02d:00", h));
                 cb.getItems().add(String.format("%02d:15", h));
@@ -320,6 +600,20 @@ public class CalendrierController {
                 dateCourante = dateCourante.plusDays(1);
             }
         }
+
+        if (estCalendrierEmploye()) {
+            for (DemandeConge demande : demandesEnAttente) {
+                LocalDate dateCourante = demande.getJourDebut().toLocalDate();
+                LocalDate dateFinDemande = demande.getJourFin().toLocalDate();
+
+                while (!dateCourante.isAfter(dateFinDemande)) {
+                    if (!dateCourante.isBefore(dateDebutSemaineAffichee) && !dateCourante.isAfter(dateFinSemaine)) {
+                        placerDemandeEnAttenteDansGrille(demande, dateCourante);
+                    }
+                    dateCourante = dateCourante.plusDays(1);
+                }
+            }
+        }
     }
 
     private void placerEvenementDansGrille(Planning event, LocalDate date, boolean afficherBoutons) {
@@ -335,6 +629,50 @@ public class CalendrierController {
         GridPane.setMargin(eventBlock, new Insets(2));
     }
 
+    private void placerDemandeEnAttenteDansGrille(DemandeConge demande, LocalDate date) {
+        int col = date.getDayOfWeek().getValue();
+        int hDebut = date.isEqual(demande.getJourDebut().toLocalDate()) ? demande.getJourDebut().getHour() : 8;
+        int hFin = date.isEqual(demande.getJourFin().toLocalDate()) ? demande.getJourFin().getHour() : 18;
+
+        int rowDebut = hDebut - 5;
+        int rowSpan = Math.max(1, hFin - hDebut + 1);
+
+        Node bloc = creerBlocDemandeEnAttente(demande, date);
+        gridPlanning.add(bloc, col, rowDebut, 1, rowSpan);
+        GridPane.setMargin(bloc, new Insets(2));
+    }
+
+    private Node creerBlocDemandeEnAttente(DemandeConge demande, LocalDate date) {
+        VBox box = new VBox(2);
+        box.getStyleClass().add("event-block");
+        box.setPadding(new Insets(4));
+        box.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        box.setStyle("-fx-background-color: " + CongeUtil.COULEUR_DEMANDE_EN_ATTENTE
+                + "; -fx-background-radius: 5; -fx-border-color: #FB8C00; -fx-border-width: 1; -fx-border-radius: 5;");
+
+        String textFill = ColorContrastUtil.textFillForBackground(CongeUtil.COULEUR_DEMANDE_EN_ATTENTE);
+        Label lblType = new Label(CongeUtil.TYPE_CONGE_AFFICHAGE);
+        lblType.setWrapText(true);
+        lblType.setStyle("-fx-text-fill: " + textFill + "; -fx-font-weight: bold; -fx-font-size: 11px;");
+
+        Label lblStatut = new Label("En attente RH");
+        lblStatut.setWrapText(true);
+        lblStatut.setStyle("-fx-text-fill: " + textFill + "; -fx-font-size: 10px;");
+
+        DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
+        LocalDateTime debutAffiche = date.isEqual(demande.getJourDebut().toLocalDate())
+                ? demande.getJourDebut()
+                : DemandeCongeService.debutJournee(date);
+        LocalDateTime finAffiche = date.isEqual(demande.getJourFin().toLocalDate())
+                ? demande.getJourFin()
+                : DemandeCongeService.finJournee(date);
+        Label lblTime = new Label(debutAffiche.format(tf) + " - " + finAffiche.format(tf));
+        lblTime.setStyle("-fx-text-fill: " + textFill + "; -fx-font-size: 10px;");
+
+        box.getChildren().addAll(lblType, lblStatut, lblTime);
+        return box;
+    }
+
     private Node creerBlocEvenement(Planning event, boolean afficherBoutons) {
         VBox box = new VBox(2);
         box.getStyleClass().add("event-block");
@@ -344,17 +682,24 @@ public class CalendrierController {
         String color = (event.getCouleur() != null && !event.getCouleur().isEmpty()) ? event.getCouleur() : "#ffcc00";
         box.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 5;");
 
-        Label lblType = new Label(event.getType());
-        lblType.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 11px;");
+        String textFill = ColorContrastUtil.textFillForBackground(color);
+        String labelStyleBold = "-fx-text-fill: " + textFill + "; -fx-font-weight: bold; -fx-font-size: 11px;";
+        String labelStyleSmall = "-fx-text-fill: " + textFill + "; -fx-font-size: 10px;";
+
+        Label lblType = new Label(CongeUtil.estTypeConge(event.getType())
+                ? CongeUtil.TYPE_CONGE_AFFICHAGE
+                : event.getType());
+        lblType.setStyle(labelStyleBold);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox header = new HBox(lblType, spacer);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        if (afficherBoutons) {
+        if (afficherBoutons && !estEvenementConge(event)) {
+            String btnTextFill = textFill;
             Button btnEdit = new Button("✎");
-            btnEdit.setStyle("-fx-background-color: rgba(255, 255, 255, 0.4); -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnEdit.setStyle("-fx-background-color: rgba(128, 128, 128, 0.35); -fx-text-fill: " + btnTextFill + "; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
             btnEdit.setOnAction(e -> modifierEvenement(event));
 
             Button btnSuppr = new Button("X");
@@ -367,10 +712,10 @@ public class CalendrierController {
 
         DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
         Label lblTime = new Label(event.getJourDebut().format(tf) + " - " + event.getJourFin().format(tf));
-        lblTime.setStyle("-fx-text-fill: white; -fx-font-size: 10px;");
+        lblTime.setStyle(labelStyleSmall);
 
         Label lblDesc = new Label(event.getDescription());
-        lblDesc.setStyle("-fx-text-fill: white; -fx-font-size: 10px;");
+        lblDesc.setStyle(labelStyleSmall);
         lblDesc.setWrapText(true);
 
         box.getChildren().addAll(header, lblTime, lblDesc);
@@ -383,10 +728,134 @@ public class CalendrierController {
 
     @FXML
     public void ouvrirPopupAjout(ActionEvent event) {
+        if (!employeRhSelectionne()) {
+            return;
+        }
         afficherFormulaire(null);
     }
 
+    @FXML
+    public void ouvrirPopupDemandeConge(ActionEvent event) {
+        if (!estCalendrierEmploye() || utilisateurConnecte == null) {
+            return;
+        }
+        utilisateurAffiche = utilisateurConnecte;
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Demander des congés");
+        dialog.setHeaderText(null);
+        dialog.setResizable(true);
+
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+        dp.setMinWidth(460);
+        dp.setPrefWidth(500);
+
+        Button okButton = (Button) dp.lookupButton(ButtonType.OK);
+        okButton.getStyleClass().add("button-ok");
+        okButton.setText("Envoyer la demande");
+
+        VBox form = new VBox(16);
+        form.setPadding(new Insets(8, 4, 4, 4));
+        form.setPrefWidth(440);
+
+        Label intro = new Label("Votre demande sera transmise à la RH pour validation.");
+        intro.setWrapText(true);
+        intro.setStyle("-fx-text-fill: #475569; -fx-font-size: 13px;");
+
+        DatePicker dateDebut = new DatePicker(LocalDate.now().plusDays(1));
+        dateDebut.setMaxWidth(Double.MAX_VALUE);
+        DatePicker dateFin = new DatePicker(LocalDate.now().plusDays(1));
+        dateFin.setMaxWidth(Double.MAX_VALUE);
+
+        TextArea commentaire = new TextArea();
+        commentaire.setPromptText("Motif ou précisions (optionnel)");
+        commentaire.setWrapText(true);
+        commentaire.setPrefRowCount(3);
+        commentaire.setMaxWidth(Double.MAX_VALUE);
+
+        ProgressBar progressSolde = new ProgressBar(0);
+        progressSolde.setMaxWidth(Double.MAX_VALUE);
+        Label lblSolde = new Label("Calcul du solde…");
+        lblSolde.setWrapText(true);
+        lblSolde.setStyle("-fx-text-fill: #4b5563; -fx-font-size: 12px;");
+
+        Runnable actualiserSolde = () -> {
+            LocalDate debut = dateDebut.getValue();
+            if (debut == null || utilisateurConnecte == null) {
+                return;
+            }
+            try {
+                SoldeConge solde = demandeCongeService.calculerSoldeConge(utilisateurConnecte.getId(), debut.getYear());
+                progressSolde.setProgress(solde.getRatioUtilise());
+                lblSolde.setText("Solde " + solde.getAnnee() + " : "
+                        + solde.getJoursRestants() + " jour(s) restant(s) sur "
+                        + solde.getJoursAcquis() + " (" + solde.getJoursPris() + " pris, "
+                        + solde.getJoursEnAttente() + " en attente).");
+            } catch (SQLException e) {
+                lblSolde.setText("Impossible de calculer le solde.");
+            }
+        };
+
+        dateDebut.valueProperty().addListener((obs, oldVal, newVal) -> actualiserSolde.run());
+        dateFin.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && dateDebut.getValue() != null && newVal.isBefore(dateDebut.getValue())) {
+                dateFin.setValue(dateDebut.getValue());
+            }
+        });
+        actualiserSolde.run();
+
+        form.getChildren().addAll(
+                intro,
+                creerChampDemandeConge("Date de début", dateDebut),
+                creerChampDemandeConge("Date de fin", dateFin),
+                creerChampDemandeConge("Commentaire (optionnel)", commentaire),
+                creerChampDemandeConge("Votre solde de congés", new VBox(8, progressSolde, lblSolde))
+        );
+
+        dp.setContent(form);
+
+        dialog.showAndWait().ifPresent(res -> {
+            if (res == ButtonType.OK) {
+                try {
+                    LocalDate debut = dateDebut.getValue();
+                    LocalDate fin = dateFin.getValue();
+                    if (debut == null || fin == null) {
+                        afficherErreur("Les dates sont obligatoires.");
+                        return;
+                    }
+                    if (fin.isBefore(debut)) {
+                        afficherErreur("La date de fin doit être postérieure à la date de début.");
+                        return;
+                    }
+
+                    LocalDateTime start = DemandeCongeService.debutJournee(debut);
+                    LocalDateTime end = DemandeCongeService.finJournee(fin);
+                    demandeCongeService.creerDemande(utilisateurConnecte, start, end, commentaire.getText());
+                    rechargerDonneesPlanning();
+                    rafraichirCalendrier();
+
+                    Alert info = new Alert(Alert.AlertType.INFORMATION);
+                    info.setTitle("Demande envoyée");
+                    info.setHeaderText(null);
+                    info.setContentText("Votre demande de congés a été transmise à la RH.");
+                    appliquerStyleAlert(info);
+                    info.showAndWait();
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (SQLException ex) {
+                    afficherErreur("Impossible d'envoyer la demande : " + ex.getMessage());
+                }
+            }
+        });
+    }
+
     private void modifierEvenement(Planning event) {
+        if (estEvenementConge(event)) {
+            afficherInfoCongeNonModifiable();
+            return;
+        }
         afficherFormulaire(event);
     }
 
@@ -407,7 +876,7 @@ public class CalendrierController {
         grid.setHgap(20); grid.setVgap(15); grid.setPrefWidth(450);
 
         ComboBox<String> typeBox = new ComboBox<>();
-        typeBox.getItems().addAll("Cours", "Réunion", "Vacances", "Autre");
+        typeBox.getItems().addAll("Réunion", "Autre");
         typeBox.setMaxWidth(Double.MAX_VALUE);
 
         ColorPicker colorPicker = new ColorPicker();
@@ -419,6 +888,10 @@ public class CalendrierController {
         TextField hFF = new TextField(); hFF.setPrefWidth(80);
 
         if (isEdit) {
+            if (estEvenementConge(eventToEdit)) {
+                afficherInfoCongeNonModifiable();
+                return;
+            }
             typeBox.setValue(eventToEdit.getType());
             descField.setText(eventToEdit.getDescription());
             dDP.setValue(eventToEdit.getJourDebut().toLocalDate());
@@ -454,12 +927,37 @@ public class CalendrierController {
 
                     String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
 
-                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor, isEdit ? eventToEdit.getId() : -1);
+                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor,
+                            isEdit ? eventToEdit.getId() : -1, isEdit ? eventToEdit : null);
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    afficherErreur("Impossible d'enregistrer l'événement : " + e.getMessage());
                 }
             }
         });
+    }
+
+    private VBox creerChampDemandeConge(String titre, Node champ) {
+        Label lbl = new Label(titre);
+        lbl.setStyle("-fx-font-weight: bold; -fx-text-fill: #475569; -fx-font-size: 12px;");
+        VBox bloc = new VBox(6, lbl, champ);
+        return bloc;
+    }
+
+    private void afficherInfoCongeNonModifiable() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Congés");
+        alert.setHeaderText(null);
+        if (estCalendrierEmploye()) {
+            alert.setContentText("Les congés validés ne peuvent pas être modifiés ici. "
+                    + "Pour une nouvelle absence, utilisez « Demander des congés ».");
+        } else {
+            alert.setContentText("Les congés ne peuvent pas être modifiés depuis le calendrier. "
+                    + "Utilisez le bouton « Demandes de congés » pour modifier, valider ou refuser.");
+        }
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
     }
 
     private void ajouterLigneForm(GridPane g, String label, Node field, int row) {
@@ -469,31 +967,57 @@ public class CalendrierController {
         g.add(field, 1, row);
     }
 
-    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, String couleur, int idToDelete) throws SQLException {
-        if (idToDelete != -1) {
-            planningService.deletePlanning(idToDelete);
+    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc,
+                                             String couleur, int idExistant, Planning existant) throws SQLException {
+        if (utilisateurAffiche == null) {
+            afficherErreur("Sélectionnez d'abord un employé.");
+            return;
         }
 
-        PlanningDAO dao = new PlanningDAO();
-        Planning newEvent = new Planning(0, start, end, type, desc, couleur, utilisateur);
-        dao.createPlanning(newEvent);
-
-        events = initEvent();
-        rafraichirCalendrier();
+        try {
+            if (CongeUtil.estTypeConge(type)) {
+                afficherErreur("Les congés ne peuvent pas être créés ou modifiés depuis le calendrier. "
+                        + "Utilisez « Demandes de congés » pour la validation RH.");
+                return;
+            }
+            if (idExistant > 0 && existant != null) {
+                Planning modifie = new Planning(idExistant, start, end, type, desc, couleur, utilisateurAffiche);
+                planningService.modifierPlanning(modifie);
+            } else {
+                Planning nouveau = new Planning(0, start, end, type, desc, couleur, utilisateurAffiche);
+                planningService.ajouterPlanning(nouveau);
+            }
+            rechargerDonneesPlanning();
+            rafraichirCalendrier();
+        } catch (IllegalArgumentException ex) {
+            afficherErreur(ex.getMessage());
+        } catch (RuntimeException ex) {
+            afficherErreur(ex.getMessage());
+        }
     }
 
     private void supprimerEvenement(Planning event) {
+        if (estEvenementConge(event)) {
+            afficherInfoCongeNonModifiable();
+            return;
+        }
+
         Alert a = new Alert(Alert.AlertType.CONFIRMATION, "Voulez-vous vraiment supprimer cet événement ?", ButtonType.YES, ButtonType.NO);
         appliquerStyleAlert(a);
 
         a.showAndWait().ifPresent(res -> {
             if (res == ButtonType.YES) {
                 try {
-                    PlanningDAO dao = new PlanningDAO();
-                    dao.deletePlanning(event.getId());
-                    events = initEvent();
+                    planningService.supprimerPlanning(event.getId());
+                    rechargerDonneesPlanning();
                     rafraichirCalendrier();
-                } catch (SQLException e) { e.printStackTrace(); }
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (RuntimeException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (SQLException e) {
+                    afficherErreur("Impossible de supprimer l'événement : " + e.getMessage());
+                }
             }
         });
     }

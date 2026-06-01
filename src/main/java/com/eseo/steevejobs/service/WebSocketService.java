@@ -123,6 +123,7 @@ public class WebSocketService {
                 @Override
                 public void onMessage(String message) {
                     try {
+                        System.out.println("[WS] Message reçu : " + message);
                         JSONObject json = new JSONObject(message);
                         String type = json.optString("type");
                         if ("UPDATE_TICKET".equals(type)) {
@@ -214,16 +215,19 @@ public class WebSocketService {
     private void traiterMessageUpdate(JSONObject messageJson) {
         try {
             String eventId = messageJson.optString("eventId");
-            if (eventId != null && !eventId.isEmpty() && !processedEvents.add(eventId)) return;
+            if (eventId != null && !eventId.isEmpty() && !processedEvents.add(eventId)) {
+                return;
+            }
             if (processedEvents.size() > 500) processedEvents.clear();
 
             JSONObject payload = messageJson.getJSONObject("payload");
             int idTicket = payload.getInt("ticketId");
             String typeCible = payload.optString("targetType", "AUTEUR");
             int idSender = payload.optInt("senderId", -1);
-
             User currentUser = SessionService.getUtilisateurConnecte();
-            if (currentUser != null && currentUser.getId() == idSender) return;
+            if (currentUser != null && currentUser.getId() == idSender) {
+                return;
+            }
 
             ajouterTicketNonLu(idTicket);
             pendingTypesToUpdate.add(typeCible);
@@ -236,7 +240,7 @@ public class WebSocketService {
                 });
             }
         } catch (Exception e) {
-            System.err.println("❌ WS_ERR (Process JSON): " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -249,15 +253,26 @@ public class WebSocketService {
             } else {
                 TicketsListController listeActive = TicketsListController.getActiveInstance();
                 if (listeActive != null) listeActive.rafraichirAffichage();
+
                 java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(ParametresController.class);
                 boolean pushEnabled = prefs.getBoolean("push_enabled", false);
 
                 for (String typeCible : pendingTypesToUpdate) {
-                    HomeController.ajouterNotification(typeCible);
+                    System.out.println("[WS] Traitement notif pour typeCible=" + typeCible);
 
-                    if (MenuController.getInstance() != null) {
-                        int nombre = "TECH".equals(typeCible) ? HomeController.notificationsTech : HomeController.notificationsAuteur;
-                        MenuController.getInstance().allumerBadge(typeCible, nombre);
+                    HomeController.ajouterNotification(typeCible);
+                    int nombre = "TECH".equals(typeCible)
+                            ? HomeController.notificationsTech
+                            : HomeController.notificationsAuteur;
+
+                    System.out.println("[WS] Valeur badge → " + typeCible + " = " + nombre);
+                    System.out.println("[WS] MenuController.getInstance() = " + MenuController.getInstance());
+
+                    MenuController mc = MenuController.getInstance();
+                    if (mc != null) {
+                        mc.allumerBadge(typeCible, Math.max(nombre, 1));
+                    } else {
+                        System.err.println("[WS] ⚠️ MenuController.getInstance() est null, badge non affiché !");
                     }
 
                     if (pushEnabled) {
@@ -270,7 +285,8 @@ public class WebSocketService {
                 }
                 pendingTypesToUpdate.clear();
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

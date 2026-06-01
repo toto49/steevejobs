@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!--
+    Écran de connexion / bienvenue
+    - Layout principal : BorderPane
+    - Controller : BienvenueController
+    - Style global : connexion.css
+-->
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.Image?>
@@ -10,35 +16,77 @@
             fx:controller="com.eseo.steevejobs.controller.BienvenueController"
             style="-fx-background-color: white;">
 
+    <!-- =======================
+         CONTENU CENTRAL
+         ======================= -->
     <center>
         <HBox style="-fx-background-color: white;">
 
-            <VBox prefWidth="450" minWidth="350" alignment="CENTER" spacing="20" style="-fx-background-color: white;">
+            <!-- =======================
+                 COLONNE GAUCHE : FORMULAIRE DE CONNEXION
+                 ======================= -->
+            <VBox prefWidth="450" minWidth="350" alignment="CENTER" spacing="20"
+                  style="-fx-background-color: white;">
+
+                <!-- Marges internes -->
                 <padding>
                     <Insets top="40" right="50" bottom="40" left="50"/>
                 </padding>
+
+                <!-- Espace flexible pour centrer verticalement -->
                 <Region VBox.vgrow="ALWAYS"/>
+
+                <!-- Logo -->
                 <ImageView fitHeight="160" fitWidth="160" preserveRatio="true">
                     <Image url="@../../../../images/logo.png"/>
                 </ImageView>
+
                 <Region prefHeight="20"/>
+
+                <!-- Champ email -->
                 <TextField promptText="E-MAIL" alignment="CENTER" fx:id="mail_connexion"
-                           style="-fx-background-radius: 25; -fx-border-radius: 25; -fx-text-fill: black; -fx-border-color: #000000; -fx-background-color: transparent; -fx-pref-height: 45; -fx-font-family: 'Arial';"/>
+                           style="-fx-background-radius: 25; -fx-border-radius: 25;
+                                  -fx-text-fill: black; -fx-border-color: #000000;
+                                  -fx-background-color: transparent; -fx-pref-height: 45;
+                                  -fx-font-family: 'Arial';"/>
+
+                <!-- Champ mot de passe -->
                 <PasswordField promptText="MDP" alignment="CENTER" fx:id="mdp_connexion"
-                               style="-fx-background-radius: 25; -fx-text-fill: black; -fx-border-radius: 25; -fx-border-color: #000000; -fx-background-color: transparent; -fx-pref-height: 45; -fx-font-family: 'Arial';"/>
+                               style="-fx-background-radius: 25; -fx-text-fill: black;
+                                      -fx-border-radius: 25; -fx-border-color: #000000;
+                                      -fx-background-color: transparent; -fx-pref-height: 45;
+                                      -fx-font-family: 'Arial';"/>
+
                 <Region prefHeight="10"/>
+
+                <!-- Bouton de connexion -->
                 <Button text="LOGIN" onAction="#onLoginClick" maxWidth="Infinity"
-                        style="-fx-background-color: #5C85D6; -fx-text-fill: white; -fx-background-radius: 25; -fx-pref-height: 50; -fx-font-weight: bold; -fx-font-size: 16px; -fx-cursor: hand;"/>
+                        style="-fx-background-color: #5C85D6; -fx-text-fill: white;
+                               -fx-background-radius: 25; -fx-pref-height: 50;
+                               -fx-font-weight: bold; -fx-font-size: 16px; -fx-cursor: hand;"/>
+
+                <!-- Message d'erreur dynamique -->
                 <Text fx:id="errror_connexion"></Text>
+
+                <!-- Checkbox "se souvenir" -->
                 <HBox alignment="CENTER_LEFT">
-                    <CheckBox text="Enregistrer mes informations" styleClass="ma-checkbox" fx:id="save_connexion"/>
+                    <CheckBox text="Enregistrer mes informations" styleClass="ma-checkbox"
+                              fx:id="save_connexion"/>
                 </HBox>
 
+                <!-- Espace flexible -->
                 <Region VBox.vgrow="ALWAYS"/>
+
+                <!-- Lien mot de passe oublié -->
                 <Hyperlink fx:id="mdpoublie" text="mot de passe oublié ?" onAction="#mdpOublieClicked"
-                           style="-fx-text-fill: #5C85D6; -fx-font-size: 12px; -fx-underline: true; -fx-border-color: transparent;"/>
+                           style="-fx-text-fill: #5C85D6; -fx-font-size: 12px;
+                                  -fx-underline: true; -fx-border-color: transparent;"/>
+
             </VBox>
 
+            <!-- =======================
+                 COLONNE DROITE : IMAGE + TITRE
+                 ======================= -->
             <StackPane fx:id="rightPane" HBox.hgrow="ALWAYS"
                        style="-fx-background-color: #5C85D6;
                               -fx-background-image: url('/images/image.jpg');
@@ -46,14 +94,19 @@
                               -fx-background-position: center center;
                               -fx-background-repeat: no-repeat;">
 
+                <!-- Texte "BIENVENUE." en bas à droite -->
                 <Label text="BIENVENUE." StackPane.alignment="BOTTOM_RIGHT"
-                       style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 60px; -fx-font-weight: bold; -fx-padding: 15 40 15 40;">
+                       style="-fx-background-color: transparent; -fx-text-fill: white;
+                              -fx-font-size: 60px; -fx-font-weight: bold;
+                              -fx-padding: 15 40 15 40;">
                     <StackPane.margin>
                         <Insets bottom="40" right="40"/>
                     </StackPane.margin>
                 </Label>
+
             </StackPane>
 
         </HBox>
     </center>
+
 </BorderPane>

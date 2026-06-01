@@ -147,8 +147,8 @@
 
     <center>
         <AnchorPane style="-fx-background-color: #2b2b2b;">
-            <Label text="Le contenu de votre page ira ici"
-                   textFill="white"
+            <Label text="Erreur lors du chargement"
+                   textFill="red"
                    AnchorPane.topAnchor="20"
                    AnchorPane.leftAnchor="20"/>
         </AnchorPane>

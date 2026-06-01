@@ -5,71 +5,70 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="720.0" prefWidth="1280.0"
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="720.0" prefWidth="1280.0" stylesheets="@/style/style.css"
             style="-fx-background-color: #f4f5f7;" xmlns="http://javafx.com/javafx/11"
             fx:controller="com.eseo.steevejobs.controller.FichePayeController">
 
     <top>
-        <HBox alignment="CENTER_LEFT" prefHeight="60.0"
-              style="-fx-background-color: #6a8bce;">
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" spacing="15.0" style="-fx-background-color: #4B78CC;">
             <padding><Insets left="20.0" right="20.0"/></padding>
-            <Label text="&lt; FICHES DE PAIE" textFill="WHITE">
+            <Label text="GESTION DES FICHES DE PAIE" textFill="WHITE">
                 <font><Font name="System Bold" size="24.0"/></font>
             </Label>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="btnGenerer" onAction="#ouvrirFormulaireGeneration"
-                    text="+ Générer une fiche"
-                    style="-fx-background-color: white; -fx-text-fill: #4B78CC;
-                           -fx-font-weight: bold; -fx-background-radius: 15;
-                           -fx-cursor: hand; -fx-padding: 6 14;">
-            </Button>
-            <padding><Insets right="20.0"/></padding>
+            <Button onAction="#ouvrirCalendrierRh" prefHeight="40.0" prefWidth="180.0"
+                    text="📅 Calendrier RH"
+                    style="-fx-background-color: white; -fx-text-fill: #4B78CC; -fx-font-weight: bold;
+                           -fx-background-radius: 20; -fx-cursor: hand;"/>
         </HBox>
     </top>
 
     <center>
-        <HBox spacing="10.0" BorderPane.alignment="CENTER">
-            <padding>
-                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
-            </padding>
+        <HBox spacing="15.0">
+            <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/></padding>
 
             <!-- LISTE DES FICHES -->
-            <VBox HBox.hgrow="ALWAYS"
-                  style="-fx-background-color: white; -fx-background-radius: 10;
-                         -fx-border-color: #d1d5db; -fx-border-radius: 10;">
-                <padding>
-                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
-                </padding>
+            <VBox HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-background-radius: 10;
+                         -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
+                <padding><Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/></padding>
 
-                <!-- Filtres -->
-                <HBox alignment="CENTER_LEFT" prefHeight="50.0" spacing="15.0">
-                    <ComboBox fx:id="comboEmployeFiltre"
-                              promptText="Tous les employés"
-                              prefWidth="220.0"
-                              onAction="#filtrerParEmploye"
-                              style="-fx-background-radius: 15; -fx-background-color: #e5e7eb;"/>
-                    <ComboBox fx:id="comboAnneeFiltre"
-                              promptText="Toutes les années"
-                              prefWidth="160.0"
-                              onAction="#filtrerParEmploye"
-                              style="-fx-background-radius: 15; -fx-background-color: #e5e7eb;"/>
+                <!-- FILTRES -->
+                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <ComboBox fx:id="comboEmployeFiltre" promptText="Tous les employés" prefWidth="220.0"
+                              onAction="#filtrerParEmploye" style="-fx-background-radius: 20;"/>
+                    <ComboBox fx:id="comboAnneeFiltre" promptText="Toutes les années" prefWidth="160.0"
+                              onAction="#filtrerParEmploye" style="-fx-background-radius: 20;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnGenerer" onAction="#ouvrirFormulaireGeneration"
+                            text="+ Générer une fiche" prefWidth="220.0" prefHeight="50.0"
+                            style="-fx-background-color: white; -fx-text-fill: #4B78CC;
+               -fx-font-weight: bold; -fx-border-color: #d1d5db;
+               -fx-border-radius: 20; -fx-background-radius: 20;
+               -fx-cursor: hand; -fx-padding: 8 16;"/>
                 </HBox>
 
-                <TableView fx:id="tableFiches" VBox.vgrow="ALWAYS"
-                           style="-fx-background-color: transparent;">
+                <!-- ESPACE ENTRE FILTRES ET TABLEAU -->
+                <VBox prefHeight="20.0" minHeight="20.0">
+                    <padding><Insets top="15.0" bottom="5.0"/></padding>
+                </VBox>
+
+                <!-- TABLEAU -->
+                <TableView fx:id="tableFiches" VBox.vgrow="ALWAYS" style="-fx-background-color: white">
                     <columns>
-                        <TableColumn fx:id="colEmploye" text="Employé"  prefWidth="250.0"/>
-                        <TableColumn fx:id="colMois"    text="Mois"     prefWidth="160.0"/>
-                        <TableColumn fx:id="colPoste"   text="Poste"    prefWidth="200.0"/>
-                        <TableColumn fx:id="colActions" text=""         prefWidth="100.0"/>
+                        <TableColumn fx:id="colEmploye" text="EMPLOYÉ" prefWidth="350.0"/>
+                        <TableColumn fx:id="colEmail" text="EMAIL" prefWidth="220.0"/>
+                        <TableColumn fx:id="colService" text="SERVICE" prefWidth="150.0"/>
+                        <TableColumn fx:id="colPoste" text="POSTE" prefWidth="250.0"/>
+                        <TableColumn fx:id="colMois" text="MOIS" prefWidth="250.0"/>
+                        <TableColumn fx:id="colActions" text="" prefWidth="80.0"/>
                     </columns>
                     <placeholder>
-                        <Label text="Aucune fiche de paie trouvée." style="-fx-text-fill: #9ca3af;"/>
+                        <Label text="📄 Aucune fiche de paie trouvée" style="-fx-text-fill: #9ca3af; -fx-font-size: 14px;"/>
                     </placeholder>
                 </TableView>
 
-                <HBox alignment="CENTER_LEFT" prefHeight="40.0" spacing="20.0">
-                    <Label fx:id="lblNbFiches" text="0 fiche(s)" textFill="#6b7280"/>
+                <HBox alignment="CENTER_LEFT" prefHeight="40.0">
+                    <Label fx:id="lblNbFiches" text="0 fiche(s)" textFill="#6b7280" style="-fx-font-size: 12px;"/>
                 </HBox>
             </VBox>
         </HBox>

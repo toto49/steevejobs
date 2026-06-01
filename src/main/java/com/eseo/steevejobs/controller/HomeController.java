@@ -24,12 +24,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class HomeController {
 
     private static final Map<String, Image> IMAGE_CACHE = new HashMap<>();
     private User currentUser;
     private static List<String> cachedPermissions = null;
+    private static final long CACHE_TTL_MS = 30_000; // 30 secondes
+    private static long cacheTimestamp = -1;
 
     @FXML
     private FlowPane appsGrid;
@@ -44,6 +49,7 @@ public class HomeController {
     private static int cachedUserId = -1;
     private final PermissionService permissionService = new PermissionService();
     private List<String> currentUserPermissions;
+    private ScheduledExecutorService permissionScheduler;
 
     public static HomeController getActiveInstance() {
         return activeInstance;
@@ -88,6 +94,20 @@ public class HomeController {
         });
     }
 
+    public static void invaliderCachePermissions() {
+        cachedPermissions = null;
+        cachedUserId = -1;
+        cacheTimestamp = -1;
+        if (activeInstance != null) {
+            Platform.runLater(() -> {
+                User user = SessionService.getUtilisateurConnecte();
+                if (user != null) {
+                    activeInstance.onUserLogin(user.getId());
+                }
+            });
+        }
+    }
+
     public void onUserLogin(int idUserConnecte) {
         CompletableFuture.supplyAsync(() -> {
             TicketService ticketService = new TicketServiceImpl();
@@ -122,16 +142,26 @@ public class HomeController {
             return null;
         });
 
-        if (cachedPermissions != null && cachedUserId == idUserConnecte) {
+        boolean cacheValide = cachedPermissions != null
+                && cachedUserId == idUserConnecte
+                && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS;
+
+        if (cacheValide) {
             this.currentUserPermissions = cachedPermissions;
-            Platform.runLater(this::renderAppCenter);
+            renderAppCenter();
         } else {
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(idUserConnecte))
                     .thenAcceptAsync(perms -> {
+                        boolean permissionsChangees = !perms.equals(cachedPermissions);
+
                         cachedPermissions = perms;
                         cachedUserId = idUserConnecte;
+                        cacheTimestamp = System.currentTimeMillis();
                         this.currentUserPermissions = perms;
-                        renderAppCenter();
+
+                        if (permissionsChangees) {
+                            renderAppCenter();
+                        }
                     }, Platform::runLater).exceptionally(ex -> {
                         ex.printStackTrace();
                         return null;
@@ -146,6 +176,7 @@ public class HomeController {
 
         if (this.currentUser != null) {
             onUserLogin(currentUser.getId());
+            demarrerSchedulerPermissions();
         } else {
             SessionService.setUtilisateurConnecte(null);
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/bienvenue-view.fxml"));
@@ -154,52 +185,88 @@ public class HomeController {
         }
     }
 
-    private void renderAppCenter() {
-        appsGrid.getChildren().clear();
-
-        for (AppModule app : AppModule.values()) {
-            if (hasPermission(app.getCodeAction())) {
-
-                String parametre = null;
-                String codeAction = app.getCodeAction();
-                if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                    parametre = currentUser.getRole();
-                }
-
-                Label badgeDynamique = new Label();
-                badgeDynamique.setVisible(false);
-
-                if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                    badgeCarteTech = badgeDynamique;
-                    if (notificationsTech > 0) {
-                        badgeDynamique.setText(String.valueOf(notificationsTech));
-                        badgeDynamique.setVisible(true);
-                    }
-                } else if ("MES_TICKETS".equals(codeAction)) {
-                    badgeCarteAuteur = badgeDynamique;
-                    if (notificationsAuteur > 0) {
-                        badgeDynamique.setText(String.valueOf(notificationsAuteur));
-                        badgeDynamique.setVisible(true);
-                    }
-                }
-
-                HBox card = createAppCard(
-                        app.getTitle(),
-                        app.getSubtitle(),
-                        badgeDynamique,
-                        app.getBgColor(),
-                        app.getChemin(),
-                        app.getImage(),
-                        parametre,
-                        codeAction
-                );
-
-                card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
-                card.prefHeightProperty().bind(card.widthProperty().multiply(0.6));
-
-                appsGrid.getChildren().add(card);
-            }
+    private void demarrerSchedulerPermissions() {
+        if (permissionScheduler != null && !permissionScheduler.isShutdown()) {
+            permissionScheduler.shutdown();
         }
+
+        permissionScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "permission-checker");
+            t.setDaemon(true);
+            return t;
+        });
+
+        permissionScheduler.scheduleAtFixedRate(() -> {
+            if (currentUser == null) return;
+
+            CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(currentUser.getId()))
+                    .thenAccept(perms -> {
+                        if (!perms.equals(cachedPermissions)) {
+                            Platform.runLater(() -> {
+                                cachedPermissions = perms;
+                                cacheTimestamp = System.currentTimeMillis();
+                                this.currentUserPermissions = perms;
+                                renderAppCenter();
+                            });
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        ex.printStackTrace();
+                        return null;
+                    });
+        }, 30, 30, TimeUnit.SECONDS);
+    }
+
+    private void renderAppCenter() {
+        Platform.runLater(() -> {
+            if (appsGrid == null) return;
+
+            appsGrid.getChildren().clear();
+
+            for (AppModule app : AppModule.values()) {
+                if (hasPermission(app.getCodeAction())) {
+
+                    String parametre = null;
+                    String codeAction = app.getCodeAction();
+                    if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                        parametre = currentUser.getRole();
+                    }
+
+                    Label badgeDynamique = new Label();
+                    badgeDynamique.setVisible(false);
+
+                    if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                        badgeCarteTech = badgeDynamique;
+                        if (notificationsTech > 0) {
+                            badgeDynamique.setText(String.valueOf(notificationsTech));
+                            badgeDynamique.setVisible(true);
+                        }
+                    } else if ("MES_TICKETS".equals(codeAction)) {
+                        badgeCarteAuteur = badgeDynamique;
+                        if (notificationsAuteur > 0) {
+                            badgeDynamique.setText(String.valueOf(notificationsAuteur));
+                            badgeDynamique.setVisible(true);
+                        }
+                    }
+
+                    HBox card = createAppCard(
+                            app.getTitle(),
+                            app.getSubtitle(),
+                            badgeDynamique,
+                            app.getBgColor(),
+                            app.getChemin(),
+                            app.getImage(),
+                            parametre,
+                            codeAction
+                    );
+
+                    card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
+                    card.prefHeightProperty().bind(card.widthProperty().multiply(0.6));
+
+                    appsGrid.getChildren().add(card);
+                }
+            }
+        });
     }
 
     private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
@@ -211,7 +278,7 @@ public class HomeController {
                 ((ParametrizedController) controller).initData(parametre);
             }
             MenuController.getInstance().setCenterView(view);
-            MenuController.getInstance().changerTitre(titreCard);
+            MenuController.getInstance().changerTitre(formaterTitreModule(titreCard));
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -268,7 +335,6 @@ public class HomeController {
         card.setOnMouseEntered(e -> card.setOpacity(0.8));
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
-
             if (MenuController.getInstance() != null) {
                 if ("APP_VISO_VIEW".equals(codeAction)) {
                     try {
@@ -302,7 +368,7 @@ public class HomeController {
                     chargerPageAvecParametre(chemin, parametreFacultatif, title);
                 } else {
                     MenuController.getInstance().chargerPage(chemin);
-                    MenuController.getInstance().changerTitre(title);
+                    MenuController.getInstance().changerTitre(formaterTitreModule(title));
                 }
             } else {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
@@ -314,5 +380,12 @@ public class HomeController {
 
     private boolean hasPermission(String requiredPermission) {
         return currentUserPermissions != null && currentUserPermissions.contains(requiredPermission);
+    }
+
+    private String formaterTitreModule(String title) {
+        if (title == null) {
+            return "";
+        }
+        return title.replace('\n', ' ').replaceAll("\\s+", " ").trim();
     }
 }
