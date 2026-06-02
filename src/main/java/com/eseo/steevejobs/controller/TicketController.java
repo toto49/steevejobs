@@ -307,7 +307,19 @@ public class TicketController {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
+        appliquerStyleDialog(alert.getDialogPane());
         alert.showAndWait();
+    }
+
+    private void appliquerStyleDialog(DialogPane dp) {
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
     }
 
     public void initData(int ticketId) {

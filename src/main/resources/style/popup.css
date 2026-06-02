@@ -1,308 +1,158 @@
-/* =======================================================
-   1. STYLES GLOBAUX & CONTENEURS
-   ======================================================= */
-
-/* Fond global pour les fenêtres pop-up (Alertes et Dialogues personnalisés) */
-.dialog-pane {
-    -fx-background-color: #f8fafc; /* Gris très clair / Blanc cassé */
+/* ───────────────────────────────────────────────
+   POPUP ROOT
+   ─────────────────────────────────────────────── */
+.popup-root {
+    -fx-background-color: transparent;
     -fx-padding: 0;
 }
 
-/* Conteneur principal du contenu (le formulaire à l'intérieur du pop-up) */
-.content {
-    -fx-padding: 25px;
-    -fx-background-color: #f8fafc;
-}
-
-/* Style de base pour les textes/titres des formulaires */
-.label-style {
-    -fx-text-fill: #475569; /* Gris moyen/foncé */
-    -fx-font-weight: bold;
-    -fx-font-size: 12px;
-}
-/* =======================================================
-2. CHAMPS DE SAISIE (Texte, Listes, Dates, Couleurs)
-======================================================= */
-
-/* Style commun pour tous les champs de saisie (au repos) */
-.text-field, .combo-box, .date-picker, .color-picker {
-    -fx-background-color: white;
-    -fx-background-radius: 8;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 8;
-    -fx-border-width: 1;
-    -fx-min-height: 35;
-}
-
-/* Forcer la couleur du texte à l'intérieur des champs */
-.text-field, .combo-box .list-cell, .date-picker .text-field, .color-picker .label {
-    -fx-text-fill: #1e293b;
-}
-
-/* Effet lors du clic/focus sur un champ */
-.text-field:focused, .combo-box:focused, .date-picker:focused, .color-picker:focused {
-    -fx-border-color: #6588d9;
-    -fx-border-width: 1;
-    -fx-effect: dropshadow(three-pass-box, rgba(101,136,217,0.3), 4, 0, 0, 0);
-}
-
-/* =======================================================
-   3. MENUS DÉROULANTS (ComboBox)
-   ======================================================= */
-
-/* La liste déroulante globale qui s'ouvre sous la ComboBox */
-.combo-box-popup .list-view {
-    -fx-background-color: white;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 4;
-}
-
-/* Chaque élément (ligne) à l'intérieur de la liste déroulante */
-.combo-box-popup .list-cell {
-    -fx-background-color: white;
-    -fx-text-fill: #1e293b;
-    -fx-padding: 8 10;
-}
-
-/* Changement de couleur au survol de la souris ou quand l'élément est sélectionné */
-.combo-box-popup .list-cell:hover, .combo-box-popup .list-cell:filled:selected {
-    -fx-background-color: #f1f5f9; /* Fond gris très clair au survol */
-    -fx-text-fill: #1e293b;
-}
-
-/* =======================================================
-   4. BOUTONS D'ACTION (Ajout / Modification)
-   ======================================================= */
-
-/* Bouton d'action principale (Ex: Enregistrer, Ajouter, OK) */
-.button-ok {
-    -fx-background-color: #6588d9;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-radius: 8;
-    -fx-padding: 8 25;
-    -fx-cursor: hand;
-}
-
-/* Survol du bouton principal (Bleu plus foncé) */
-.button-ok:hover {
-    -fx-background-color: #5172b9;
-}
-
-/* Bouton d'action secondaire (Ex: Annuler, Retour) */
-.button-cancel {
-    -fx-background-color: #e2e8f0;
-    -fx-text-fill: #475569;
-    -fx-background-radius: 8;
-    -fx-padding: 8 20;
-    -fx-cursor: hand;
-}
-
-/* Survol du bouton secondaire (Gris plus foncé) */
-.button-cancel:hover {
-    -fx-background-color: #cbd5e1;
-}
-
-/* =======================================================
-   5. DATE PICKER (Le champ et le bouton calendrier)
-   ======================================================= */
-
-/* Empêche le DatePicker d'avoir une double bordure via son champ texte interne */
-.date-picker:focused .text-field, .date-picker .text-field {
+/* ScrollPane */
+.scroll-pane {
     -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-effect: none;
 }
 
-/* Le petit bouton carré avec l'icône calendrier à droite du champ */
-.date-picker-custom > .arrow-button {
-    -fx-background-color: #6a8bce;
-    -fx-background-radius: 5;
-    -fx-padding: 10 15 10 15;
-    -fx-cursor: hand;
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
 }
 
-/* Couleur de l'icône calendrier à l'intérieur du bouton */
-.date-picker-custom > .arrow-button > .arrow {
+/* ───────────────────────────────────────────────
+   CONTENU DU POPUP
+   ─────────────────────────────────────────────── */
+.popup-contenu {
+    -fx-padding: 20;
+    -fx-spacing: 20;
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+}
+
+/* Carte contenant le formulaire */
+.popup-carte {
     -fx-background-color: #ffffff;
-    -fx-scale-x: 1.2;
-    -fx-scale-y: 1.2;
+    -fx-padding: 20;
+    -fx-background-radius: 12;
+    -fx-spacing: 12;
 }
 
-/* Survol du bouton calendrier */
-.date-picker-custom > .arrow-button:hover {
-    -fx-background-color: #b3e5fc;
+/* ───────────────────────────────────────────────
+   HEADER DU POPUP
+   ─────────────────────────────────────────────── */
+.popup-header {
+    -fx-background-color: transparent; /* supprime le fond gris */
+    -fx-min-height: 40px;
+    -fx-padding: 0 0 10 0;
+    -fx-alignment: CENTER_LEFT; /* centre verticalement */
 }
 
-/* =======================================================
-   6. CALENDRIER OUVERT (Le pop-up du DatePicker)
-   ======================================================= */
-
-/* Le fond global du calendrier une fois déployé */
-.date-picker-popup {
-    -fx-background-color: white;
-    -fx-border-color: #bdc3c7;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 5); /* Petite ombre portée */
-}
-
-/* L'en-tête du calendrier (Mois et Année) */
-.date-picker-popup .month-year-pane {
-    -fx-background-color: #6a8bce;
-    -fx-background-radius: 10 10 0 0; /* Arrondi seulement en haut */
-}
-
-/* Le texte de l'en-tête (hors sélecteurs blancs mois/année) */
-.date-picker-popup .month-year-pane > .label {
-    -fx-text-fill: white;
+.popup-header-title {
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
+    -fx-text-fill: #3b82f6;
 }
 
-/* Sélecteurs mois / année (fond blanc dans le bandeau bleu) */
-.date-picker-popup .month-year-pane .spinner {
-    -fx-background-color: white;
-    -fx-background-radius: 8;
-}
-
-.date-picker-popup .month-year-pane .spinner .label,
-.date-picker-popup .month-year-pane .spinner .text-field {
-    -fx-text-fill: #1e293b;
-    -fx-background-color: transparent;
-    -fx-font-weight: bold;
-}
-
-.date-picker-popup .month-year-pane .spinner .increment-arrow-button,
-.date-picker-popup .month-year-pane .spinner .decrement-arrow-button {
-    -fx-background-color: transparent;
-}
-
-.date-picker-popup .month-year-pane .spinner .increment-arrow,
-.date-picker-popup .month-year-pane .spinner .decrement-arrow {
-    -fx-background-color: black;
-}
-
-/* Flèches de navigation du bandeau */
-.date-picker-popup .month-year-pane .left-button .left-arrow,
-.date-picker-popup .month-year-pane .right-button .right-arrow {
-    -fx-background-color: white;
-}
-
-/* La zone de la grille contenant les jours (L, M, M, J, V, S, D) */
-.date-picker-popup .calendar-grid {
-    -fx-background-color: white;
-    -fx-background-radius: 5;
-    -fx-padding: 10;
-}
-
-/* Le nom des jours de la semaine (L, M, M...) */
-.date-picker-popup .calendar-grid .day-name-cell {
-    -fx-text-fill: #6a8bce;
-    -fx-font-weight: bold;
-}
-
-/* Les cases de chaque jour (1, 2, 3...) */
-.date-picker-popup .day-cell {
-    -fx-background-color: transparent;
-    -fx-text-fill: black;
-    -fx-background-radius: 30; /* Rend la sélection et le survol ronds */
-}
-
-/* Jour au survol de la souris */
-.date-picker-popup .day-cell:hover {
-    -fx-background-color: #e1f5fe;
-    -fx-text-fill: #01579b;
-}
-
-/* Jour sélectionné (cliqué) par l'utilisateur */
-.date-picker-popup .day-cell:selected {
-    -fx-background-color: #6a8bce;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-}
-
-/* Le jour d'aujourd'hui (mise en évidence avec une bordure) */
-.date-picker-popup .today {
-    -fx-border-color: #6a8bce;
-    -fx-border-radius: 30;
-    -fx-border-width: 1;
-}
-
-/* Colonne des numéros de semaine à l'extrême gauche (facultatif selon les OS) */
-.date-picker-popup .week-number-cell {
-    -fx-background-color: white;
-    -fx-text-fill: #776a6a;
-}
-
-/* =======================================================
-   7. STYLES DES ALERTES NATIVES JAVAFX (Confirmation/Erreur)
-   ======================================================= */
-
-/* Zone d'en-tête de l'alerte (où il y a l'icône et le grand titre) */
-.dialog-pane > .header-panel {
-    -fx-background-color: #f1f5f9; /* Gris très clair */
-    -fx-border-color: transparent transparent #e2e8f0 transparent; /* Ligne séparatrice en bas */
-    -fx-border-width: 1px;
-}
-
-/* Grand texte de l'en-tête de l'alerte (ex: "Confirmation de suppression") */
-.dialog-pane > .header-panel .label {
-    -fx-text-fill: #1e293b; /* Bleu/gris foncé */
+/* ───────────────────────────────────────────────
+   LABELS
+   ─────────────────────────────────────────────── */
+.label-champ {
     -fx-font-size: 14px;
-    -fx-font-weight: bold;
+    -fx-text-fill: #374151; /* gris foncé */
+    -fx-font-weight: 600;
 }
 
-/* Texte principal du message de l'alerte (ex: "Voulez-vous vraiment...") */
-.dialog-pane > .content.label {
-    -fx-text-fill: #475569;
-    -fx-font-size: 13px;
-    -fx-padding: 20px;
+/* ───────────────────────────────────────────────
+   CHAMPS DE FORMULAIRE
+   ─────────────────────────────────────────────── */
+.champform {
+    -fx-background-color: #f9fafb;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8 10;
+    -fx-font-size: 14px;
 }
 
-/* =======================================================
-   8. CORRECTION DES BOUTONS NATIFS (Dans les Alertes)
-   ======================================================= */
-
-/* Force le fond de la barre du bas contenant les boutons pour correspondre au design global */
-.dialog-pane > .button-bar > .container {
-    -fx-background-color: #f8fafc;
-    -fx-padding: 10 20 10 0;
+.champform:focused {
+    -fx-border-color: #3b82f6;
+    -fx-background-color: #ffffff;
 }
 
-/* Style de base pour TOUS les boutons natifs générés par JavaFX (Ex: Non, Annuler) */
-.dialog-pane .button {
-    -fx-background-color: #e2e8f0;
-    -fx-text-fill: #475569;
-    -fx-font-weight: bold;
+/* ───────────────────────────────────────────────
+   ERREURS
+   ─────────────────────────────────────────────── */
+.erreur-champ {
+    -fx-text-fill: #dc2626; /* rouge */
+    -fx-font-size: 12px;
+    -fx-padding: 0 0 4 0;
+}
+
+/* ───────────────────────────────────────────────
+   BOUTONS
+   ─────────────────────────────────────────────── */
+.button {
     -fx-background-radius: 8;
-    -fx-padding: 8 20;
-    -fx-cursor: hand;
-    -fx-border-color: transparent;
+    -fx-font-size: 14px;
+    -fx-padding: 8 16;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
 }
 
-/* Survol des boutons natifs secondaires */
-.dialog-pane .button:hover {
-    -fx-background-color: #cbd5e1;
-}
-
-/* Style spécifique au bouton validant l'action par défaut (Ex: Oui, OK) */
-.dialog-pane .button:default {
-    -fx-background-color: #6588d9;
+/* Bouton OK */
+.dialog-pane .button-bar .button[data-button-type="OK_DONE"] {
+    -fx-background-color: #2563eb;
     -fx-text-fill: white;
 }
 
-/* Survol du bouton validant l'action par défaut */
-.dialog-pane .button:default:hover {
-    -fx-background-color: #5172b9;
+.dialog-pane .button-bar .button[data-button-type="OK_DONE"]:hover {
+    -fx-background-color: #1d4ed8;
 }
 
-/* Force la couleur de TOUS les labels standards dans le pop-up */
-.dialog-pane .label {
-    -fx-text-fill: #1e293b; /* Bleu/gris très foncé pour une lisibilité parfaite */
+/* Bouton Annuler */
+.dialog-pane .button-bar .button[data-button-type="CANCEL"] {
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: #111827;
 }
 
-/* On s'assure que le style personnalisé garde la priorité */
-.dialog-pane .label-style {
-    -fx-text-fill: #475569;
-    -fx-font-weight: bold;
+.dialog-pane .button-bar .button[data-button-type="CANCEL"]:hover {
+    -fx-background-color: #d1d5db;
+}
+
+.dialog-pane .button-bar .button[data-button-type="CANCEL"]:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.button:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+/* Empêche le DialogPane de casser les coins des boutons */
+.dialog-pane .button {
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+
+/* Empêche le focus de modifier la forme */
+.dialog-pane .button:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+
+/* ───────────────────────────────────────────────
+   DIALOG PANE GLOBAL
+   ─────────────────────────────────────────────── */
+.dialog-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0 !important;
+    -fx-padding: 0;
+}
+
+.dialog-pane > *.content {
+    -fx-background-color: transparent;
+}
+
+.dialog-pane:header *.header-panel {
+    -fx-background-color: transparent;
 }
