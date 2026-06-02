@@ -19,16 +19,14 @@ import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.HPos;
+import javafx.scene.layout.*;
+import javafx.stage.Modality;
 import javafx.util.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
 import java.sql.SQLException;
@@ -270,6 +268,18 @@ public class CalendrierController {
         }, "recherche-employe-rh");
         recherche.setDaemon(true);
         recherche.start();
+    }
+    private void appliquerStyleDialog(DialogPane dp) {
+        try {
+            java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+            if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+        } catch (Exception ignored) {}
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
     }
 
     private void appliquerEmployeSelectionne(User employe) throws SQLException {
@@ -871,27 +881,50 @@ public class CalendrierController {
         dialog.setTitle(isEdit ? "Modifier l'événement" : "Ajouter un événement");
 
         DialogPane dp = dialog.getDialogPane();
-        dp.getButtonTypes().add(ButtonType.OK);
-        dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
+        appliquerStyleDialog(dp);
 
-        Button okButton = (Button) dp.lookupButton(ButtonType.OK);
-        okButton.getStyleClass().add("button-ok");
-        okButton.setText(isEdit ? "Enregistrer" : "Ajouter");
-
+        // GridPane 2 colonnes
         GridPane grid = new GridPane();
-        grid.setHgap(20); grid.setVgap(15); grid.setPrefWidth(450);
+        grid.setHgap(12);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(12));
 
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(140);
+        colLabel.setHalignment(HPos.LEFT);
+
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
+
+        grid.getColumnConstraints().addAll(colLabel, colField);
+
+        // Champs
         ComboBox<String> typeBox = new ComboBox<>();
         typeBox.getItems().addAll("Réunion", "Autre");
         typeBox.setMaxWidth(Double.MAX_VALUE);
 
-        ColorPicker colorPicker = new ColorPicker();
-
         TextField descField = new TextField();
+        descField.getStyleClass().add("champform");
+
         DatePicker dDP = new DatePicker();
-        TextField hDF = new TextField(); hDF.setPrefWidth(80);
         DatePicker dFP = new DatePicker();
-        TextField hFF = new TextField(); hFF.setPrefWidth(80);
+
+        ComboBox<String> hDF = new ComboBox<>();
+        ComboBox<String> hFF = new ComboBox<>();
+        for (int h = 6; h <= 22; h++) {
+            hDF.getItems().add(String.format("%02d:00", h));
+            hDF.getItems().add(String.format("%02d:30", h));
+            hFF.getItems().add(String.format("%02d:00", h));
+            hFF.getItems().add(String.format("%02d:30", h));
+        }
+        hDF.setEditable(false);
+        hFF.setEditable(false);
+        hDF.setPrefWidth(90);
+        hFF.setPrefWidth(90);
+
+        ColorPicker colorPicker = new ColorPicker(Color.web("#7298E0"));
 
         if (isEdit) {
             if (estEvenementConge(eventToEdit)) {
@@ -901,48 +934,118 @@ public class CalendrierController {
             typeBox.setValue(eventToEdit.getType());
             descField.setText(eventToEdit.getDescription());
             dDP.setValue(eventToEdit.getJourDebut().toLocalDate());
-            hDF.setText(eventToEdit.getJourDebut().format(DateTimeFormatter.ofPattern("HH:mm")));
+            hDF.setValue(eventToEdit.getJourDebut().format(DateTimeFormatter.ofPattern("HH:mm")));
             dFP.setValue(eventToEdit.getJourFin().toLocalDate());
-            hFF.setText(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
-
-            if (eventToEdit.getCouleur() != null) {
-                colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
+            hFF.setValue(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
+            if (eventToEdit.getCouleur() != null && !eventToEdit.getCouleur().isEmpty()) {
+                try {
+                    colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
+                } catch (Exception ignored) {}
             }
         } else {
             typeBox.setValue("Réunion");
             colorPicker.setValue(Color.web("#7298E0"));
             dDP.setValue(LocalDate.now());
-            hDF.setText("08:00");
+            hDF.setValue("08:00");
             dFP.setValue(LocalDate.now());
-            hFF.setText("10:00");
+            hFF.setValue("10:00");
         }
 
-        ajouterLigneForm(grid, "TYPE :", typeBox, 0);
-        ajouterLigneForm(grid, "DESCRIPTION :", descField, 1);
-        ajouterLigneForm(grid, "DÉBUT :", new HBox(10, dDP, hDF), 2);
-        ajouterLigneForm(grid, "FIN :", new HBox(10, dFP, hFF), 3);
-        ajouterLigneForm(grid, "COULEUR :", colorPicker, 4);
+        int row = 0;
+        grid.add(new Label("TYPE :"), 0, row);
+        grid.add(typeBox, 1, row++);
 
-        dp.setContent(grid);
+        grid.add(new Label("DESCRIPTION :"), 0, row);
+        grid.add(descField, 1, row++);
 
-        dialog.showAndWait().ifPresent(res -> {
-            if (res == ButtonType.OK) {
-                try {
-                    LocalDateTime start = LocalDateTime.of(dDP.getValue(), LocalTime.parse(hDF.getText()));
-                    LocalDateTime end = LocalDateTime.of(dFP.getValue(), LocalTime.parse(hFF.getText()));
+        grid.add(new Label("DÉBUT :"), 0, row);
+        HBox debutBox = new HBox(8, dDP, hDF);
+        HBox.setHgrow(dDP, Priority.ALWAYS);
+        grid.add(debutBox, 1, row++);
 
-                    String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
+        grid.add(new Label("FIN :"), 0, row);
+        HBox finBox = new HBox(8, dFP, hFF);
+        HBox.setHgrow(dFP, Priority.ALWAYS);
+        grid.add(finBox, 1, row++);
 
-                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor,
-                            isEdit ? eventToEdit.getId() : -1, isEdit ? eventToEdit : null);
-                } catch (IllegalArgumentException ex) {
-                    afficherErreur(ex.getMessage());
-                } catch (Exception e) {
-                    afficherErreur("Impossible d'enregistrer l'événement : " + e.getMessage());
+        grid.add(new Label("COULEUR :"), 0, row);
+        grid.add(colorPicker, 1, row++);
+
+        GridPane.setHgrow(typeBox, Priority.ALWAYS);
+        GridPane.setHgrow(descField, Priority.ALWAYS);
+
+        VBox content = new VBox(12);
+        Label titre = new Label(isEdit ? "MODIFIER L'ÉVÉNEMENT" : "AJOUTER UN ÉVÉNEMENT");
+        titre.getStyleClass().add("popup-header-title");
+        titre.setStyle("-fx-font-size:16px; -fx-font-weight:bold; -fx-text-fill:#5882D6;");
+        content.getChildren().addAll(titre, grid);
+        content.getStyleClass().add("popup-contenu");
+        content.setPadding(new Insets(8));
+        content.setFillWidth(true);
+
+        dp.setContent(content);
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) {
+            btnOk.setText(isEdit ? "Enregistrer" : "Ajouter");
+            btnOk.getStyleClass().add("button-primary");
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                // Validation
+                if (typeBox.getValue() == null || typeBox.getValue().trim().isEmpty()) {
+                    afficherErreur("Le type est obligatoire.");
+                    ev.consume();
+                    return;
                 }
-            }
-        });
+                if (dDP.getValue() == null || dFP.getValue() == null) {
+                    afficherErreur("Les dates de début et de fin sont obligatoires.");
+                    ev.consume();
+                    return;
+                }
+                try {
+                    LocalTime tDeb = LocalTime.parse(hDF.getValue());
+                    LocalTime tFin = LocalTime.parse(hFF.getValue());
+                    LocalDateTime start = LocalDateTime.of(dDP.getValue(), tDeb);
+                    LocalDateTime end = LocalDateTime.of(dFP.getValue(), tFin);
+                    if (!end.isAfter(start)) {
+                        afficherErreur("La date de fin doit être après la date de début.");
+                        ev.consume();
+                        return;
+                    }
+
+                    String hexColor;
+                    try {
+                        String raw = colorPicker.getValue().toString();
+                        hexColor = "#" + raw.substring(2, 8);
+                    } catch (Exception ex) {
+                        hexColor = "#7298E0";
+                    }
+
+                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(),
+                            hexColor, isEdit ? eventToEdit.getId() : -1, isEdit ? eventToEdit : null);
+
+                } catch (Exception ex) {
+                    afficherErreur("Format d'heure invalide.");
+                    ev.consume();
+                }
+            });
+        }
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) {
+            btnCancel.setText("Annuler");
+            btnCancel.getStyleClass().add("button-cancel");
+        }
+
+        dp.setPrefWidth(720);
+        dp.setMinWidth(520);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(800);
+
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
+
 
     private VBox creerChampDemandeConge(String titre, Node champ) {
         Label lbl = new Label(titre);
