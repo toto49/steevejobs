@@ -9,8 +9,8 @@ Application de bureau **JavaFX** pour le quotidien des équipes : plannings, doc
 <br>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-21+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![JavaFX](https://img.shields.io/badge/JavaFX-21-4780bc?style=flat-square&logo=java&logoColor=white)](https://openjfx.io/)
+[![Java](https://img.shields.io/badge/Java-25+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![JavaFX](https://img.shields.io/badge/JavaFX-25-4780bc?style=flat-square&logo=java&logoColor=white)](https://openjfx.io/)
 [![MySQL](https://img.shields.io/badge/MySQL-8+-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![CI](https://img.shields.io/github/actions/workflow/status/toto49/steevejobs/build.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI)](https://github.com/toto49/steevejobs/actions)
 
@@ -94,7 +94,7 @@ mysql -u root -p steevejobs < sql/steevejobs.sql
 
 | Étape | Détail |
 |-------|--------|
-| JDK | 21+ — [Liberica Full](https://bell-sw.com/pages/downloads/) recommandé |
+| JDK | 25+ — [Liberica Full](https://bell-sw.com/pages/downloads/) recommandé |
 | BDD | MySQL 8 — script `sql/steevejobs.sql` |
 | Config | [`.env.example`](.env.example) → `.env` (ne pas committer) |
 | Admin | Exécuter `DatabaseSeeder` une fois au premier lancement |
@@ -119,8 +119,8 @@ Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 ## Stack technique
 
 <p align="center">
-<img src="https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java"/>
-<img src="https://img.shields.io/badge/JavaFX-21-4780bc?style=for-the-badge&logo=java&logoColor=white" alt="JavaFX"/>
+<img src="https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java"/>
+<img src="https://img.shields.io/badge/JavaFX-25-4780bc?style=for-the-badge&logo=java&logoColor=white" alt="JavaFX"/>
 <img src="https://img.shields.io/badge/MySQL-8+-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL"/>
 <img src="https://img.shields.io/badge/Maven-mvnw-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven"/>
 <img src="https://img.shields.io/badge/Docker-WS-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
