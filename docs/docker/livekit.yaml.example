@@ -1,0 +1,21 @@
+# Copiez ce fichier en livekit.yaml sur la branche websocket et adaptez les valeurs.
+# Ne commitez jamais livekit.yaml avec vos vraies clés.
+
+port: 7880
+bind_addresses:
+  - ""
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+
+turn:
+  enabled: true
+  domain: livekit.votre-domaine.fr
+  tls_port: 5349
+  udp_port: 3478
+  external_tls: true
+
+keys:
+  votre_api_key_livekit: "votre_api_secret_livekit"

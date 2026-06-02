@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  ws-server:
+    build: .
+    container_name: steevejobs-websocket
+    ports:
+      - "8887:8887"
+    volumes:
+      - ./.env:/app/.env
+    restart: unless-stopped
+
+  livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: steevejobs-livekit
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+    command: --config /livekit.yaml
