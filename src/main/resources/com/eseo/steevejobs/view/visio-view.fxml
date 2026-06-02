@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 <BorderPane xmlns:fx="http://javafx.com/fxml/1"
             xmlns="http://javafx.com/javafx/17.0.12"
             fx:controller="com.eseo.steevejobs.controller.VisioController"
@@ -12,33 +13,27 @@
             prefHeight="820.0"
             minWidth="960.0"
             minHeight="700.0">
-
-    <!-- HEADER -->
     <top>
-        <HBox alignment="CENTER_LEFT"
-              styleClass="visio-header"
-              BorderPane.alignment="CENTER">
-            <children>
-                <VBox spacing="2.0">
-                    <children>
-                        <Label text="VISIOCONFÉRENCE" styleClass="visio-header-title"/>
-                        <Label text="Organisez vos réunions audio/vidéo rapidement et proprement."
-                               styleClass="visio-header-subtitle"/>
-                    </children>
-                </VBox>
-
-                <Region HBox.hgrow="ALWAYS"/>
-
-                <Button mnemonicParsing="false"
-                        onAction="#rafraichirListeReunions"
-                        styleClass="visio-btn-header"
-                        text="Actualiser"/>
-            </children>
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
             <padding>
-                <Insets top="16.0" right="24.0" bottom="16.0" left="24.0"/>
+                <Insets left="20.0" right="20.0"/>
             </padding>
+            <Label style="-fx-text-fill: white" text="VISIOCONFÉRENCE">
+
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Button mnemonicParsing="false"
+                    onAction="#rafraichirListeReunions"
+                    styleClass="visio-btn-header"
+                    text="Actualiser"/>
         </HBox>
     </top>
+    <!-- HEADER -->
+
 
     <!-- CONTENU -->
     <center>
