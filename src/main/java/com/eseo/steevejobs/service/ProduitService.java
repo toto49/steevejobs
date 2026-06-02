@@ -142,6 +142,10 @@ public class ProduitService {
         return produitDAO.findAll();
     }
 
+    public List<Produit> findAllActive() throws SQLException {
+        return produitDAO.findAllActive();
+    }
+
     /** Recherche par nom (barre de recherche de la page Stock) */
     public List<Produit> rechercherProduitsParNom(String term) throws SQLException {
         if (term == null) term = "";

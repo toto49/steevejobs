@@ -98,6 +98,13 @@ Sur Java 25, les tests Mockito peuvent nécessiter :
 ./mvnw test -Dnet.bytebuddy.experimental=true
 ```
 
+**JavaFX multi-OS :** le `pom.xml` choisit automatiquement le bon classifier (`win`, `linux`, `mac`, `mac-aarch64`). En cas de besoin, forcez-le :
+
+```bash
+./mvnw test -Djfx.os=linux
+./mvnw test -Djfx.os=mac-aarch64
+```
+
 ---
 
 ## 6. Serveur WebSocket & LiveKit (Docker)

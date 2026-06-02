@@ -1,6 +1,6 @@
 ---
 name: Demande de Fonctionnalité
-about: Suggérer une nouvelle idée ou une amélioration pour MediaStock.
+about: Suggérer une nouvelle idée ou une amélioration pour SteeveJobs.
 title: "[FEATURE] <Titre court et descriptif>"
 labels: enhancement
 assignees: ''

@@ -1,8 +1,6 @@
 package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.config.ColorContrastUtil;
-import com.eseo.steevejobs.dao.PlanningDAO;
-import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.DemandeConge;
 import com.eseo.steevejobs.model.HeuresTravail;
 import com.eseo.steevejobs.model.Planning;
@@ -13,6 +11,8 @@ import com.eseo.steevejobs.service.DemandeCongeService;
 import com.eseo.steevejobs.service.HeuresTravailService;
 import com.eseo.steevejobs.service.PlanningService;
 import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.util.TestRuntime;
+import com.eseo.steevejobs.service.UserService;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -70,7 +70,7 @@ public class CalendrierController {
     private PlanningService planningService;
     private HeuresTravailService heuresTravailService;
     private DemandeCongeService demandeCongeService;
-    private UserDAO userDAO;
+    private UserService userService;
     private boolean miseAJourRechercheEmploye;
     private int employeSelectionneId = -1;
     private List<DemandeConge> demandesEnAttente = new ArrayList<>();
@@ -82,13 +82,18 @@ public class CalendrierController {
 
     @FXML
     public void initialize() throws SQLException {
-        PlanningDAO planningDAO = new PlanningDAO();
-        planningService = new PlanningService(planningDAO);
+        planningService = new PlanningService();
         heuresTravailService = new HeuresTravailService();
         demandeCongeService = new DemandeCongeService();
+        userService = new UserService();
         utilisateurConnecte = SessionService.getUtilisateurConnecte();
-
         dateDebutSemaineAffichee = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        if (TestRuntime.isEnabled()) {
+            events = new ArrayList<>();
+            demandesEnAttente = new ArrayList<>();
+            return;
+        }
 
         if (comboEmploye != null) {
             utilisateurAffiche = null;
@@ -141,7 +146,6 @@ public class CalendrierController {
     }
 
     private void initialiserSelecteurEmploye() {
-        userDAO = new UserDAO();
         comboEmploye.setEditable(true);
         comboEmploye.setItems(FXCollections.observableArrayList());
         comboEmploye.setPromptText("Nom, prénom ou email…");
@@ -242,7 +246,9 @@ public class CalendrierController {
         final String terme = saisie.trim();
         Thread recherche = new Thread(() -> {
             try {
-                List<User> resultats = userDAO.searchByName(terme, RECHERCHE_EMPLOYE_MAX_SUGGESTIONS);
+                List<User> resultats = userService.searchUsersByName(terme).stream()
+                        .limit(RECHERCHE_EMPLOYE_MAX_SUGGESTIONS)
+                        .toList();
                 Platform.runLater(() -> {
                     if (miseAJourRechercheEmploye) {
                         return;

@@ -13,7 +13,6 @@ public class ConnexionService {
             int index = random.nextInt(chars.length());
             sb.append(chars.charAt(index));
         }
-        //todo: appeler le DAO de changement de mot de passe
         return sb.toString();
     }
 }

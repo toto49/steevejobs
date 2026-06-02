@@ -148,6 +148,41 @@
     -fx-background-color: white;
 }
 
+.ticket-message-input {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 4 8;
+    -fx-font-size: 16px;
+    -fx-text-fill: #1A2B4A;
+}
+
+.ticket-message-input:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.ticket-message-input .content {
+    -fx-background-color: transparent;
+}
+
+.ticket-message-input .prompt-text {
+    -fx-text-fill: #5A7299;
+    -fx-font-style: italic;
+}
+
+.ticket-message-input:disabled {
+    -fx-opacity: 0.85;
+}
+
+.ticket-message-input:disabled .prompt-text {
+    -fx-text-fill: #8A4A4A;
+    -fx-font-style: normal;
+}
+
 .text-area,
 .textarea-form {
     -fx-background-color: #F8FBFF;

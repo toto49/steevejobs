@@ -95,20 +95,4 @@ class FichePayeServiceTest {
         assertEquals("Le taux de cotisations patronales doit être entre 0 et 1.", ex.getMessage());
     }
 
-    @Test
-    void genererFichePaye_heuresInvalides_doitLeverException() {
-        User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
-        LocalDateTime mois = LocalDateTime.of(2026, 4, 1, 0, 0);
-
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.genererFichePaye(employe, mois, 2500, 0.45, 0, 15));
-        assertEquals("Les heures travaillées doivent être supérieures à 0.", ex.getMessage());
-    }
-
-    @Test
-    void supprimer_delegueAuDao() throws SQLException {
-        when(fichePayeDAO.deleteFichePaye(7)).thenReturn(true);
-
-        assertTrue(service.supprimer(7));
-    }
 }

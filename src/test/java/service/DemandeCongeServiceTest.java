@@ -216,4 +216,47 @@ class DemandeCongeServiceTest {
         verify(planningService).supprimerPlanning(55);
         verify(demandeCongeDAO).delete(11);
     }
+
+    @Test
+    void creerDemande_dateDansLePasse_doitLeverException() {
+        User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
+        LocalDateTime debut = LocalDateTime.now().minusDays(2);
+        LocalDateTime fin = LocalDateTime.now().minusDays(1);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.creerDemande(employe, debut, fin, "Passé"));
+        assertTrue(ex.getMessage().contains("passé"));
+    }
+
+    @Test
+    void refuserDemande_enAttente_passeEnRefusee() throws SQLException {
+        User employe = TestDataFactory.utilisateurActif(6, "emp6@mail.fr");
+        DemandeConge demande = new DemandeConge(
+                20,
+                LocalDateTime.of(2026, 11, 1, 8, 0),
+                LocalDateTime.of(2026, 11, 2, 18, 0),
+                StatutDemandeConge.EN_ATTENTE,
+                "Perso",
+                null,
+                LocalDateTime.now(),
+                employe,
+                0
+        );
+
+        when(demandeCongeDAO.findById(20)).thenReturn(demande);
+        when(demandeCongeDAO.update(any(DemandeConge.class))).thenReturn(true);
+
+        service.refuserDemande(20);
+
+        verify(demandeCongeDAO).update(argThat(d -> d.getStatut() == StatutDemandeConge.REFUSEE));
+        verify(planningService, never()).ajouterPlanning(any());
+    }
+
+    @Test
+    void validerDemande_introuvable_doitLeverException() throws SQLException {
+        when(demandeCongeDAO.findById(999)).thenReturn(null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.validerDemande(999, "OK"));
+    }
+
 }

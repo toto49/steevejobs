@@ -112,6 +112,7 @@ Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 | 🐳 [**Déploiement Docker**](docs/DOCKER.md) | DevOps — Compose, LiveKit, branche [`websocket`](https://github.com/toto49/steevejobs/tree/websocket) |
 | 🏗 [**Architecture production**](docs/ARCHITECTURE.md) | DevOps — NAS, reverse proxy, LiveKit, WebDAV |
 | 🧪 [**Tests unitaires**](docs/TESTS.md) | Développeurs — JUnit 5, Mockito |
+| 🤖 [**Transparence IA**](docs/TRANSPARENCE_IA.md) | Dossier projet — usage de l'IA (obligatoire) |
 | 📚 [**Index docs**](docs/README.md) | Vue d'ensemble de la documentation |
 
 ---
@@ -133,7 +134,7 @@ Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 
 <br>
 
-**Client :** HikariCP · AtlantaFX · ControlsFX · OpenPDF · Jakarta Mail · Java-WebSocket · Sardine (WebDAV) · Auth0 JWT · dotenv-java
+**Client :** HikariCP · AtlantaFX · OpenPDF · Jakarta Mail · Java-WebSocket · WebDAV (HttpURLConnection) · Auth0 JWT · jBCrypt · dotenv-java
 
 **Production :** Synology NAS · Web Station (reverse proxy) · Let's Encrypt · MailPlus · WebDAV · branche Git `websocket`
 
@@ -170,6 +171,7 @@ steevejobs/
 | Contribuer | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Code de conduite | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
 | Sécurité | [SECURITY.md](SECURITY.md) |
+| Transparence IA | [docs/TRANSPARENCE_IA.md](docs/TRANSPARENCE_IA.md) |
 | Licence | [MIT](LICENSE) |
 
 Les contributions sont les bienvenues — merci de lire le guide de contribution avant d'ouvrir une PR.

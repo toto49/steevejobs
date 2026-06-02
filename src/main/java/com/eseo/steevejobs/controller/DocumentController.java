@@ -1,7 +1,5 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.DocumentDAO;
-import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.*;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
@@ -51,8 +49,7 @@ public class DocumentController implements Initializable {
     @FXML private Label detailEmail, detailTel, detailAdresse;
     @FXML private Button btnExporterPdf, btnOuvrirPdf, btnModifier, btnChanger, btnSupprimer;
 
-    private final DocumentService documentService = new DocumentService(new DocumentDAO());
-    private final TiersDAO tiersDAO = new TiersDAO();
+    private final DocumentService documentService = new DocumentService();
     private final ObservableList<Document> tousLesDocuments = FXCollections.observableArrayList();
     private Document documentSelectionne = null;
 

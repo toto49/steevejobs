@@ -13,6 +13,11 @@ import java.util.List;
  */
 public class TicketDAO {
 
+    private static final String SQL_DERNIERE_ACTIVITE =
+            "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets)";
+    private static final String SQL_ORDER_BY_ACTIVITE =
+            "ORDER BY COALESCE(" + SQL_DERNIERE_ACTIVITE + ", t.date_ouverture) DESC";
+
     /**
      * Créer un nouveau ticket
      */
@@ -109,7 +114,7 @@ public class TicketDAO {
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
                 "WHERE t.id_auteur = ? " +
-                "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
+                "ORDER BY COALESCE(" + SQL_DERNIERE_ACTIVITE + ", t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -134,7 +139,7 @@ public class TicketDAO {
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
                 "WHERE t.statut = ? " +
-                "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
+                "ORDER BY COALESCE(" + SQL_DERNIERE_ACTIVITE + ", t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -158,7 +163,7 @@ public class TicketDAO {
                 "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets) AS date_derniere_activite " +
                 "FROM TICKETS t " +
                 "INNER JOIN USER u ON t.id_auteur = u.id_user " +
-                "ORDER BY COALESCE(date_derniere_activite, t.date_ouverture) DESC";
+                "ORDER BY COALESCE(" + SQL_DERNIERE_ACTIVITE + ", t.date_ouverture) DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);

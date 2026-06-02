@@ -1,6 +1,5 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.dao.MessageDAO;
 import com.eseo.steevejobs.dao.TicketDAO;
 import com.eseo.steevejobs.model.Enum.StatutTicket;
 import com.eseo.steevejobs.model.Message;
@@ -16,8 +15,8 @@ import java.util.stream.Collectors;
 
 public class TicketServiceImpl implements TicketService {
 
-    private final TicketDAO  ticketDAO;
-    private final MessageDAO messageDAO;
+    private final TicketDAO     ticketDAO;
+    private final MessageService messageService;
 
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -28,13 +27,13 @@ public class TicketServiceImpl implements TicketService {
     private static final int CONTENU_MAX_LENGTH     = 5000;
 
     public TicketServiceImpl() {
-        this.ticketDAO  = new TicketDAO();
-        this.messageDAO = new MessageDAO();
+        this.ticketDAO = new TicketDAO();
+        this.messageService = new MessageServiceImpl();
     }
 
-    public TicketServiceImpl(TicketDAO ticketDAO, MessageDAO messageDAO) {
-        this.ticketDAO  = ticketDAO;
-        this.messageDAO = messageDAO;
+    public TicketServiceImpl(TicketDAO ticketDAO, MessageService messageService) {
+        this.ticketDAO = ticketDAO;
+        this.messageService = messageService;
     }
 
     // --------------------------------------------------------
@@ -113,7 +112,7 @@ public class TicketServiceImpl implements TicketService {
 
             message.setTicket(ticket);
             message.setDateEnvoi(LocalDateTime.now());
-            messageDAO.createMessage(message);
+            messageService.createMessage(message);
 
             if (ticket.getStatut() == StatutTicket.EN_ATTENTE) {
                 ticketDAO.updateStatut(ticketId, StatutTicket.EN_COURS);
@@ -151,14 +150,9 @@ public class TicketServiceImpl implements TicketService {
         if (ticketId <= 0) {
             throw new IllegalArgumentException("L'ID du ticket est invalide.");
         }
-        try {
-            return messageDAO.findByTicketId(ticketId).stream()
-                    .sorted(Comparator.comparing(Message::getDateEnvoi))
-                    .collect(Collectors.toList());
-        } catch (SQLException e) {
-            throw new RuntimeException(
-                    "Erreur BDD : Impossible de récupérer les messages du ticket.", e);
-        }
+        return messageService.getMessagesByTicketId(ticketId).stream()
+                .sorted(Comparator.comparing(Message::getDateEnvoi))
+                .collect(Collectors.toList());
     }
 
     @Override

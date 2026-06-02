@@ -1,7 +1,10 @@
 package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.HelloApplication;
+import com.eseo.steevejobs.util.TestRuntime;
+import com.eseo.steevejobs.service.SystemNotificationService;
 import com.eseo.steevejobs.service.WebSocketService;
+import com.eseo.steevejobs.service.WebSocketUiBridge;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -53,14 +56,50 @@ public class MenuController {
     @FXML
     public void initialize() {
         instance = this;
-        Platform.runLater(() -> {
-            badgeAccueil = installerBadge(btnAccueil);
-            badgeTicket = installerBadge(btnTicket);
-        });
+        badgeAccueil = installerBadge(btnAccueil);
+        badgeTicket = installerBadge(btnTicket);
 
         if (btnAccueil != null) updateButtonStyles(btnAccueil);
+        enregistrerCallbacksWebSocket();
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         chargerPage("home");
         WebSocketService.getInstance().connecter();
+    }
+
+    private void enregistrerCallbacksWebSocket() {
+        WebSocketUiBridge.getInstance().setTicketCallbacks(new WebSocketUiBridge.TicketCallbacks() {
+            @Override
+            public boolean tryRefreshChatIfActive(int ticketId) {
+                TicketController chatActif = TicketController.getActiveInstance();
+                if (chatActif != null && chatActif.getCurrentTicketId() == ticketId) {
+                    chatActif.refreshChatSilently();
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onRefreshTicketList() {
+                TicketsListController listeActive = TicketsListController.getActiveInstance();
+                if (listeActive != null) {
+                    listeActive.rafraichirAffichage();
+                }
+            }
+
+            @Override
+            public void onTicketNotification(String targetType, boolean pushEnabled) {
+                HomeController.ajouterNotification(targetType);
+                if (pushEnabled) {
+                    if ("AUTEUR".equals(targetType)) {
+                        SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse reçue");
+                    } else if ("TECH".equals(targetType)) {
+                        SystemNotificationService.send("SteeveJobs - Admin", "Nouveau message à traiter !");
+                    }
+                }
+            }
+        });
     }
 
     public void setComposantsFenetre(Stage stage, Label labelTitre) {
@@ -95,21 +134,24 @@ public class MenuController {
     }
 
     public void allumerBadge(String typeCible, int nombreExact) {
-        Platform.runLater(() -> {
-            if ("TECH".equals(typeCible)) {
-                mettreAJourBadgeRelatif(badgeAccueil, nombreExact);
-            } else {
-                mettreAJourBadgeRelatif(badgeTicket, nombreExact);
-            }
-        });
+        Platform.runLater(() -> mettreAJourBadge(typeCible, nombreExact));
     }
 
-    private void mettreAJourBadgeRelatif(Label badge, int nombre) {
-        if (badge == null) {
-            Platform.runLater(() -> {
+    private void mettreAJourBadge(String typeCible, int nombre) {
+        Label badge;
+        if ("TECH".equals(typeCible)) {
+            if (badgeAccueil == null) {
                 badgeAccueil = installerBadge(btnAccueil);
+            }
+            badge = badgeAccueil;
+        } else {
+            if (badgeTicket == null) {
                 badgeTicket = installerBadge(btnTicket);
-            });
+            }
+            badge = badgeTicket;
+        }
+
+        if (badge == null) {
             return;
         }
 
@@ -140,6 +182,14 @@ public class MenuController {
         }
         if (bouton.getGraphic() == null) {
             return null;
+        }
+
+        if (bouton.getGraphic() instanceof StackPane stack) {
+            for (Node child : stack.getChildren()) {
+                if (child instanceof Label label) {
+                    return label;
+                }
+            }
         }
 
         Label badge = new Label("1");

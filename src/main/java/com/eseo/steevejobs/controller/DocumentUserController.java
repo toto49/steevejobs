@@ -1,8 +1,8 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.FichePayeDAO;
 import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.service.FichePayeService;
 import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.WebDavService;
 import javafx.application.Platform;
@@ -28,7 +28,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class DocumentUserController implements Initializable {
 
-    private final FichePayeDAO fichePayeDAO = new FichePayeDAO();
+    private final FichePayeService fichePayeService = new FichePayeService();
     private final ObservableList<FichePaye> mesFiches = FXCollections.observableArrayList();
     @FXML
     private TableView<FichePaye> tableFiches;
@@ -89,7 +89,7 @@ public class DocumentUserController implements Initializable {
         if (utilisateurConnecte == null) return;
 
         try {
-            mesFiches.setAll(fichePayeDAO.findByEmployeId(utilisateurConnecte.getId()));
+            mesFiches.setAll(fichePayeService.findByEmployeId(utilisateurConnecte.getId()));
             tableFiches.setItems(mesFiches);
 
             tableFiches.sort();

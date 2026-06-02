@@ -1,6 +1,6 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.UserDAO;
+import com.eseo.steevejobs.service.UserService;
 import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.FichePayeService;
@@ -50,7 +50,7 @@ public class FichePayeController implements Initializable {
     @FXML private Label lblNbFiches;
 
     private final FichePayeService fichePayeService = new FichePayeService();
-    private final UserDAO userDAO = new UserDAO();
+    private final UserService userService = new UserService();
 
     private static final DateTimeFormatter FMT_MOIS = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH);
 
@@ -114,7 +114,7 @@ public class FichePayeController implements Initializable {
         try {
             ObservableList<User> employes = FXCollections.observableArrayList();
             employes.add(null);
-            employes.addAll(userDAO.findAll());
+            employes.addAll(userService.getAllUsers());
             comboEmployeFiltre.setItems(employes);
             comboEmployeFiltre.setConverter(new StringConverter<>() {
                 @Override public String toString(User u) {
@@ -210,7 +210,7 @@ public class FichePayeController implements Initializable {
 
         // Configuration employé
         try {
-            comboEmploye.setItems(FXCollections.observableArrayList(userDAO.findActiveUsers()));
+            comboEmploye.setItems(FXCollections.observableArrayList(userService.getActiveUsers()));
         } catch (SQLException e) {
             afficherErreur("Impossible de charger les employés : " + e.getMessage());
             return;
@@ -255,7 +255,7 @@ public class FichePayeController implements Initializable {
             User employe = comboEmploye.getValue();
             if (employe != null) {
                 try {
-                    User employeComplet = userDAO.getById(employe.getId());
+                    User employeComplet = userService.getUserById(employe.getId());
                     if (employeComplet != null) {
                         // Taux horaire
                         if (employeComplet.getTaux() > 0) {
@@ -288,7 +288,7 @@ public class FichePayeController implements Initializable {
                 if (employe != null && !txtTauxCotisationsPatronales.getText().isBlank()) {
                     try {
                         int tauxPatronal = Integer.parseInt(txtTauxCotisationsPatronales.getText().replace(",", "."));
-                        userDAO.updateTauxPatronal(employe.getId(), tauxPatronal);
+                        userService.updateTauxPatronal(employe.getId(), tauxPatronal);
                     } catch (NumberFormatException | SQLException ex) {
                         // Ignorer
                     }
@@ -303,7 +303,7 @@ public class FichePayeController implements Initializable {
                 if (employe != null && !txtTauxHoraire.getText().isBlank()) {
                     try {
                         int tauxHoraire = Integer.parseInt(txtTauxHoraire.getText().replace(",", "."));
-                        userDAO.updateTaux(employe.getId(), tauxHoraire);  // ← Sauvegarde dans taux
+                        userService.updateTaux(employe.getId(), tauxHoraire);  // ← Sauvegarde dans taux
                     } catch (NumberFormatException | SQLException ex) {
                         // Ignorer
                     }

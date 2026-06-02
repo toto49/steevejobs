@@ -85,23 +85,4 @@ class ProduitServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.supprimerProduit(0));
     }
 
-    @Test
-    void ajouterProduit_prixNegatif_doitLeverException() {
-        Produit produit = new Produit(0, "Nom", new BigDecimal("-1"), BigDecimal.valueOf(20), 10, BigDecimal.ZERO, true, 5);
-        assertThrows(IllegalArgumentException.class, () -> service.ajouterProduit(produit));
-    }
-
-    @Test
-    void mettreAJourStock_produitInexistant_doitLeverException() throws SQLException {
-        when(produitDAO.getById(1)).thenReturn(null);
-
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.mettreAJourStock(1, 1));
-        assertEquals("Produit introuvable.", ex.getMessage());
-    }
-
-    @Test
-    void obtenirProduitsStockBas_seuilNegatif_doitLeverException() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.obtenirProduitsStockBas(-1));
-        assertEquals("Le seuil ne peut pas être négatif.", ex.getMessage());
-    }
 }

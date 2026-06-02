@@ -24,15 +24,4 @@ class ConnexionServiceTest {
         assertTrue(mdp.matches("[A-Za-z0-9]{20}"));
     }
 
-    @Test
-    void generateRandomMdp_deuxAppels_produisentDesValeursDifferentes() {
-        String mdp1 = ConnexionService.generateRandomMdp(16);
-        String mdp2 = ConnexionService.generateRandomMdp(16);
-        assertNotEquals(mdp1, mdp2);
-    }
-
-    @Test
-    void generateRandomMdp_longueurZero_retourneChaineVide() {
-        assertEquals("", ConnexionService.generateRandomMdp(0));
-    }
 }

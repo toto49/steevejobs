@@ -234,10 +234,6 @@ public class DemandeCongeService {
         return demandeCongeDAO.findAll();
     }
 
-    public List<DemandeConge> listerParEmploye(int userId) throws SQLException {
-        return demandeCongeDAO.findByUserId(userId);
-    }
-
     public List<DemandeConge> listerEnAttenteParEmploye(int userId) throws SQLException {
         return demandeCongeDAO.findByUserId(userId).stream()
                 .filter(d -> d.getStatut() == StatutDemandeConge.EN_ATTENTE)

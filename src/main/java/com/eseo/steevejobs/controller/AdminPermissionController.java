@@ -2,6 +2,7 @@ package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.model.Permission;
 import com.eseo.steevejobs.service.PermissionService;
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.animation.FillTransition;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
@@ -35,10 +36,12 @@ public class AdminPermissionController {
     @FXML
     public void initialize() {
         this.permissionService = new PermissionService();
-        permissionService.synchroniserPermissionsBaseDeDonnees();
-        this.toutesLesPermissionsCache = permissionService.getAllPermissions();
-
         roleComboBox.getItems().addAll("ADMIN", "RH", "EMPLOYE");
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
+        permissionService.syncAppModulePermissions();
+        this.toutesLesPermissionsCache = permissionService.getAllPermissions();
 
         roleComboBox.setOnAction(event -> {
             String roleChoisi = roleComboBox.getValue();

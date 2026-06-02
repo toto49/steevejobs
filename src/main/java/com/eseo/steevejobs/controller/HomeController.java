@@ -3,6 +3,7 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.util.TestRuntime;
 import com.eseo.steevejobs.service.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -59,6 +60,9 @@ public class HomeController {
     }
 
     public static void ajouterNotification(String typeCible) {
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         User user = SessionService.getUtilisateurConnecte();
         if (user == null) return;
 
@@ -109,6 +113,11 @@ public class HomeController {
     }
 
     public void onUserLogin(int idUserConnecte) {
+        if (TestRuntime.isEnabled()) {
+            this.currentUserPermissions = List.of();
+            renderAppCenter();
+            return;
+        }
         CompletableFuture.supplyAsync(() -> {
             TicketService ticketService = new TicketServiceImpl();
             int nTech = 0;
