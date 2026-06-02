@@ -1,398 +1,158 @@
-
-/* =======================================================
-1. CONTENEUR PRINCIPAL
-======================================================= */
-.dialog-pane {
-    -fx-background-color: #f8fafc;
+/* ───────────────────────────────────────────────
+   POPUP ROOT
+   ─────────────────────────────────────────────── */
+.popup-root {
+    -fx-background-color: transparent;
     -fx-padding: 0;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
 }
 
-/* Zone de contenu du dialog natif */
-.dialog-pane > .content.label {
-    -fx-text-fill: #475569;
-    -fx-font-size: 13px;
-    -fx-padding: 20px;
-    -fx-background-color: #f8fafc;
+/* ScrollPane */
+.scroll-pane {
+    -fx-background-color: transparent;
 }
 
-.dialog-pane > .content {
-    -fx-background-color: #f8fafc;
-    -fx-padding: 20px;
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
 }
 
-/* =======================================================
-   2. EN-TÊTE
-   ======================================================= */
-
-.dialog-pane > .header-panel {
-    -fx-background-color: #f1f5f9;
-    -fx-border-color: transparent transparent #e2e8f0 transparent;
-    -fx-border-width: 1px;
-    -fx-padding: 14 20 14 20;
-}
-
-.dialog-pane > .header-panel .label {
-    -fx-text-fill: #1e293b;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-}
-
-/* =======================================================
-   3. LABELS
-   ======================================================= */
-
-/* Classe utilisée dans les deux controllers */
-.label-style {
-    -fx-text-fill: #475569;
-    -fx-font-weight: bold;
-    -fx-font-size: 12px;
-}
-
-.dialog-pane .label {
-    -fx-text-fill: #1e293b;
-}
-
-/* =======================================================
-   4. CHAMPS DE SAISIE
-   ======================================================= */
-
-.dialog-pane .text-field,
-.dialog-pane .combo-box,
-.dialog-pane .date-picker,
-.dialog-pane .color-picker {
+/* ───────────────────────────────────────────────
+   CONTENU DU POPUP
+   ─────────────────────────────────────────────── */
+.popup-contenu {
+    -fx-padding: 20;
+    -fx-spacing: 20;
     -fx-background-color: white;
-    -fx-background-radius: 6;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 6;
-    -fx-border-width: 1;
-    -fx-min-height: 34;
-    -fx-text-fill: #1e293b;
+    -fx-background-radius: 12;
 }
 
-.dialog-pane .text-field:focused,
-.dialog-pane .combo-box:focused,
-.dialog-pane .date-picker:focused {
-    -fx-border-color: #6a8bce;
-    -fx-effect: dropshadow(three-pass-box, rgba(106,139,206,0.25), 4, 0, 0, 0);
+/* Carte contenant le formulaire */
+.popup-carte {
+    -fx-background-color: #ffffff;
+    -fx-padding: 20;
+    -fx-background-radius: 12;
+    -fx-spacing: 12;
 }
 
-
-.champform {
-    -fx-background-color: white;
-    -fx-background-radius: 6;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 6;
-    -fx-border-width: 1;
-    -fx-pref-height: 34;
-    -fx-text-fill: #1e293b;
-    -fx-font-family: 'Arial';
-    -fx-highlight-fill: #6a8bce;
-    -fx-highlight-text-fill: white;
-}
-
-.champform:focused {
-    -fx-border-color: #6a8bce;
-    -fx-effect: dropshadow(three-pass-box, rgba(106,139,206,0.25), 4, 0, 0, 0);
-}
-
-/* =======================================================
-   5. MENUS DÉROULANTS
-   ======================================================= */
-
-.combo-box-popup .list-view {
-    -fx-background-color: white;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-}
-
-.combo-box-popup .list-cell {
-    -fx-background-color: white;
-    -fx-text-fill: #1e293b;
-    -fx-padding: 7 10;
-}
-
-.combo-box-popup .list-cell:hover,
-.combo-box-popup .list-cell:filled:selected {
-    -fx-background-color: #f1f5f9;
-    -fx-text-fill: #1e293b;
-}
-
-/* =======================================================
-   6. BARRE DE BOUTONS DU BAS
-   ======================================================= */
-
-.dialog-pane > .button-bar > .container {
-    -fx-background-color: #f8fafc;
-    -fx-padding: 10 20 14 0;
-    -fx-border-color: #e2e8f0 transparent transparent transparent;
-    -fx-border-width: 1;
-}
-
-
-.dialog-pane .button {
-    -fx-background-color: #e2e8f0;
-    -fx-text-fill: #475569;
-    -fx-font-weight: bold;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-padding: 8 20;
-    -fx-cursor: hand;
-    -fx-border-color: transparent;
-}
-
-.dialog-pane .button:hover {
-    -fx-background-color: #cbd5e1;
-}
-
-/* =======================================================
-   7. BOUTONS NOMMÉS
-   ======================================================= */
-
-.button-ok {
-    -fx-background-color: #6a8bce;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-padding: 8 22;
-    -fx-cursor: hand;
-    -fx-border-color: transparent;
-}
-
-.button-ok:hover {
-    -fx-background-color: #5172b9;
-}
-
-.button-cancel {
-    -fx-background-color: #e2e8f0;
-    -fx-text-fill: #475569;
-    -fx-font-weight: bold;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-padding: 8 20;
-    -fx-cursor: hand;
-    -fx-border-color: transparent;
-}
-
-.button-cancel:hover {
-    -fx-background-color: #cbd5e1;
-}
-
-
-.dialog-pane .button:default {
-    -fx-background-color: #6a8bce;
-    -fx-text-fill: white;
-}
-
-.dialog-pane .button:default:hover {
-    -fx-background-color: #5172b9;
-}
-
-.button-primary {
-    -fx-background-color: #6a8bce;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-padding: 8 22;
-    -fx-cursor: hand;
-}
-
-.button-primary:hover {
-    -fx-background-color: #5172b9;
-}
-
-.button-annuler {
-    -fx-background-color: white;
-    -fx-text-fill: #6a8bce;
-    -fx-border-color: #6a8bce;
-    -fx-border-width: 1;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-padding: 8 20;
-    -fx-cursor: hand;
-}
-
-.button-annuler:hover {
-    -fx-background-color: #f1f5f9;
-}
-
-/* =======================================================
-   9. EN-TÊTE CUSTOM
-   ======================================================= */
-
+/* ───────────────────────────────────────────────
+   HEADER DU POPUP
+   ─────────────────────────────────────────────── */
 .popup-header {
-    -fx-background-color: #7A9FE0;
-    -fx-padding: 13 20 13 20;
+    -fx-background-color: transparent; /* supprime le fond gris */
+    -fx-min-height: 40px;
+    -fx-padding: 0 0 10 0;
+    -fx-alignment: CENTER_LEFT; /* centre verticalement */
 }
 
 .popup-header-title {
-    -fx-font-size: 16px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
-    -fx-font-family: 'Arial';
+    -fx-text-fill: #3b82f6;
+}
+
+/* ───────────────────────────────────────────────
+   LABELS
+   ─────────────────────────────────────────────── */
+.label-champ {
+    -fx-font-size: 14px;
+    -fx-text-fill: #374151; /* gris foncé */
+    -fx-font-weight: 600;
+}
+
+/* ───────────────────────────────────────────────
+   CHAMPS DE FORMULAIRE
+   ─────────────────────────────────────────────── */
+.champform {
+    -fx-background-color: #f9fafb;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8 10;
+    -fx-font-size: 14px;
+}
+
+.champform:focused {
+    -fx-border-color: #3b82f6;
+    -fx-background-color: #ffffff;
+}
+
+/* ───────────────────────────────────────────────
+   ERREURS
+   ─────────────────────────────────────────────── */
+.erreur-champ {
+    -fx-text-fill: #dc2626; /* rouge */
+    -fx-font-size: 12px;
+    -fx-padding: 0 0 4 0;
+}
+
+/* ───────────────────────────────────────────────
+   BOUTONS
+   ─────────────────────────────────────────────── */
+.button {
+    -fx-background-radius: 8;
+    -fx-font-size: 14px;
+    -fx-padding: 8 16;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+
+/* Bouton OK */
+.dialog-pane .button-bar .button[data-button-type="OK_DONE"] {
+    -fx-background-color: #2563eb;
     -fx-text-fill: white;
 }
 
-/* =======================================================
-   10. CARTE FORMULAIRE STOCK (popup-carte, popup-contenu, popup-root)
-   ======================================================= */
-
-.popup-root {
-    -fx-background-color: #f4f5f7;
+.dialog-pane .button-bar .button[data-button-type="OK_DONE"]:hover {
+    -fx-background-color: #1d4ed8;
 }
 
-.popup-contenu {
-    -fx-background-color: #f4f5f7;
-    -fx-padding: 18;
+/* Bouton Annuler */
+.dialog-pane .button-bar .button[data-button-type="CANCEL"] {
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: #111827;
 }
 
-.popup-carte {
-    -fx-background-color: white;
-    -fx-background-radius: 8;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 8;
-    -fx-border-width: 1;
-    -fx-padding: 18;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 6, 0, 0, 2);
+.dialog-pane .button-bar .button[data-button-type="CANCEL"]:hover {
+    -fx-background-color: #d1d5db;
 }
 
+.dialog-pane .button-bar .button[data-button-type="CANCEL"]:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
 
-.rounded-scroll-pane {
+.button:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+/* Empêche le DialogPane de casser les coins des boutons */
+.dialog-pane .button {
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+
+/* Empêche le focus de modifier la forme */
+.dialog-pane .button:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 8 !important;
+}
+
+/* ───────────────────────────────────────────────
+   DIALOG PANE GLOBAL
+   ─────────────────────────────────────────────── */
+.dialog-pane {
     -fx-background-color: transparent;
-    -fx-background: transparent;
-    -fx-border-color: transparent;
+    -fx-background-insets: 0 !important;
     -fx-padding: 0;
 }
 
-.rounded-scroll-pane .viewport {
-    -fx-background-color: #f4f5f7;
-}
-
-.rounded-scroll-pane .scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-pref-width: 8;
-}
-
-.rounded-scroll-pane .scroll-bar:vertical .track,
-.rounded-scroll-pane .scroll-bar:vertical .track-background {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-}
-
-.rounded-scroll-pane .scroll-bar:vertical .thumb {
-    -fx-background-color: #cbd5e1;
-    -fx-background-radius: 10;
-}
-
-.rounded-scroll-pane .scroll-bar:vertical .increment-button,
-.rounded-scroll-pane .scroll-bar:vertical .decrement-button,
-.rounded-scroll-pane .scroll-bar:vertical .increment-arrow,
-.rounded-scroll-pane .scroll-bar:vertical .decrement-arrow {
-    -fx-padding: 0;
-    -fx-background-color: transparent;
-    -fx-shape: " ";
-}
-
-.rounded-scroll-pane .corner {
+.dialog-pane > *.content {
     -fx-background-color: transparent;
 }
 
-/* =======================================================
-   11. LABEL ERREUR
-   ======================================================= */
-
-.label-erreur {
-    -fx-text-fill: #dc2626;
-    -fx-font-size: 11px;
-}
-
-/* =======================================================
-   12. DATE PICKER
-   ======================================================= */
-
-.date-picker:focused .text-field,
-.date-picker .text-field {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-effect: none;
-}
-
-.date-picker-custom > .arrow-button {
-    -fx-background-color: #6a8bce;
-    -fx-background-radius: 5;
-    -fx-padding: 8 12;
-    -fx-cursor: hand;
-}
-
-.date-picker-custom > .arrow-button > .arrow {
-    -fx-background-color: white;
-}
-
-.date-picker-custom > .arrow-button:hover {
-    -fx-background-color: #5172b9;
-}
-
-.date-picker-popup {
-    -fx-background-color: white;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 10, 0, 0, 4);
-}
-
-.date-picker-popup .month-year-pane {
-    -fx-background-color: #6a8bce;
-    -fx-background-radius: 8 8 0 0;
-}
-
-.date-picker-popup .month-year-pane .label {
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-}
-
-.date-picker-popup .month-year-pane .left-button .left-arrow,
-.date-picker-popup .month-year-pane .right-button .right-arrow {
-    -fx-background-color: white;
-}
-
-.date-picker-popup .calendar-grid {
-    -fx-background-color: white;
-    -fx-padding: 8;
-}
-
-.date-picker-popup .calendar-grid .day-name-cell {
-    -fx-text-fill: #6a8bce;
-    -fx-font-weight: bold;
-}
-
-.date-picker-popup .day-cell {
-    -fx-background-color: transparent;
-    -fx-text-fill: #1e293b;
-    -fx-background-radius: 50%;
-}
-
-.date-picker-popup .day-cell:hover {
-    -fx-background-color: #f1f5f9;
-    -fx-text-fill: #1e293b;
-}
-
-.date-picker-popup .day-cell:selected {
-    -fx-background-color: #6a8bce;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-}
-
-.date-picker-popup .today {
-    -fx-border-color: #6a8bce;
-    -fx-border-radius: 50%;
-    -fx-border-width: 1;
-}
-
-.date-picker-popup .week-number-cell {
-    -fx-text-fill: #94a3b8;
+.dialog-pane:header *.header-panel {
     -fx-background-color: transparent;
 }

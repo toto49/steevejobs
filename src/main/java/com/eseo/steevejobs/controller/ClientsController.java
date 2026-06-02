@@ -6,14 +6,17 @@ import com.eseo.steevejobs.service.TiersService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
+import javafx.scene.layout.Region;
 
 import java.net.URL;
 import java.sql.SQLException;
@@ -88,6 +91,8 @@ public class ClientsController implements Initializable {
         header.getStyleClass().add("popup-header");
         Label titreLabel = new Label(titre);
         titreLabel.getStyleClass().add("popup-header-title");
+        // un peu de padding pour coller le texte à gauche
+        titreLabel.setPadding(new Insets(0, 0, 0, 4));
         header.getChildren().add(titreLabel);
         return header;
     }
@@ -153,12 +158,12 @@ public class ClientsController implements Initializable {
 
     @FXML
     private void ouvrirFormulaireCreation() {
-        Stage popup = new Stage();
-        popup.initModality(Modality.APPLICATION_MODAL);
-        popup.setTitle("Nouveau client / fournisseur");
-        popup.setResizable(true);
-        popup.setMinWidth(400);
-        popup.setMinHeight(450);
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Nouveau client / fournisseur");
+
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
 
         // ── Champs ────────────────────────────────────────────────
         ComboBox<TiersType> comboType = comboFormType();
@@ -170,7 +175,6 @@ public class ClientsController implements Initializable {
         TextField txtSiret   = champForm("SIRET (14 chiffres)");
         TextField txtNumTva  = champForm("N° TVA");
 
-        // Labels d'erreur
         Label errType    = erreurLabel();
         Label errNom     = erreurLabel();
         Label errEmail   = erreurLabel();
@@ -179,92 +183,143 @@ public class ClientsController implements Initializable {
         // ── Header ────────────────────────────────────────────────
         HBox header = buildHeader("Nouveau client / fournisseur");
 
-        // ── Carte formulaire ──────────────────────────────────────
-        VBox carte = new VBox(14);
-        carte.getStyleClass().add("popup-carte");
-        carte.getChildren().addAll(
-                labelChamp("Type *"),     comboType,  errType,
-                labelChamp("Nom *"),      txtNom,     errNom,
-                labelChamp("Prénom"),     txtPrenom,
-                labelChamp("Email *"),    txtEmail,   errEmail,
-                labelChamp("Téléphone"),  txtTel,
-                labelChamp("Adresse"),    txtAdresse,
-                labelChamp("SIRET"),      txtSiret,   errSiret,
-                labelChamp("N° TVA"),     txtNumTva
-        );
+        // ── GridPane 2 colonnes ────────────────────────────────────
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(6, 6, 6, 6));
 
-        // ── Boutons ───────────────────────────────────────────────
-        Button btnAnnuler = new Button("Annuler");
-        btnAnnuler.getStyleClass().add("button-annuler");
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setHalignment(HPos.LEFT);   // texte du label aligné à gauche
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(140);
+        colLabel.setMaxWidth(180);
 
-        Button btnCreer = new Button("Créer le client");
-        btnCreer.getStyleClass().add("button-primary");
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
 
-        HBox boutons = new HBox(12, btnAnnuler, btnCreer);
-        boutons.setAlignment(Pos.CENTER_RIGHT);
+        grid.getColumnConstraints().addAll(colLabel, colField);
 
-        // ── Contenu scrollable ────────────────────────────────────
-        VBox contenu = new VBox(16, carte, boutons);
-        contenu.getStyleClass().add("popup-contenu");
+        int row = 0;
+        grid.add(new Label("Type *"), 0, row);
+        grid.add(comboType, 1, row++);
+        grid.add(errType, 1, row++);
 
-        ScrollPane scroll = new ScrollPane(contenu);
-        scroll.setFitToWidth(true);
-        scroll.getStyleClass().add("rounded-scroll-pane");
+        grid.add(new Label("Nom *"), 0, row);
+        grid.add(txtNom, 1, row++);
+        grid.add(errNom, 1, row++);
 
-        VBox root = new VBox(header, scroll);
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        root.getStyleClass().add("popup-root");
+        grid.add(new Label("Prénom"), 0, row);
+        grid.add(txtPrenom, 1, row++);
 
-        // ── Actions ───────────────────────────────────────────────
-        btnAnnuler.setOnAction(e -> popup.close());
+        grid.add(new Label("Email *"), 0, row);
+        grid.add(txtEmail, 1, row++);
+        grid.add(errEmail, 1, row++);
 
-        btnCreer.setOnAction(e -> {
-            errType.setText(""); errNom.setText(""); errEmail.setText(""); errSiret.setText("");
-            boolean valide = true;
+        grid.add(new Label("Téléphone"), 0, row);
+        grid.add(txtTel, 1, row++);
 
-            if (comboType.getValue() == null) {
-                errType.setText("Veuillez sélectionner un type."); valide = false;
-            }
-            if (txtNom.getText().trim().isEmpty()) {
-                errNom.setText("Le nom est obligatoire."); valide = false;
-            }
-            if (txtEmail.getText().trim().isEmpty()) {
-                errEmail.setText("L'email est obligatoire."); valide = false;
-            }
-            String siret = txtSiret.getText().trim();
-            if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
-                errSiret.setText("Le SIRET doit contenir exactement 14 chiffres."); valide = false;
-            }
+        grid.add(new Label("Adresse"), 0, row);
+        grid.add(txtAdresse, 1, row++);
 
-            if (!valide) return;
+        grid.add(new Label("SIRET"), 0, row);
+        grid.add(txtSiret, 1, row++);
+        grid.add(errSiret, 1, row++);
 
-            Tiers client = new Tiers(
-                    0,
-                    txtNom.getText().trim(),
-                    txtPrenom.getText().trim(),
-                    comboType.getValue(),
-                    txtEmail.getText().trim(),
-                    txtAdresse.getText().trim(),
-                    txtTel.getText().trim(),
-                    siret,
-                    txtNumTva.getText().trim()
-            );
+        grid.add(new Label("N° TVA"), 0, row);
+        grid.add(txtNumTva, 1, row++);
 
-            try {
-                tiersService.ajouterTiers(client);
-                popup.close();
-                chargerTousClients();
-                showInfo("Succès", "Client/Fournisseur créé avec succès !");
-            } catch (Exception ex) {
-                errNom.setText("Erreur : " + ex.getMessage());
-            }
-        });
+        // Assure que chaque champ grandit horizontalement
+        GridPane.setHgrow(comboType, Priority.ALWAYS);
+        GridPane.setHgrow(txtNom, Priority.ALWAYS);
+        GridPane.setHgrow(txtPrenom, Priority.ALWAYS);
+        GridPane.setHgrow(txtEmail, Priority.ALWAYS);
+        GridPane.setHgrow(txtTel, Priority.ALWAYS);
+        GridPane.setHgrow(txtAdresse, Priority.ALWAYS);
+        GridPane.setHgrow(txtSiret, Priority.ALWAYS);
+        GridPane.setHgrow(txtNumTva, Priority.ALWAYS);
 
-        // ── Affichage ─────────────────────────────────────────────
-        Scene scene = new Scene(root, 480, 620);
-        applyCSS(scene);
-        popup.setScene(scene);
-        popup.showAndWait();
+        // ── Contenu  ───────────────────────────────
+        VBox contentBox = new VBox(12, header, grid);
+        contentBox.getStyleClass().addAll("popup-contenu");
+        contentBox.setPadding(new Insets(12));
+        contentBox.setFillWidth(true);
+
+        // On met le content directement dans le DialogPane pour que la taille s'ajuste
+        dp.setContent(contentBox);
+
+        // Applique le CSS du popup
+        appliquerStyleDialog(dp);
+
+        // Récupère les boutons
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+
+        if (btnOk != null) {
+            btnOk.setText("Créer le client");
+            btnOk.getStyleClass().add("button-primary");
+            // Empêche fermeture si validation échoue
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                errType.setText(""); errNom.setText(""); errEmail.setText(""); errSiret.setText("");
+                boolean valide = true;
+
+                if (comboType.getValue() == null) {
+                    errType.setText("Veuillez sélectionner un type."); valide = false;
+                }
+                if (txtNom.getText().trim().isEmpty()) {
+                    errNom.setText("Le nom est obligatoire."); valide = false;
+                }
+                if (txtEmail.getText().trim().isEmpty()) {
+                    errEmail.setText("L'email est obligatoire."); valide = false;
+                }
+                String siret = txtSiret.getText().trim();
+                if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
+                    errSiret.setText("Le SIRET doit contenir exactement 14 chiffres."); valide = false;
+                }
+
+                if (!valide) {
+                    ev.consume();
+                    return;
+                }
+
+                Tiers client = new Tiers(
+                        0,
+                        txtNom.getText().trim(),
+                        txtPrenom.getText().trim(),
+                        comboType.getValue(),
+                        txtEmail.getText().trim(),
+                        txtAdresse.getText().trim(),
+                        txtTel.getText().trim(),
+                        siret,
+                        txtNumTva.getText().trim()
+                );
+
+                try {
+                    tiersService.ajouterTiers(client);
+                    dialog.close();
+                    chargerTousClients();
+                    showInfo("Succès", "Client/Fournisseur créé avec succès !");
+                } catch (Exception ex) {
+                    errNom.setText("Erreur : " + ex.getMessage());
+                    ev.consume();
+                }
+            });
+        }
+
+        if (btnCancel != null) {
+            btnCancel.setText("Annuler");
+            btnCancel.getStyleClass().add("button-annuler");
+        }
+
+        // Ajuste la taille du DialogPane : plus large par défaut, hauteur calculée sur le contenu
+        dp.setPrefWidth(720);
+        dp.setMinWidth(560);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(600);
+
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -276,14 +331,13 @@ public class ClientsController implements Initializable {
         if (clientSelectionne == null) return;
         Tiers c = clientSelectionne;
 
-        Stage popup = new Stage();
-        popup.initModality(Modality.APPLICATION_MODAL);
-        popup.setTitle("Modifier le client");
-        popup.setResizable(true);
-        popup.setMinWidth(400);
-        popup.setMinHeight(450);
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Modifier le client");
 
-        // ── Champs pré-remplis ────────────────────────────────────
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
+
         ComboBox<TiersType> comboType = comboFormType();
         comboType.setValue(c.getType());
 
@@ -295,99 +349,140 @@ public class ClientsController implements Initializable {
         TextField txtSiret   = champFormValeur(c.getSiret());
         TextField txtNumTva  = champFormValeur(c.getNum_tva());
 
-        // Labels d'erreur
         Label errType  = erreurLabel();
         Label errNom   = erreurLabel();
         Label errEmail = erreurLabel();
         Label errSiret = erreurLabel();
 
-        // ── Header ────────────────────────────────────────────────
         HBox header = buildHeader("Modifier : " + c.getNom());
 
-        // ── Carte formulaire ──────────────────────────────────────
-        VBox carte = new VBox(14);
-        carte.getStyleClass().add("popup-carte");
-        carte.getChildren().addAll(
-                labelChamp("Type *"),     comboType,  errType,
-                labelChamp("Nom *"),      txtNom,     errNom,
-                labelChamp("Prénom"),     txtPrenom,
-                labelChamp("Email *"),    txtEmail,   errEmail,
-                labelChamp("Téléphone"),  txtTel,
-                labelChamp("Adresse"),    txtAdresse,
-                labelChamp("SIRET"),      txtSiret,   errSiret,
-                labelChamp("N° TVA"),     txtNumTva
-        );
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(6, 6, 6, 6));
 
-        // ── Boutons ───────────────────────────────────────────────
-        Button btnAnnuler      = new Button("Annuler");
-        btnAnnuler.getStyleClass().add("button-annuler");
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setHalignment(HPos.LEFT);
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(140);
+        colLabel.setMaxWidth(180);
 
-        Button btnEnregistrer  = new Button("Enregistrer les modifications");
-        btnEnregistrer.getStyleClass().add("button-primary");
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
 
-        HBox boutons = new HBox(12, btnAnnuler, btnEnregistrer);
-        boutons.setAlignment(Pos.CENTER_RIGHT);
+        grid.getColumnConstraints().addAll(colLabel, colField);
 
-        // ── Contenu scrollable ────────────────────────────────────
-        VBox contenu = new VBox(16, carte, boutons);
-        contenu.getStyleClass().add("popup-contenu");
+        int row = 0;
+        grid.add(new Label("Type *"), 0, row);
+        grid.add(comboType, 1, row++);
+        grid.add(errType, 1, row++);
 
-        ScrollPane scroll = new ScrollPane(contenu);
-        scroll.setFitToWidth(true);
-        scroll.getStyleClass().add("rounded-scroll-pane");
+        grid.add(new Label("Nom *"), 0, row);
+        grid.add(txtNom, 1, row++);
+        grid.add(errNom, 1, row++);
 
-        VBox root = new VBox(header, scroll);
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        root.getStyleClass().add("popup-root");
+        grid.add(new Label("Prénom"), 0, row);
+        grid.add(txtPrenom, 1, row++);
 
-        // ── Actions ───────────────────────────────────────────────
-        btnAnnuler.setOnAction(e -> popup.close());
+        grid.add(new Label("Email *"), 0, row);
+        grid.add(txtEmail, 1, row++);
+        grid.add(errEmail, 1, row++);
 
-        btnEnregistrer.setOnAction(ev -> {
-            errType.setText(""); errNom.setText(""); errEmail.setText(""); errSiret.setText("");
-            boolean valide = true;
+        grid.add(new Label("Téléphone"), 0, row);
+        grid.add(txtTel, 1, row++);
 
-            if (comboType.getValue() == null) {
-                errType.setText("Veuillez sélectionner un type."); valide = false;
-            }
-            if (txtNom.getText().trim().isEmpty()) {
-                errNom.setText("Le nom est obligatoire."); valide = false;
-            }
-            if (txtEmail.getText().trim().isEmpty()) {
-                errEmail.setText("L'email est obligatoire."); valide = false;
-            }
-            String siret = txtSiret.getText().trim();
-            if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
-                errSiret.setText("Le SIRET doit contenir exactement 14 chiffres."); valide = false;
-            }
+        grid.add(new Label("Adresse"), 0, row);
+        grid.add(txtAdresse, 1, row++);
 
-            if (!valide) return;
+        grid.add(new Label("SIRET"), 0, row);
+        grid.add(txtSiret, 1, row++);
+        grid.add(errSiret, 1, row++);
 
-            c.setType(comboType.getValue());
-            c.setNom(txtNom.getText().trim());
-            c.setPrenom(txtPrenom.getText().trim());
-            c.setEmail(txtEmail.getText().trim());
-            c.setTel(txtTel.getText().trim());
-            c.setAdresse(txtAdresse.getText().trim());
-            c.setSiret(siret);
-            c.setNum_tva(txtNumTva.getText().trim());
+        grid.add(new Label("N° TVA"), 0, row);
+        grid.add(txtNumTva, 1, row++);
 
-            try {
-                tiersService.modifierTiers(c);
-                popup.close();
-                chargerTousClients();
-                afficherDetail(c);
-                showInfo("Succès", "Client/Fournisseur modifié avec succès !");
-            } catch (Exception ex) {
-                errNom.setText("Erreur : " + ex.getMessage());
-            }
-        });
+        GridPane.setHgrow(comboType, Priority.ALWAYS);
+        GridPane.setHgrow(txtNom, Priority.ALWAYS);
+        GridPane.setHgrow(txtPrenom, Priority.ALWAYS);
+        GridPane.setHgrow(txtEmail, Priority.ALWAYS);
+        GridPane.setHgrow(txtTel, Priority.ALWAYS);
+        GridPane.setHgrow(txtAdresse, Priority.ALWAYS);
+        GridPane.setHgrow(txtSiret, Priority.ALWAYS);
+        GridPane.setHgrow(txtNumTva, Priority.ALWAYS);
 
-        // ── Affichage ─────────────────────────────────────────────
-        Scene scene = new Scene(root, 480, 620);
-        applyCSS(scene);
-        popup.setScene(scene);
-        popup.showAndWait();
+        VBox contentBox = new VBox(12, header, grid);
+        contentBox.getStyleClass().addAll("popup-contenu");
+        contentBox.setPadding(new Insets(12));
+        contentBox.setFillWidth(true);
+
+        dp.setContent(contentBox);
+
+        appliquerStyleDialog(dp);
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+
+        if (btnOk != null) {
+            btnOk.setText("Enregistrer les modifications");
+            btnOk.getStyleClass().add("button-primary");
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                errType.setText(""); errNom.setText(""); errEmail.setText(""); errSiret.setText("");
+                boolean valide = true;
+
+                if (comboType.getValue() == null) {
+                    errType.setText("Veuillez sélectionner un type."); valide = false;
+                }
+                if (txtNom.getText().trim().isEmpty()) {
+                    errNom.setText("Le nom est obligatoire."); valide = false;
+                }
+                if (txtEmail.getText().trim().isEmpty()) {
+                    errEmail.setText("L'email est obligatoire."); valide = false;
+                }
+                String siret = txtSiret.getText().trim();
+                if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
+                    errSiret.setText("Le SIRET doit contenir exactement 14 chiffres."); valide = false;
+                }
+
+                if (!valide) {
+                    ev.consume();
+                    return;
+                }
+
+                c.setType(comboType.getValue());
+                c.setNom(txtNom.getText().trim());
+                c.setPrenom(txtPrenom.getText().trim());
+                c.setEmail(txtEmail.getText().trim());
+                c.setTel(txtTel.getText().trim());
+                c.setAdresse(txtAdresse.getText().trim());
+                c.setSiret(siret);
+                c.setNum_tva(txtNumTva.getText().trim());
+
+                try {
+                    tiersService.modifierTiers(c);
+                    dialog.close();
+                    chargerTousClients();
+                    afficherDetail(c);
+                    showInfo("Succès", "Client/Fournisseur modifié avec succès !");
+                } catch (Exception ex) {
+                    errNom.setText("Erreur : " + ex.getMessage());
+                    ev.consume();
+                }
+            });
+        }
+
+        if (btnCancel != null) {
+            btnCancel.setText("Annuler");
+            btnCancel.getStyleClass().add("button-annuler");
+        }
+
+        dp.setPrefWidth(720);
+        dp.setMinWidth(560);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(600);
+
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
 
     // ─────────────────────────────────────────────────────────────

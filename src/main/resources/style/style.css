@@ -559,14 +559,6 @@
     -fx-shape: " ";
 }
 
-
-.dialog-pane {
-    -fx-background-color: white;
-    -fx-border-color: #D8E2F6;
-    -fx-border-radius: 14;
-    -fx-background-radius: 14;
-}
-
 .dialog-pane .header-panel {
     -fx-background-color: #F6F9FF;
 }
