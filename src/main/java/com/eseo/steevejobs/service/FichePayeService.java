@@ -62,35 +62,6 @@ public class FichePayeService {
         return fiche;
     }
 
-    public boolean supprimerFiche(int id) throws IllegalArgumentException, SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("L'ID de la fiche de paie est invalide.");
-        }
-        return fichePayeDAO.deleteFichePaye(id);
-    }
-
-    public List<FichePaye> obtenirToutesLesFiches() throws SQLException {
-        return fichePayeDAO.findAll();
-    }
-
-    public List<FichePaye> obtenirFichesParEmploye(int employeId)
-            throws IllegalArgumentException, SQLException {
-        if (employeId <= 0) {
-            throw new IllegalArgumentException("L'ID de l'employé est invalide.");
-        }
-        return fichePayeDAO.findByEmployeId(employeId);
-    }
-
-    public List<FichePaye> obtenirFichesParAnnee(int annee)
-            throws IllegalArgumentException, SQLException {
-        int anneeActuelle = LocalDateTime.now().getYear();
-        if (annee < 2000 || annee > anneeActuelle) {
-            throw new IllegalArgumentException(
-                    "L'année doit être comprise entre 2000 et " + anneeActuelle + ".");
-        }
-        return fichePayeDAO.findByAnnee(annee);
-    }
-
     public List<FichePaye> findAll() throws SQLException {
         return fichePayeDAO.findAll();
     }

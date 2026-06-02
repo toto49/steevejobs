@@ -1,7 +1,7 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.controller.*;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.util.TestRuntime;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -42,9 +42,14 @@ public class WebSocketService {
     private final Set<String> pendingTypesToUpdate = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean debounceScheduled = new AtomicBoolean(false);
     private final Set<String> processedEvents = ConcurrentHashMap.newKeySet();
+    private volatile int pendingTicketId = -1;
+
+    private final WebSocketUiBridge uiBridge = WebSocketUiBridge.getInstance();
 
     private WebSocketService() {
-        scheduler.scheduleAtFixedRate(this::checkConnection, 2, 5, TimeUnit.SECONDS);
+        if (!TestRuntime.isEnabled()) {
+            scheduler.scheduleAtFixedRate(this::checkConnection, 2, 5, TimeUnit.SECONDS);
+        }
     }
 
     public static WebSocketService getInstance() {
@@ -71,6 +76,9 @@ public class WebSocketService {
     }
 
     public void envoyerMessageBrut(String message) {
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         try {
             if (wsClient != null && wsClient.isOpen() && isConnected.get()) {
                 wsClient.send(message);
@@ -83,6 +91,9 @@ public class WebSocketService {
     }
 
     public void connecter() {
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         if (isConnected.get() || !isConnecting.compareAndSet(false, true)) return;
 
         try {
@@ -133,44 +144,33 @@ public class WebSocketService {
                             if ("SUCCESS".equals(status)) {
                                 String token = json.getString("token");
                                 String roomName = json.optString("roomName", "");
-                                if (VisioController.getActiveInstance() != null) {
-                                    VisioController.getActiveInstance().recevoirTokenEtLancer(token, roomName);
-                                }
+                                uiBridge.dispatchVisioTokenSuccess(token, roomName);
                             } else {
                                 String messageErreur = json.optString("message", "❌ Accès au salon refusé.");
                                 System.err.println("🛑 [WS] Accès Visio refusé par le serveur : " + messageErreur);
-                                if (VisioController.getActiveInstance() != null) {
-                                    VisioController.getActiveInstance().recevoirErreurVisio(messageErreur);
-                                }
+                                uiBridge.dispatchVisioMessage(messageErreur);
                             }
                         } else if ("PLANIF_RESPONSE".equals(type)) {
                             String status = json.optString("status");
 
-                            if (VisioController.getActiveInstance() != null) {
-                                if ("SUCCESS".equals(status)) {
-                                    VisioController.getActiveInstance().recevoirErreurVisio("✅ Réunion planifiée avec succès !");
-                                    VisioController.getActiveInstance().rafraichirListeReunions(); // Recharge le tableau
-                                } else {
-                                    String messageErreur = json.optString("message",
-                                            "❌ Échec de la planification en BDD.");
-                                    VisioController.getActiveInstance().recevoirErreurVisio(messageErreur);
-                                }
+                            if ("SUCCESS".equals(status)) {
+                                uiBridge.dispatchVisioMessage("✅ Réunion planifiée avec succès !");
+                                uiBridge.dispatchRefreshReunionsRequest();
+                            } else {
+                                String messageErreur = json.optString("message",
+                                        "❌ Échec de la planification en BDD.");
+                                uiBridge.dispatchVisioMessage(messageErreur);
                             }
                         } else if ("MY_VISIOS_RESPONSE".equals(type)) {
                             JSONArray reunions = json.optJSONArray("reunions");
-
-                            if (VisioController.getActiveInstance() != null && reunions != null) {
-                                VisioController.getActiveInstance().recevoirListeReunions(reunions);
-                            }
+                            uiBridge.dispatchReunionsList(reunions);
                         } else if ("DELETE_VISIO_RESPONSE".equals(type)) {
                             String status = json.optString("status");
-                            message = json.optString("message", "Suppression impossible.");
-                            if (VisioController.getActiveInstance() != null) {
-                                if ("SUCCESS".equals(status)) {
-                                    VisioController.getActiveInstance().recevoirSuppressionSalon("✅ " + message);
-                                } else {
-                                    VisioController.getActiveInstance().recevoirSuppressionSalon("❌ " + message);
-                                }
+                            String responseMessage = json.optString("message", "Suppression impossible.");
+                            if ("SUCCESS".equals(status)) {
+                                uiBridge.dispatchSalonDeleted("✅ " + responseMessage);
+                            } else {
+                                uiBridge.dispatchSalonDeleted("❌ " + responseMessage);
                             }
                         }
                     } catch (Exception e) {
@@ -202,7 +202,7 @@ public class WebSocketService {
     }
 
     private void checkConnection() {
-        if (!serviceActive.get()) return;
+        if (TestRuntime.isEnabled() || !serviceActive.get()) return;
         try {
             boolean open = (wsClient != null && wsClient.isOpen());
             if (!open && lastUri != null) connecter();
@@ -229,63 +229,50 @@ public class WebSocketService {
 
             ajouterTicketNonLu(idTicket);
             pendingTypesToUpdate.add(typeCible);
-
-            if (debounceScheduled.compareAndSet(false, true)) {
-                Platform.runLater(() -> {
-                    PauseTransition pause = new PauseTransition(Duration.millis(300));
-                    pause.setOnFinished(e -> appliquerMisesAJourUI(idTicket));
-                    pause.play();
-                });
-            }
+            pendingTicketId = idTicket;
+            planifierMiseAJourUI();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void appliquerMisesAJourUI(int dernierIdTicket) {
-        debounceScheduled.set(false);
-        try {
-            TicketController chatActif = TicketController.getActiveInstance();
-            if (chatActif != null && chatActif.getCurrentTicketId() == dernierIdTicket) {
-                chatActif.refreshChatSilently();
-            } else {
-                TicketsListController listeActive = TicketsListController.getActiveInstance();
-                if (listeActive != null) listeActive.rafraichirAffichage();
+    private void planifierMiseAJourUI() {
+        if (debounceScheduled.compareAndSet(false, true)) {
+            Platform.runLater(() -> {
+                PauseTransition pause = new PauseTransition(Duration.millis(300));
+                pause.setOnFinished(e -> appliquerMisesAJourUI());
+                pause.play();
+            });
+        }
+    }
 
-                java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(ParametresController.class);
-                boolean pushEnabled = prefs.getBoolean("push_enabled", false);
+    private void appliquerMisesAJourUI() {
+        debounceScheduled.set(false);
+        int ticketId = pendingTicketId;
+        try {
+            if (uiBridge.tryRefreshChatIfActive(ticketId)) {
+                pendingTypesToUpdate.clear();
+            } else {
+                uiBridge.dispatchRefreshTicketList();
 
                 for (String typeCible : pendingTypesToUpdate) {
-                    System.out.println("[WS] Traitement notif pour typeCible=" + typeCible);
-
-                    HomeController.ajouterNotification(typeCible);
-                    int nombre = "TECH".equals(typeCible)
-                            ? HomeController.notificationsTech
-                            : HomeController.notificationsAuteur;
-
-                    System.out.println("[WS] Valeur badge → " + typeCible + " = " + nombre);
-                    System.out.println("[WS] MenuController.getInstance() = " + MenuController.getInstance());
-
-                    MenuController mc = MenuController.getInstance();
-                    if (mc != null) {
-                        mc.allumerBadge(typeCible, Math.max(nombre, 1));
-                    } else {
-                        System.err.println("[WS] ⚠️ MenuController.getInstance() est null, badge non affiché !");
-                    }
-
-                    if (pushEnabled) {
-                        if ("AUTEUR".equals(typeCible)) {
-                            SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse reçue");
-                        } else if ("TECH".equals(typeCible)) {
-                            SystemNotificationService.send("SteeveJobs - Admin", "Nouveau message à traiter !");
-                        }
-                    }
+                    uiBridge.dispatchTicketNotification(typeCible, isPushEnabled());
                 }
                 pendingTypesToUpdate.clear();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        if (!pendingTypesToUpdate.isEmpty() || pendingTicketId != ticketId) {
+            planifierMiseAJourUI();
+        }
+    }
+
+    private boolean isPushEnabled() {
+        return java.util.prefs.Preferences.userNodeForPackage(
+                com.eseo.steevejobs.controller.ParametresController.class
+        ).getBoolean("push_enabled", false);
     }
 
     public void deconnecter(Runnable onClosed) {

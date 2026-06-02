@@ -4,7 +4,7 @@ import com.eseo.steevejobs.model.Permission;
 
 import java.util.List;
 
-public interface PermissionDao {
+public interface PermissionDAO {
     List<String> getPermissionCodesByUserId(int idUser);
 
     boolean insertRolePermission(String nomRole, int idPermission);

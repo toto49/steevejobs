@@ -302,7 +302,7 @@
                                     </children>
                                 </HBox>
                             </children>
-                        </VBox>
+    </VBox>
 
                     </items>
                 </SplitPane>

@@ -1,12 +1,14 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.Enum.VisioStatut;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.model.Visio;
 import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.service.UserService;
 import com.eseo.steevejobs.service.VisioService;
+import com.eseo.steevejobs.util.TestRuntime;
 import com.eseo.steevejobs.service.WebSocketService;
+import com.eseo.steevejobs.service.WebSocketUiBridge;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -56,7 +58,7 @@ public class VisioController {
     private static VisioController activeInstance;
     private static Dotenv dotenv;
 
-    private final UserDAO userDAO = new UserDAO();
+    private final UserService userService = new UserService();
     private final VisioService visioService = new VisioService();
     private final ContextMenu menuSuggestions = new ContextMenu();
 
@@ -120,6 +122,10 @@ public class VisioController {
     public void initialize() {
         activeInstance = this;
         attenteTokenVisio = false;
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
+        enregistrerCallbacksWebSocket();
 
         initialiserMenuSuggestions();
 
@@ -135,8 +141,40 @@ public class VisioController {
     public void couperController() {
         attenteTokenVisio = false;
         roomNameEnAttente = "";
+        WebSocketUiBridge.getInstance().clearVisioCallbacks();
         activeInstance = null;
         menuSuggestions.hide();
+    }
+
+    private void enregistrerCallbacksWebSocket() {
+        WebSocketUiBridge.getInstance().setVisioCallbacks(new WebSocketUiBridge.VisioCallbacks() {
+            @Override
+            public void onTokenSuccess(String token, String roomName) {
+                recevoirTokenEtLancer(token, roomName);
+            }
+
+            @Override
+            public void onVisioMessage(String message) {
+                recevoirErreurVisio(message);
+            }
+
+            @Override
+            public void onReunionsList(JSONArray reunions) {
+                if (reunions != null) {
+                    recevoirListeReunions(reunions);
+                }
+            }
+
+            @Override
+            public void onSalonDeleted(String message) {
+                recevoirSuppressionSalon(message);
+            }
+
+            @Override
+            public void onRefreshReunionsRequested() {
+                rafraichirListeReunions();
+            }
+        });
     }
 
     private void initialiserMenuSuggestions() {
@@ -147,7 +185,7 @@ public class VisioController {
 
     private void chargerEmployes() {
         try {
-            tousLesEmployes.setAll(userDAO.findActiveUsers());
+            tousLesEmployes.setAll(userService.getActiveUsers());
             trierEmployes();
         } catch (SQLException e) {
             afficherStatut("Impossible de charger la liste des employés.", true);

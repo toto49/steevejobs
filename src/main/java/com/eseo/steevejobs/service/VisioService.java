@@ -6,6 +6,7 @@ import com.eseo.steevejobs.model.Enum.VisioStatut;
 import com.eseo.steevejobs.model.SalonAccesInfo;
 import com.eseo.steevejobs.model.SalonEnCoursInfo;
 import com.eseo.steevejobs.model.Visio;
+import com.eseo.steevejobs.util.TestRuntime;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
@@ -18,7 +19,15 @@ public class VisioService {
 
     private static final ZoneId FUSEAU_HORAIRE = ZoneId.systemDefault();
 
-    private final VisioDAO visioDAO = new VisioDAO();
+    private final VisioDAO visioDAO;
+
+    public VisioService() {
+        this.visioDAO = new VisioDAO();
+    }
+
+    public VisioService(VisioDAO visioDAO) {
+        this.visioDAO = visioDAO;
+    }
 
     public Optional<String> validerNomSalon(String roomName) {
         if (roomName == null || roomName.trim().isEmpty()) {
@@ -50,7 +59,7 @@ public class VisioService {
 
     private void activerSalonsPlanifiesEligibles() {
         int misAJour = visioDAO.activerSalonsPlanifiesEligibles(LocalDateTime.now(FUSEAU_HORAIRE));
-        if (misAJour > 0) {
+        if (misAJour > 0 && !TestRuntime.isEnabled()) {
             System.out.println("✅ " + misAJour + " réunion(s) planifiée(s) passée(s) en EN_COURS.");
         }
     }
@@ -85,7 +94,9 @@ public class VisioService {
         activerSalonsPlanifiesEligibles();
 
         if (!visioDAO.existeEnBdd(roomName)) {
-            System.out.println("✨ Initialisation d'une visioconférence instantanée publique : " + roomName);
+            if (!TestRuntime.isEnabled()) {
+                System.out.println("✨ Initialisation d'une visioconférence instantanée publique : " + roomName);
+            }
             Visio instantAppel = new Visio(roomName, userId, null);
             instantAppel.setStatut(VisioStatut.EN_COURS);
             instantAppel.setType_reunion(ReunionType.INSTANTANEE);
@@ -100,7 +111,9 @@ public class VisioService {
             reponse.put("type", "VISIO_TOKEN_RESPONSE");
             reponse.put("status", "SUCCESS");
             reponse.put("roomName", roomName);
-            System.out.println("✅ Autorisation d'accès BDD accordée pour " + userName + " sur le salon [" + roomName + "]");
+            if (!TestRuntime.isEnabled()) {
+                System.out.println("✅ Autorisation d'accès BDD accordée pour " + userName + " sur le salon [" + roomName + "]");
+            }
         } else {
             reponse.put("type", "VISIO_TOKEN_RESPONSE");
             reponse.put("status", "ERROR");
@@ -132,10 +145,6 @@ public class VisioService {
         return visioDAO.listerReunionsDisponibles(userId);
     }
 
-    public void gererDepartParticipant(String roomName, int userId) {
-        System.out.println("🚶 Profil #" + userId + " déconnecté du salon : " + roomName);
-    }
-
     public void couperSalonDefinitif(String roomName, int userId) {
         Optional<String> errNom = validerNomSalon(roomName);
         if (errNom.isPresent() || !visioDAO.isCreateur(roomName.trim(), userId)) {
@@ -150,6 +159,8 @@ public class VisioService {
         } else {
             visioDAO.terminerSalonPlanifie(nom);
         }
-        System.out.println("🔒 Salon clôturé : " + nom);
+        if (!TestRuntime.isEnabled()) {
+            System.out.println("🔒 Salon clôturé : " + nom);
+        }
     }
 }

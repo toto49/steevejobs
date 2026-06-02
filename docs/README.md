@@ -9,6 +9,7 @@ Bienvenue dans la documentation du projet. Choisissez le guide adapté à votre 
 | [**Déploiement Docker**](DOCKER.md) | DevOps | Compose, LiveKit, branche [`websocket`](https://github.com/toto49/steevejobs/tree/websocket) |
 | [**Architecture production**](ARCHITECTURE.md) | DevOps | NAS Synology, reverse proxy, DNS |
 | [**Tests unitaires**](TESTS.md) | Développeurs | Stratégie JUnit / Mockito, exécution des tests |
+| [**Transparence IA**](TRANSPARENCE_IA.md) | Évaluation / équipe | Usage de l'IA sur le projet (obligatoire) |
 
 ## Ressources complémentaires
 

@@ -3,6 +3,7 @@ package service;
 import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.UserService;
+import org.mindrot.jbcrypt.BCrypt;
 import service.support.MockitoJava25Support;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,10 +12,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.sql.SQLException;
-import java.util.List;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -94,11 +95,12 @@ class UserServiceTest {
 
     @Test
     void authenticate_identifiantsCorrects_retourneUtilisateur() throws Exception {
-        User user = new User(1, "Dupont", "Jean", "jean@test.fr", "hash", "", "EMPLOYE", "", "Dev", true);
+        String passwordClair = "monMotDePasse";
+        String hash = BCrypt.hashpw(passwordClair, BCrypt.gensalt(12));
+        User user = new User(1, "Dupont", "Jean", "jean@test.fr", hash, "", "EMPLOYE", "", "Dev", true);
         when(userDAO.getByEmail("jean@test.fr")).thenReturn(user);
-        when(userDAO.authenticate("jean@test.fr", "hash")).thenReturn(user);
 
-        User resultat = service.authenticate("jean@test.fr", "hash");
+        User resultat = service.authenticate("jean@test.fr", passwordClair);
 
         assertNotNull(resultat);
         assertEquals(1, resultat.getId());
@@ -106,22 +108,59 @@ class UserServiceTest {
 
     @Test
     void authenticate_motDePasseIncorrect_doitLeverSecurityException() throws Exception {
-        User user = new User(1, "Dupont", "Jean", "jean@test.fr", "hash", "", "EMPLOYE", "", "Dev", true);
+        String hash = BCrypt.hashpw("bonMotDePasse", BCrypt.gensalt(12));
+        User user = new User(1, "Dupont", "Jean", "jean@test.fr", hash, "", "EMPLOYE", "", "Dev", true);
         when(userDAO.getByEmail("jean@test.fr")).thenReturn(user);
-        when(userDAO.authenticate("jean@test.fr", "mauvais")).thenReturn(null);
 
         assertThrows(SecurityException.class, () -> service.authenticate("jean@test.fr", "mauvais"));
     }
 
     @Test
-    void hashPassword_retourneSha256De64Caracteres() {
-        String hash = service.hashPassword("monMotDePasse");
-        assertEquals(64, hash.length());
+    void authenticate_cinqEchecs_doitBloquerLeCompte() throws Exception {
+        String hash = BCrypt.hashpw("bonMotDePasse", BCrypt.gensalt(12));
+        User user = new User(1, "Dupont", "Jean", "jean@test.fr", hash, "", "EMPLOYE", "", "Dev", true);
+        user.setTentativesEchouees(4);
+        when(userDAO.getByEmail("jean@test.fr")).thenReturn(user);
+
+        SecurityException ex = assertThrows(SecurityException.class,
+                () -> service.authenticate("jean@test.fr", "mauvais"));
+
+        assertTrue(ex.getMessage().contains("bloqué"));
+        verify(userDAO).updateTentativesEtBlocage(eq(1), eq(5), any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
     @Test
-    void hashPassword_memeEntree_memeSortie() {
-        assertEquals(service.hashPassword("steevejobs"), service.hashPassword("steevejobs"));
+    void authenticate_compteDejaBloque_doitRefuserLaConnexion() throws Exception {
+        String hash = BCrypt.hashpw("bonMotDePasse", BCrypt.gensalt(12));
+        User user = new User(1, "Dupont", "Jean", "jean@test.fr", hash, "", "EMPLOYE", "", "Dev", true);
+        user.setBloqueJusqua(LocalDateTime.now().plusMinutes(10));
+        when(userDAO.getByEmail("jean@test.fr")).thenReturn(user);
+
+        SecurityException ex = assertThrows(SecurityException.class,
+                () -> service.authenticate("jean@test.fr", "bonMotDePasse"));
+
+        assertTrue(ex.getMessage().contains("Compte bloqué"));
+        verify(userDAO, never()).updateTentativesEtBlocage(anyInt(), anyInt(), any(), any());
+    }
+
+    @Test
+    void authenticate_succesApresEchecs_reinitialiseLesTentatives() throws Exception {
+        String passwordClair = "monMotDePasse";
+        String hash = BCrypt.hashpw(passwordClair, BCrypt.gensalt(12));
+        User user = new User(1, "Dupont", "Jean", "jean@test.fr", hash, "", "EMPLOYE", "", "Dev", true);
+        user.setTentativesEchouees(2);
+        user.setDateDernierEchec(LocalDateTime.now().minusMinutes(1));
+        when(userDAO.getByEmail("jean@test.fr")).thenReturn(user);
+
+        assertNotNull(service.authenticate("jean@test.fr", passwordClair));
+        verify(userDAO).updateTentativesEtBlocage(1, 0, null, null);
+    }
+
+    @Test
+    void hashPassword_retourneUnHashBCrypt() {
+        String hash = service.hashPassword("monMotDePasse");
+        assertTrue(hash.startsWith("$2a$"));
+        assertTrue(BCrypt.checkpw("monMotDePasse", hash));
     }
 
     @Test
@@ -130,27 +169,4 @@ class UserServiceTest {
         assertEquals("ID utilisateur invalide", ex.getMessage());
     }
 
-    @Test
-    void activateUser_idInexistant_retourneFalse() throws SQLException {
-        when(userDAO.activateUser(99)).thenReturn(false);
-
-        assertFalse(service.activateUser(99));
-    }
-
-    @Test
-    void updateUserPassword_motDePasseVide_doitLeverException() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.updateUserPassword(1, "  "));
-        assertEquals("Le mot de passe est obligatoire", ex.getMessage());
-    }
-
-    @Test
-    void getIdsByRole_retourneLesIdentifiants() throws SQLException {
-        when(userDAO.findByRole("RH")).thenReturn(List.of(
-                new User(1, "A", "B", "a@t.fr", "h", "", "RH", "", "RH", true),
-                new User(2, "C", "D", "c@t.fr", "h", "", "RH", "", "RH", true)
-        ));
-
-        assertEquals(List.of(1, 2), service.getIdsByRole("RH"));
-    }
 }

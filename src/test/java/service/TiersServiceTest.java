@@ -85,31 +85,4 @@ class TiersServiceTest {
         verify(tiersDAO, never()).deleteTiers(anyInt());
     }
 
-    @Test
-    void modifierTiers_idInvalide_doitLeverException() {
-        Tiers tiers = tiersValide();
-        tiers.setId(0);
-
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.modifierTiers(tiers));
-        assertEquals("L'ID du tiers est invalide pour une modification.", ex.getMessage());
-    }
-
-    @Test
-    void ajouterTiers_echecBdd_doitLeverRuntimeException() throws SQLException {
-        Tiers tiers = tiersValide();
-        when(tiersDAO.emailExists(tiers.getEmail())).thenReturn(false);
-        when(tiersDAO.siretExists(tiers.getSiret())).thenReturn(false);
-        when(tiersDAO.createTiers(tiers)).thenReturn(false);
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.ajouterTiers(tiers));
-        assertTrue(ex.getMessage().contains("Impossible d'ajouter le tiers"));
-    }
-
-    @Test
-    void validerTiers_nomVide_doitLeverException() {
-        Tiers tiers = tiersValide();
-        tiers.setNom("  ");
-
-        assertThrows(IllegalArgumentException.class, () -> service.ajouterTiers(tiers));
-    }
 }

@@ -79,6 +79,10 @@ public class TiersService {
         return tiersDAO.getById(id);
     }
 
+    public List<Tiers> findAll() throws SQLException {
+        return tiersDAO.findAll();
+    }
+
     public List<Tiers> obtenirTousLesTiers() throws SQLException {
         return tiersDAO.findAll();
     }

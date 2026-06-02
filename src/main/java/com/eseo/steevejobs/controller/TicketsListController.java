@@ -3,6 +3,7 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.*;
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -87,6 +88,10 @@ public class TicketsListController implements ParametrizedController {
     }
 
     private void chargerTicketsBDDAsync(Runnable actionApresChargement) {
+        if (TestRuntime.isEnabled()) {
+            this.tousLesTicketsBDD = List.of();
+            return;
+        }
         if (isFetching) return;
         isFetching = true;
 

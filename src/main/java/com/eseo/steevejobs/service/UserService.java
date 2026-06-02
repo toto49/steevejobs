@@ -240,6 +240,13 @@ public class UserService {
         return userDAO.countActiveUsers();
     }
 
+    public boolean updateTauxPatronal(int userId, int tauxPatronal) throws SQLException {
+        if (tauxPatronal < 0 || tauxPatronal >= 100) {
+            throw new IllegalArgumentException("Le taux patronal doit être entre 0 et 99.");
+        }
+        return userDAO.updateTauxPatronal(userId, tauxPatronal);
+    }
+
     public String hashPassword(String password) {
         return BCrypt.hashpw(password, BCrypt.gensalt(12));
     }

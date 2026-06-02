@@ -15,6 +15,10 @@ public class PlanningService {
         this.planningDAO = planningDAO;
     }
 
+    public PlanningService() {
+        this(new PlanningDAO());
+    }
+
     // --------------------------------------------------------
     // MÉTHODES PUBLIQUES
     // --------------------------------------------------------

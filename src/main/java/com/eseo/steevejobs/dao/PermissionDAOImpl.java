@@ -9,7 +9,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PermissionDaoImpl implements PermissionDao {
+public class PermissionDAOImpl implements PermissionDAO {
 
     @Override
     public List<String> getPermissionCodesByUserId(int idUser) {
@@ -74,6 +74,7 @@ public class PermissionDaoImpl implements PermissionDao {
         }
     }
 
+    @Override
     public List<Permission> getAllPermissions() {
         List<Permission> list = new ArrayList<>();
         String sql = "SELECT * FROM PERMISSION";
@@ -81,7 +82,10 @@ public class PermissionDaoImpl implements PermissionDao {
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                list.add(new Permission(rs.getInt("id_permission"), rs.getString("code_action"), rs.getString("description")));
+                list.add(new Permission(
+                        rs.getInt("id_permission"),
+                        rs.getString("code_action"),
+                        rs.getString("description")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -89,6 +93,7 @@ public class PermissionDaoImpl implements PermissionDao {
         return list;
     }
 
+    @Override
     public List<Integer> getPermissionIdsByRole(String nomRole) {
         List<Integer> list = new ArrayList<>();
         String sql = "SELECT id_permission FROM ROLE_PERMISSION WHERE nom_role = ?";

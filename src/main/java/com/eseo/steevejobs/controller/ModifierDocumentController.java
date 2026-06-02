@@ -1,9 +1,5 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.ComposerDAO;
-import com.eseo.steevejobs.dao.DocumentDAO;
-import com.eseo.steevejobs.dao.ProduitDAO;
-import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.Document;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
@@ -11,6 +7,8 @@ import com.eseo.steevejobs.model.Enum.DocumentType;
 import com.eseo.steevejobs.model.Produit;
 import com.eseo.steevejobs.model.Tiers;
 import com.eseo.steevejobs.service.DocumentService;
+import com.eseo.steevejobs.service.ProduitService;
+import com.eseo.steevejobs.service.TiersService;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -24,6 +22,7 @@ import javafx.util.StringConverter;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
@@ -43,10 +42,9 @@ public class ModifierDocumentController implements Initializable {
     @FXML private Label lblTotalHT, lblTVA, lblTotalTTC;
     @FXML private Button btnAnnuler, btnModifier;
 
-    private final TiersDAO tiersDAO = new TiersDAO();
-    private final ProduitDAO produitDAO = new ProduitDAO();
-    private final ComposerDAO composerDAO = new ComposerDAO();
-    private final DocumentService documentService = new DocumentService(new DocumentDAO());
+    private final TiersService tiersService = new TiersService();
+    private final ProduitService produitService = new ProduitService();
+    private final DocumentService documentService = new DocumentService();
 
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
     private Document documentModification;
@@ -68,7 +66,7 @@ public class ModifierDocumentController implements Initializable {
         comboStatut.setValue(document.getStatut());
 
         try {
-            lignes.setAll(composerDAO.findByDocumentId(document.getId()));
+            lignes.setAll(documentService.findLignesByDocumentId(document.getId()));
             updateTotaux();
         } catch (SQLException e) {
             afficherErreur("Erreur chargement des lignes : " + e.getMessage());
@@ -130,8 +128,8 @@ public class ModifierDocumentController implements Initializable {
 
     private void chargerDonnees() {
         try {
-            comboTiers.setItems(FXCollections.observableArrayList(tiersDAO.findAll()));
-            comboProduit.setItems(FXCollections.observableArrayList(produitDAO.findAllActive()));
+            comboTiers.setItems(FXCollections.observableArrayList(tiersService.findAll()));
+            comboProduit.setItems(FXCollections.observableArrayList(produitService.findAllActive()));
         } catch (SQLException e) {
             afficherErreur("Erreur chargement : " + e.getMessage());
         }
@@ -222,12 +220,7 @@ public class ModifierDocumentController implements Initializable {
         btnAnnuler.setDisable(true);
 
         try {
-            documentService.modifierDocument(documentModification);
-            composerDAO.deleteByDocumentId(documentModification.getId());
-            for (Composer nouvelleLigne : lignes) {
-                nouvelleLigne.setIdDocument(documentModification.getId());
-                composerDAO.createLigne(nouvelleLigne);
-            }
+            documentService.modifierDocumentAvecLignes(documentModification, List.copyOf(lignes));
             CompletableFuture.supplyAsync(() -> {
                 try {
                     return documentService.exporterPdf(documentModification.getId());

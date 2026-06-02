@@ -6,7 +6,8 @@ import com.eseo.steevejobs.model.Message;
 import java.sql.SQLException;
 import java.util.List;
 
-public class MessageServiceImpl {
+public class MessageServiceImpl implements MessageService {
+
     private final MessageDAO messageDAO;
 
     public MessageServiceImpl() {
@@ -17,7 +18,8 @@ public class MessageServiceImpl {
         this.messageDAO = messageDAO;
     }
 
-    public Message getMessageByID(int id) {
+    @Override
+    public Message getMessage(int id) {
         try {
             return messageDAO.getById(id);
         } catch (SQLException e) {
@@ -25,6 +27,7 @@ public class MessageServiceImpl {
         }
     }
 
+    @Override
     public List<Message> getMessagesByAuteur(int auteurId) {
         try {
             return messageDAO.findByAuteurId(auteurId);
@@ -33,12 +36,31 @@ public class MessageServiceImpl {
         }
     }
 
-    public boolean supprimerMessage(int id) {
+    @Override
+    public List<Message> getMessagesByTicketId(int ticketId) {
+        try {
+            return messageDAO.findByTicketId(ticketId);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur BDD : Impossible de récupérer les messages du ticket.", e);
+        }
+    }
+
+    @Override
+    public Message createMessage(Message message) {
+        try {
+            messageDAO.createMessage(message);
+            return message;
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur BDD : Impossible d'ajouter le message.", e);
+        }
+    }
+
+    @Override
+    public boolean deleteMessage(int id) {
         try {
             return messageDAO.deleteMessage(id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
-
 }

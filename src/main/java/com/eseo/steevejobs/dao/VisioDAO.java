@@ -1,5 +1,6 @@
 package com.eseo.steevejobs.dao;
 
+import com.eseo.steevejobs.util.TestRuntime;
 import com.eseo.steevejobs.model.Enum.ReunionType;
 import com.eseo.steevejobs.model.Enum.VisioStatut;
 import com.eseo.steevejobs.model.SalonAccesInfo;
@@ -264,7 +265,9 @@ public class VisioDAO {
                 del.setInt(1, visioId);
                 int deleted = del.executeUpdate();
                 if (deleted > 0) {
-                    System.out.println("🗑️ Salon instantané supprimé de la BDD : " + roomName);
+                    if (!TestRuntime.isEnabled()) {
+                        System.out.println("🗑️ Salon instantané supprimé de la BDD : " + roomName);
+                    }
                 }
                 return deleted > 0;
             }

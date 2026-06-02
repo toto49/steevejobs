@@ -87,9 +87,9 @@
                                         </BorderPane.margin>
 
                                         <TextField fx:id="messageInput" onAction="#handleSendMessage"
-                                                   promptText="Écrivez ici...."
-                                                   style="-fx-background-color: transparent; -fx-text-fill: black; -fx-font-size: 16px;"
-                                                   text="zdzdzdzdzdzdzzz" HBox.hgrow="ALWAYS"/>
+                                                   promptText="Ecrivez votre message..."
+                                                   styleClass="ticket-message-input"
+                                                   HBox.hgrow="ALWAYS"/>
 
                                         <SVGPath
                                                 content="M3.2656 2.3663 L21.7031 11.4288 Q22.0312 11.6319 22.0312 11.9913 Q22.0312 12.3506 21.7031 12.5381 L3.2656 21.6163 Q2.9219 21.8038 2.6094 21.5381 Q2.2969 21.2725 2.4062 20.9444 L4.2188 14.0225 Q4.3125 13.6475 4.7031 13.6006 L12.9531 12.1944 Q13.1562 12.1944 13.2031 12.0538 L13.25 11.96 Q13.25 11.7256 13.0625 11.6319 L4.7031 10.2256 Q4.3125 10.1788 4.2188 9.8038 L2.4062 3.085 Q2.2969 2.6944 2.6094 2.46 Q2.9219 2.21 3.2656 2.3663 Z"

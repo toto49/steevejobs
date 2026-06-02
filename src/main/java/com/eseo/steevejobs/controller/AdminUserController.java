@@ -4,6 +4,7 @@ import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.ConnexionService;
 import com.eseo.steevejobs.service.MailService;
 import com.eseo.steevejobs.service.UserService;
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -88,6 +89,11 @@ public class AdminUserController {
     @FXML
     public void initialize() {
         setupTableColumns();
+        if (TestRuntime.isEnabled()) {
+            filteredList = new FilteredList<>(masterUserList, b -> true);
+            setupPagination();
+            return;
+        }
         loadDataFromDatabase();
         setupSearchFilter();
 

@@ -5,7 +5,7 @@ import com.eseo.steevejobs.model.Message;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.*;
-
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -53,6 +53,7 @@ public class TicketController {
     private Label descriptionLabel;
 
     private Ticket currentTicket;
+    private int viewingTicketId = -1;
     private User currentUser;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
@@ -62,7 +63,7 @@ public class TicketController {
     }
 
     public int getCurrentTicketId() {
-        return currentTicket != null ? currentTicket.getId() : -1;
+        return viewingTicketId;
     }
 
     @FXML
@@ -77,12 +78,22 @@ public class TicketController {
     }
 
     public static void fermerChat() {
+        if (activeInstance != null) {
+            activeInstance.viewingTicketId = -1;
+            activeInstance.currentTicket = null;
+        }
+        activeInstance = null;
+    }
+
+    private void libererSessionChat() {
+        viewingTicketId = -1;
+        currentTicket = null;
         activeInstance = null;
     }
 
     public void refreshChatSilently() {
-        if (currentTicket == null) return;
-        int ticketId = currentTicket.getId();
+        if (TestRuntime.isEnabled() || viewingTicketId <= 0) return;
+        int ticketId = viewingTicketId;
         CompletableFuture.supplyAsync(() -> {
             currentTicket = ticketService.getTicketById(ticketId);
             return ticketService.getMessagesDuTicket(ticketId);
@@ -262,13 +273,13 @@ public class TicketController {
             actionButton.setStyle("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand;");
 
             messageInput.setDisable(false);
-            messageInput.setPromptText("Écrivez ici...");
+            messageInput.setPromptText("Ecrivez votre message...");
         }
     }
 
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
-        activeInstance = null;
+        libererSessionChat();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticketsList-view.fxml"));
             Parent view = loader.load();
@@ -313,7 +324,14 @@ public class TicketController {
 
     public void initData(int ticketId) {
         activeInstance = this;
+        viewingTicketId = ticketId;
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         chatMessagesContainer.getChildren().clear();
+        messageInput.clear();
+        messageInput.setDisable(false);
+        messageInput.setPromptText("Ecrivez votre message...");
 
         ProgressIndicator loader = new ProgressIndicator();
         loader.setMaxSize(50, 50);

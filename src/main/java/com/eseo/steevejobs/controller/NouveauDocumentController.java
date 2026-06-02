@@ -1,13 +1,12 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.DocumentDAO;
-import com.eseo.steevejobs.dao.ProduitDAO;
-import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.*;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
 import com.eseo.steevejobs.service.DocumentService;
+import com.eseo.steevejobs.service.ProduitService;
 import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.service.TiersService;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -40,9 +39,9 @@ public class NouveauDocumentController implements Initializable {
     @FXML private Label lblTotalHT, lblTVA, lblTotalTTC;
     @FXML private Button btnAnnuler, btnCreer;
 
-    private final TiersDAO tiersDAO = new TiersDAO();
-    private final ProduitDAO produitDAO = new ProduitDAO();
-    private final DocumentService documentService = new DocumentService(new DocumentDAO());
+    private final TiersService tiersService = new TiersService();
+    private final ProduitService produitService = new ProduitService();
+    private final DocumentService documentService = new DocumentService();
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
     private User user;
 
@@ -109,8 +108,8 @@ public class NouveauDocumentController implements Initializable {
 
     private void chargerDonnees() {
         try {
-            comboTiers.setItems(FXCollections.observableArrayList(tiersDAO.findAll()));
-            comboProduit.setItems(FXCollections.observableArrayList(produitDAO.findAllActive()));
+            comboTiers.setItems(FXCollections.observableArrayList(tiersService.findAll()));
+            comboProduit.setItems(FXCollections.observableArrayList(produitService.findAllActive()));
         } catch (SQLException e) {
             afficherErreur("Erreur chargement : " + e.getMessage());
         }

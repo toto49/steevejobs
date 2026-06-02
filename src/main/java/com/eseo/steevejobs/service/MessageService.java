@@ -8,8 +8,11 @@ public interface MessageService {
 
     Message getMessage(int id);
 
-    List<Message> getMessagesByAuteur(int AuteurId);
+    List<Message> getMessagesByAuteur(int auteurId);
 
-    boolean supprimerMessage(int id);
+    List<Message> getMessagesByTicketId(int ticketId);
 
+    Message createMessage(Message message);
+
+    boolean deleteMessage(int id);
 }

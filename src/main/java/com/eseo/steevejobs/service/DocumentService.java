@@ -29,6 +29,24 @@ public class DocumentService {
         this.pdfService  = pdfService;
     }
 
+    public DocumentService() {
+        this(new DocumentDAO());
+    }
+
+    public Document getDocumentById(int idDocument) throws SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+        return documentDAO.getById(idDocument);
+    }
+
+    public List<Composer> findLignesByDocumentId(int idDocument) throws SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+        return composerDAO.findByDocumentId(idDocument);
+    }
+
     public void ajouterDocument(Document document, List<Composer> lignes)
             throws IllegalArgumentException, SQLException {
 
@@ -55,6 +73,17 @@ public class DocumentService {
         boolean success = documentDAO.updateDocument(document);
         if (!success) {
             throw new RuntimeException("Erreur BDD : Impossible de mettre à jour ce document.");
+        }
+    }
+
+    public void modifierDocumentAvecLignes(Document document, List<Composer> lignes)
+            throws IllegalArgumentException, SQLException {
+        modifierDocument(document);
+        validerLignes(lignes);
+        composerDAO.deleteByDocumentId(document.getId());
+        for (Composer ligne : lignes) {
+            ligne.setIdDocument(document.getId());
+            composerDAO.createLigne(ligne);
         }
     }
 
