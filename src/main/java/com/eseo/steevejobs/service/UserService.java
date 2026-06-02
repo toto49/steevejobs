@@ -2,9 +2,8 @@ package com.eseo.steevejobs.service;
 
 import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.User;
+import org.mindrot.jbcrypt.BCrypt;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -105,24 +104,28 @@ public class UserService {
         return userDAO.getByEmail(email);
     }
 
-
-    public User authenticate(String email, String passwordHash) throws Exception {
+    /**
+     * Authentifie un utilisateur en comparant le mot de passe clair avec le hash BCrypt de la BDD.
+     */
+    public User authenticate(String email, String passwordClair) throws Exception {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("L'email est obligatoire");
         }
-        if (passwordHash == null || passwordHash.trim().isEmpty()) {
+        if (passwordClair == null || passwordClair.trim().isEmpty()) {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         }
 
+        // Récupération de l'utilisateur par son email unique
         User user = userDAO.getByEmail(email);
 
         if (user == null) {
-            return null;
+            return null; // L'utilisateur n'existe pas
         }
 
         if (!user.isActif()) {
             throw new SecurityException("Ce compte est désactivé. Veuillez contacter l'administrateur.");
         }
+
         if (user.getBloqueJusqua() != null && user.getBloqueJusqua().isAfter(LocalDateTime.now())) {
             Duration duration = Duration.between(LocalDateTime.now(), user.getBloqueJusqua());
             long minutes = duration.toMinutes();
@@ -132,8 +135,10 @@ public class UserService {
             throw new SecurityException("Compte bloqué. Réessayez dans " + tempsRestant + ".");
         }
 
-        User validUser = userDAO.authenticate(email, passwordHash);
-        if (validUser == null) {
+        // CORRECTION BCrypt : On vérifie le mot de passe saisi avec le hash extrait de la BDD
+        boolean passwordValide = BCrypt.checkpw(passwordClair, user.getPasswordHash());
+
+        if (!passwordValide) {
             int tentatives = user.getTentativesEchouees();
             LocalDateTime maintenant = LocalDateTime.now();
             if (user.getDateDernierEchec() != null && user.getDateDernierEchec().plusMinutes(15).isBefore(maintenant)) {
@@ -163,11 +168,13 @@ public class UserService {
                 throw new SecurityException("Identifiants incorrects. Il vous reste " + (5 - tentatives) + " essai(s).");
             }
         }
+
+        // Réinitialisation des tentatives en cas de succès
         if (user.getTentativesEchouees() > 0 || user.getDateDernierEchec() != null) {
-            userDAO.updateTentativesEtBlocage(validUser.getId(), 0, null, null);
+            userDAO.updateTentativesEtBlocage(user.getId(), 0, null, null);
         }
 
-        return validUser;
+        return user;
     }
 
     public List<User> getAllUsers() throws SQLException {
@@ -206,14 +213,16 @@ public class UserService {
         return userDAO.activateUser(id);
     }
 
-    public boolean updateUserPassword(int id, String newPasswordHash) throws SQLException {
+    public boolean updateUserPassword(int id, String newPasswordClair) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
         }
-        if (newPasswordHash == null || newPasswordHash.trim().isEmpty()) {
+        if (newPasswordClair == null || newPasswordClair.trim().isEmpty()) {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         }
-        return userDAO.updatePassword(id, newPasswordHash);
+        // CORRECTION BCrypt : Lors de la mise à jour, on applique le hachage
+        String hashed = hashPassword(newPasswordClair);
+        return userDAO.updatePassword(id, hashed);
     }
 
     public boolean checkEmailExists(String email) throws SQLException {
@@ -232,22 +241,7 @@ public class UserService {
     }
 
     public String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes());
-            StringBuilder hexString = new StringBuilder();
-
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Erreur lors du hachage du mot de passe", e);
-        }
+        return BCrypt.hashpw(password, BCrypt.gensalt(12));
     }
 
     public List<Integer> getIdsByRole(String role) throws SQLException {

@@ -14,6 +14,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -144,9 +145,7 @@ public class ParametresController {
             showAlert(Alert.AlertType.ERROR, "Erreur", "Le nouveau mot de passe et la confirmation ne correspondent pas.");
             return;
         }
-
-        String hashedAncien = userService.hashPassword(ancienMdp);
-        if (!hashedAncien.equals(currentUser.getPasswordHash())) {
+        if (!BCrypt.checkpw(ancienMdp, currentUser.getPasswordHash())) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "L'ancien mot de passe est incorrect.");
             return;
         }
@@ -160,10 +159,10 @@ public class ParametresController {
                             "Le support technique";
 
             MailService.EnvoyerMail(currentUser.getEmail(), "Changement de vos informations de connexion", contenuemail);
+            userService.updateUserPassword(currentUser.getId(), nouveauMdp);
+            String nouveauHash = userService.hashPassword(nouveauMdp);
+            currentUser.setPasswordHash(nouveauHash);
 
-            String hashedNouveau = userService.hashPassword(nouveauMdp);
-            userService.updateUserPassword(currentUser.getId(), hashedNouveau);
-            currentUser.setPasswordHash(hashedNouveau);
             SessionService.setUtilisateurConnecte(currentUser);
             ancienMdpField.clear();
             nouveauMdpField.clear();

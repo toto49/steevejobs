@@ -91,10 +91,8 @@ public class BienvenueController {
                     }
 
                     String token = ConnexionService.generateRandomMdp(12);
-                    String hashedToken = userService.hashPassword(token);
-
                     User user = userService.getUserByEmail(email);
-                    userService.updateUserPassword(user.getId(), hashedToken);
+                    userService.updateUserPassword(user.getId(), token);
 
                     MailService.EnvoyerMail(
                             email,
@@ -133,8 +131,7 @@ public class BienvenueController {
         }
 
         try {
-            String passwordHash = userService.hashPassword(password);
-            User connectedUser = userService.authenticate(mail, passwordHash);
+            User connectedUser = userService.authenticate(mail, password);
 
             if (connectedUser == null) {
                 errror_connexion.setText("Erreur : identifiants incorrects.");

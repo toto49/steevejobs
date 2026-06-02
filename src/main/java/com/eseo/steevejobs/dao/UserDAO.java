@@ -129,26 +129,11 @@ public class UserDAO {
         }
     }
 
-    public User authenticate(String email, String passwordHash) throws SQLException {
-        String sql = "SELECT * FROM USER WHERE email = ? AND mdp = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, email);
-            stmt.setString(2, passwordHash);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapUser(rs);
-                }
-                return null;
-            }
-        }
-    }
-
-    public boolean updatePassword(int id, String newPasswordHash) throws SQLException {
+    public boolean updatePassword(int id, String hashedBCryptPassword) throws SQLException {
         String sql = "UPDATE USER SET mdp = ? WHERE id_user = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, newPasswordHash);
+            stmt.setString(1, hashedBCryptPassword);
             stmt.setInt(2, id);
             return stmt.executeUpdate() > 0;
         }

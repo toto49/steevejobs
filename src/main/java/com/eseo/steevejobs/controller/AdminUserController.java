@@ -4,7 +4,6 @@ import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.ConnexionService;
 import com.eseo.steevejobs.service.MailService;
 import com.eseo.steevejobs.service.UserService;
-
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -94,8 +93,8 @@ public class AdminUserController {
 
         userTable.getSelectionModel().selectedItemProperty().addListener(
                 (observable, oldValue, newValue) -> {
-                    if (newValue != null) {
-                        updateUserDetails(newValue);
+                    if (observable.getValue() != null) {
+                        updateUserDetails(observable.getValue());
                     }
                 }
         );
@@ -318,6 +317,7 @@ public class AdminUserController {
         popup.setScene(new Scene(layout, 400, 450));
         popup.setResizable(false);
         popup.show();
+
         btnSave.setOnAction(e -> {
             String nom = nomField.getText().trim();
             String prenom = prenomField.getText().trim();
@@ -350,6 +350,7 @@ public class AdminUserController {
                 popupMessageLabel.setStyle("-fx-text-fill: red;");
             }
         });
+
         btnResetPwd.setOnAction(e -> {
             if (showConfirmation("Confirmation", "Voulez-vous vraiment réinitialiser le mot de passe de " + user.getPrenom() + " " + user.getNom() + " ?")) {
 
@@ -360,9 +361,7 @@ public class AdminUserController {
                 new Thread(() -> {
                     try {
                         String plainToken = ConnexionService.generateRandomMdp(12);
-                        String hashedToken = userService.hashPassword(plainToken);
-
-                        userService.updateUserPassword(user.getId(), hashedToken);
+                        userService.updateUserPassword(user.getId(), plainToken);
 
                         MailService.EnvoyerMail(
                                 user.getEmail(),
@@ -465,9 +464,7 @@ public class AdminUserController {
                     }
 
                     String plainToken = ConnexionService.generateRandomMdp(12);
-                    String hashedToken = userService.hashPassword(plainToken);
-
-                    User newUser = new User(0, nom, prenom, email, hashedToken, "", role, tel, poste, true);
+                    User newUser = new User(0, nom, prenom, email, plainToken, "", role, tel, poste, true);
                     userService.createUser(newUser);
 
                     MailService.EnvoyerMail(
