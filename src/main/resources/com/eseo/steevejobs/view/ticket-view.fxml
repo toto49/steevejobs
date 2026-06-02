@@ -7,130 +7,130 @@
 <BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="768.0" prefWidth="1024.0" styleClass="root-pane"
             stylesheets="@../../../../style/style.css,@../../../../style/popup.css" xmlns="http://javafx.com/javafx/17.0.12"
             fx:controller="com.eseo.steevejobs.controller.TicketController">
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
+            <padding>
+                <Insets left="20.0" right="20.0"/>
+            </padding>
+
+            <Button mnemonicParsing="false"
+                    onAction="#handleRetour"
+                    style="-fx-background-color: transparent;
+                       -fx-text-fill: white;
+                       -fx-font-size: 24px;
+                       -fx-font-weight: bold;
+                       -fx-cursor: hand;"
+                    text="⟵ CONTACT SUPPORT"/>
+        </HBox>
+    </top>
+
     <center>
-        <VBox prefHeight="200.0" prefWidth="100.0" style="-fx-background-color: #DDE8FF;" BorderPane.alignment="CENTER">
-            <children>
+        <VBox style="-fx-background-color: #DDE8FF;" VBox.vgrow="ALWAYS">
 
-                <HBox alignment="CENTER_LEFT" prefHeight="80.0" style="-fx-background-color: #7A9FE0;">
-                    <padding>
-                        <Insets left="20.0" right="20.0"/>
-                    </padding>
-                    <children>
-                        <Button mnemonicParsing="false" onAction="#handleRetour"
-                                style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 28px; -fx-cursor: hand;"
-                                text="&lt; CONTACT SUPPORT"/>
-                    </children>
-                </HBox>
+            <GridPane hgap="20.0" vgap="30.0" VBox.vgrow="ALWAYS">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="ALWAYS" prefWidth="700.0"/>
+                </columnConstraints>
 
-                <GridPane hgap="20.0" vgap="30.0" VBox.vgrow="ALWAYS">
-                    <columnConstraints>
-                        <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="10.0"
-                                           prefWidth="700.0"/>
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS"/>
-                    </rowConstraints>
-                    <padding>
-                        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0"/>
-                    </padding>
-                    <children>
+                <rowConstraints>
+                    <RowConstraints vgrow="ALWAYS"/>
+                </rowConstraints>
 
-                        <HBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: black; -fx-border-radius: 10; -fx-border-width: 1;"
-                              GridPane.columnIndex="0">
-                            <children>
+                <padding>
+                    <Insets bottom="40.0" left="40.0" right="40.0" top="40.0"/>
+                </padding>
 
-                                <BorderPane HBox.hgrow="ALWAYS">
-                                    <padding>
-                                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
-                                    </padding>
+                <children>
 
-                                    <top>
-                                        <VBox spacing="5.0" BorderPane.alignment="CENTER">
-                                            <children>
-                                                <Label fx:id="ticketTitleLabel" text="TICKET N°--"
-                                                       style="-fx-font-size: 24px; -fx-text-fill: black"/>
-                                                <Label fx:id="ticketObjectLabel" text="OBJECT : --"
-                                                       style="-fx-font-size: 22px; -fx-text-fill: black"/>
-                                                <Region style="-fx-background-color: black; -fx-pref-height: 1; -fx-min-height: 1; -fx-max-height: 1;">
-                                                    <VBox.margin>
-                                                        <Insets top="5.0" bottom="10.0"/>
-                                                    </VBox.margin>
-                                                </Region>
-                                            </children>
-                                        </VBox>
-                                    </top>
+                    <HBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: black; -fx-border-radius: 10; -fx-border-width: 1;"
+                          GridPane.columnIndex="0">
 
-                                    <center>
-                                        <ScrollPane fx:id="messageScrollPane"
-                                                    fitToWidth="true"
-                                                    styleClass="rounded-scroll-pane"
-                                                    BorderPane.alignment="CENTER">
-                                            <content>
-                                                <VBox fx:id="chatMessagesContainer" spacing="15.0">
-                                                    <padding>
-                                                        <Insets right="20.0"/>
-                                                    </padding>
-                                                </VBox>
-                                            </content>
-                                        </ScrollPane>
-                                    </center>
+                        <children>
+                            <BorderPane HBox.hgrow="ALWAYS">
+                                <padding>
+                                    <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                                </padding>
 
-                                    <bottom>
-                                        <HBox alignment="CENTER_LEFT" spacing="10.0"
-                                              style="-fx-background-color: #BBD2FA; -fx-border-color: black; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8;">
-                                            <BorderPane.margin>
-                                                <Insets top="15.0"/>
-                                            </BorderPane.margin>
-                                            <children>
-                                                <Label text="" style="-fx-font-size: 20px; -fx-cursor: hand;"/>
-                                                <TextField fx:id="messageInput" promptText="Écrivez ici...."
-                                                           style="-fx-background-color: transparent; -fx-text-fill: black; -fx-font-size: 16px;"
-                                                           HBox.hgrow="ALWAYS" onAction="#handleSendMessage"/>
-                                                <SVGPath
-                                                        content="M3.2656 2.3663 L21.7031 11.4288 Q22.0312 11.6319 22.0312 11.9913 Q22.0312 12.3506 21.7031 12.5381 L3.2656 21.6163 Q2.9219 21.8038 2.6094 21.5381 Q2.2969 21.2725 2.4062 20.9444 L4.2188 14.0225 Q4.3125 13.6475 4.7031 13.6006 L12.9531 12.1944 Q13.1562 12.1944 13.2031 12.0538 L13.25 11.96 Q13.25 11.7256 13.0625 11.6319 L4.7031 10.2256 Q4.3125 10.1788 4.2188 9.8038 L2.4062 3.085 Q2.2969 2.6944 2.6094 2.46 Q2.9219 2.21 3.2656 2.3663 Z"
-                                                        onMouseClicked="#handleSendMessage"
-                                                        style="-fx-fill: black; -fx-cursor: hand; -fx-scale-x: 1.2; -fx-scale-y: 1.2;"/>
-                                            </children>
-                                        </HBox>
-                                    </bottom>
-                                </BorderPane>
+                                <top>
+                                    <VBox spacing="5.0">
+                                        <Label fx:id="ticketTitleLabel"
+                                               style="-fx-font-size: 24px; -fx-text-fill: black" text="TICKET N°--"/>
+                                        <Label fx:id="ticketObjectLabel"
+                                               style="-fx-font-size: 22px; -fx-text-fill: black" text="OBJECT : --"/>
 
-                                <Region style="-fx-background-color: black; -fx-pref-width: 1; -fx-min-width: 1; -fx-max-width: 1;"/>
+                                        <Region style="-fx-background-color: black; -fx-pref-height: 1;">
+                                            <VBox.margin>
+                                                <Insets bottom="10.0" top="5.0"/>
+                                            </VBox.margin>
+                                        </Region>
+                                    </VBox>
+                                </top>
 
-                                <VBox prefWidth="180.0" spacing="25.0">
-                                    <padding>
-                                        <Insets bottom="15.0" left="15.0" right="15.0" top="20.0"/>
-                                    </padding>
-                                    <children>
-                                        <Label fx:id="serviceLabel" text="SERVICE&#10;--"
-                                               style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: black"/>
-                                        <Label fx:id="statusLabel" text="STATUS :&#10;--"
-                                               style="-fx-font-size: 14px;-fx-text-fill: black"/>
-                                        <Label fx:id="dateLabel" text="DATE DE&#10;CREATION :&#10;--"
-                                               style="-fx-font-size: 14px; -fx-text-fill: black"/>
-                                        <Label fx:id="descriptionLabel"
-                                               text="description :&#10;--"
-                                               wrapText="true"
-                                               maxWidth="Infinity"
-                                               style="-fx-font-size: 14px; -fx-text-fill: black"/>
+                                <center>
+                                    <ScrollPane fx:id="messageScrollPane" fitToWidth="true"
+                                                styleClass="rounded-scroll-pane">
+                                        <content>
+                                            <VBox fx:id="chatMessagesContainer" spacing="15.0">
+                                                <padding>
+                                                    <Insets right="20.0"/>
+                                                </padding>
+                                            </VBox>
+                                        </content>
+                                    </ScrollPane>
+                                </center>
 
-                                        <Region VBox.vgrow="ALWAYS"/>
+                                <bottom>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0"
+                                          style="-fx-background-color: #BBD2FA; -fx-border-color: black; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8;">
+                                        <BorderPane.margin>
+                                            <Insets top="15.0"/>
+                                        </BorderPane.margin>
 
-                                        <Button fx:id="actionButton" onAction="#handleToggleTicketStatus"
-                                                maxWidth="1.7976931348623157E308" mnemonicParsing="false"
-                                                style="-fx-background-color: #5882D6; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand;"
-                                                text="RÉOUVRIR&#10;LE TICKET" textAlignment="CENTER"/>
-                                    </children>
-                                </VBox>
+                                        <TextField fx:id="messageInput" onAction="#handleSendMessage"
+                                                   promptText="Écrivez ici...."
+                                                   style="-fx-background-color: transparent; -fx-text-fill: black; -fx-font-size: 16px;"
+                                                   text="zdzdzdzdzdzdzzz" HBox.hgrow="ALWAYS"/>
 
-                            </children>
-                        </HBox>
+                                        <SVGPath
+                                                content="M3.2656 2.3663 L21.7031 11.4288 Q22.0312 11.6319 22.0312 11.9913 Q22.0312 12.3506 21.7031 12.5381 L3.2656 21.6163 Q2.9219 21.8038 2.6094 21.5381 Q2.2969 21.2725 2.4062 20.9444 L4.2188 14.0225 Q4.3125 13.6475 4.7031 13.6006 L12.9531 12.1944 Q13.1562 12.1944 13.2031 12.0538 L13.25 11.96 Q13.25 11.7256 13.0625 11.6319 L4.7031 10.2256 Q4.3125 10.1788 4.2188 9.8038 L2.4062 3.085 Q2.2969 2.6944 2.6094 2.46 Q2.9219 2.21 3.2656 2.3663 Z"
+                                                onMouseClicked="#handleSendMessage"
+                                                style="-fx-fill: black; -fx-cursor: hand; -fx-scale-x: 1.2; -fx-scale-y: 1.2;"/>
+                                    </HBox>
+                                </bottom>
+                            </BorderPane>
 
+                            <Region style="-fx-background-color: black; -fx-pref-width: 1;"/>
 
+                            <VBox prefWidth="180.0" spacing="25.0">
+                                <padding>
+                                    <Insets bottom="15.0" left="15.0" right="15.0" top="20.0"/>
+                                </padding>
 
-                    </children>
-                </GridPane>
-            </children>
+                                <Label fx:id="serviceLabel" style="-fx-font-size: 14px; -fx-font-weight: bold;"
+                                       text="SERVICE&#10;--"/>
+
+                                <Label fx:id="statusLabel" style="-fx-font-size: 14px;" text="STATUS :&#10;--"/>
+
+                                <Label fx:id="dateLabel" style="-fx-font-size: 14px;"
+                                       text="DATE DE&#10;CREATION :&#10;--"/>
+
+                                <Label fx:id="descriptionLabel" style="-fx-font-size: 14px;" text="description :&#10;--"
+                                       wrapText="true"/>
+
+                                <Region VBox.vgrow="ALWAYS"/>
+
+                                <Button fx:id="actionButton" maxWidth="Infinity" onAction="#handleToggleTicketStatus"
+                                        style="-fx-background-color: #5882D6; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand;"
+                                        text="RÉOUVRIR&#10;LE TICKET" textAlignment="CENTER"/>
+                            </VBox>
+
+                        </children>
+                    </HBox>
+
+                </children>
+            </GridPane>
+
         </VBox>
     </center>
+
 </BorderPane>

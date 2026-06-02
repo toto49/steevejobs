@@ -3,10 +3,7 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.PermissionService;
-import com.eseo.steevejobs.service.SessionService;
-import com.eseo.steevejobs.service.TicketService;
-import com.eseo.steevejobs.service.TicketServiceImpl;
+import com.eseo.steevejobs.service.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
@@ -20,6 +17,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -35,7 +33,7 @@ public class HomeController {
     private static final Map<String, Image> IMAGE_CACHE = new HashMap<>();
     private User currentUser;
     private static List<String> cachedPermissions = null;
-    private static final long CACHE_TTL_MS = 30_000; // 30 secondes
+    private static final long CACHE_TTL_MS = 30_000;
     private static long cacheTimestamp = -1;
 
     @FXML
@@ -114,25 +112,25 @@ public class HomeController {
         CompletableFuture.supplyAsync(() -> {
             TicketService ticketService = new TicketServiceImpl();
             int nTech = 0;
-            if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
+            if (currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole()))) {
                 nTech = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId());
             }
-            int nAuteur = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
+            int nAuteur = currentUser != null ? ticketService.getNombreTicketsNonLusAuteur(currentUser.getId()) : 0;
             return new int[]{nTech, nAuteur};
         }).thenAcceptAsync(counts -> {
             notificationsTech = counts[0];
             notificationsAuteur = counts[1];
 
-            if (badgeCarteTech != null && notificationsTech > 0) {
+            if (badgeCarteTech != null) {
                 badgeCarteTech.setText(String.valueOf(notificationsTech));
-                badgeCarteTech.setVisible(true);
+                badgeCarteTech.setVisible(notificationsTech > 0);
             }
-            if (badgeCarteAuteur != null && notificationsAuteur > 0) {
+            if (badgeCarteAuteur != null) {
                 badgeCarteAuteur.setText(String.valueOf(notificationsAuteur));
-                badgeCarteAuteur.setVisible(true);
+                badgeCarteAuteur.setVisible(notificationsAuteur > 0);
             }
 
-            if (MenuController.getInstance() != null) {
+            if (MenuController.getInstance() != null && currentUser != null) {
                 if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
                     MenuController.getInstance().allumerBadge("TECH", notificationsTech);
                 }
@@ -153,17 +151,14 @@ public class HomeController {
         } else {
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(idUserConnecte))
                     .thenAcceptAsync(perms -> {
-                        boolean permissionsChangees = !perms.equals(cachedPermissions);
-
                         cachedPermissions = perms;
                         cachedUserId = idUserConnecte;
                         cacheTimestamp = System.currentTimeMillis();
                         this.currentUserPermissions = perms;
 
-                        if (permissionsChangees) {
-                            renderAppCenter();
-                        }
-                    }, Platform::runLater).exceptionally(ex -> {
+                        renderAppCenter();
+                    }, Platform::runLater)
+                    .exceptionally(ex -> {
                         ex.printStackTrace();
                         return null;
                     });
@@ -219,55 +214,61 @@ public class HomeController {
     }
 
     private void renderAppCenter() {
-        Platform.runLater(() -> {
-            if (appsGrid == null) return;
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(this::renderAppCenter);
+            return;
+        }
 
-            appsGrid.getChildren().clear();
+        if (appsGrid == null) {
+            System.err.println("⚠️ [SteeveJobs] Impossible d'afficher le tableau de bord : appsGrid est null.");
+            return;
+        }
 
-            for (AppModule app : AppModule.values()) {
-                if (hasPermission(app.getCodeAction())) {
+        appsGrid.getChildren().clear();
 
-                    String parametre = null;
-                    String codeAction = app.getCodeAction();
-                    if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                        parametre = currentUser.getRole();
-                    }
+        for (AppModule app : AppModule.values()) {
+            if (hasPermission(app.getCodeAction())) {
 
-                    Label badgeDynamique = new Label();
-                    badgeDynamique.setVisible(false);
-
-                    if ("APP_TICKETS_VIEW".equals(codeAction)) {
-                        badgeCarteTech = badgeDynamique;
-                        if (notificationsTech > 0) {
-                            badgeDynamique.setText(String.valueOf(notificationsTech));
-                            badgeDynamique.setVisible(true);
-                        }
-                    } else if ("MES_TICKETS".equals(codeAction)) {
-                        badgeCarteAuteur = badgeDynamique;
-                        if (notificationsAuteur > 0) {
-                            badgeDynamique.setText(String.valueOf(notificationsAuteur));
-                            badgeDynamique.setVisible(true);
-                        }
-                    }
-
-                    HBox card = createAppCard(
-                            app.getTitle(),
-                            app.getSubtitle(),
-                            badgeDynamique,
-                            app.getBgColor(),
-                            app.getChemin(),
-                            app.getImage(),
-                            parametre,
-                            codeAction
-                    );
-
-                    card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
-                    card.prefHeightProperty().bind(card.widthProperty().multiply(0.6));
-
-                    appsGrid.getChildren().add(card);
+                String parametre = null;
+                String codeAction = app.getCodeAction();
+                if ("APP_TICKETS_VIEW".equals(codeAction) && currentUser != null) {
+                    parametre = currentUser.getRole();
                 }
+
+                Label badgeDynamique = new Label();
+                badgeDynamique.setVisible(false);
+
+                if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                    badgeCarteTech = badgeDynamique;
+                    if (notificationsTech > 0) {
+                        badgeDynamique.setText(String.valueOf(notificationsTech));
+                        badgeDynamique.setVisible(true);
+                    }
+                } else if ("MES_TICKETS".equals(codeAction)) {
+                    badgeCarteAuteur = badgeDynamique;
+                    if (notificationsAuteur > 0) {
+                        badgeDynamique.setText(String.valueOf(notificationsAuteur));
+                        badgeDynamique.setVisible(true);
+                    }
+                }
+
+                HBox card = createAppCard(
+                        app.getTitle(),
+                        app.getSubtitle(),
+                        badgeDynamique,
+                        app.getBgColor(),
+                        app.getChemin(),
+                        app.getImage(),
+                        parametre,
+                        codeAction
+                );
+
+                card.prefWidthProperty().bind(appsGrid.widthProperty().divide(3).subtract(60));
+                card.prefHeightProperty().bind(card.widthProperty().multiply(0.6));
+
+                appsGrid.getChildren().add(card);
             }
-        });
+        }
     }
 
     private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
@@ -279,11 +280,11 @@ public class HomeController {
                 ((ParametrizedController) controller).initData(parametre);
             }
             MenuController.getInstance().setCenterView(view);
-            MenuController.getInstance().changerTitre(titreCard);
+            MenuController.getInstance().changerTitre(formaterTitreModule(titreCard));
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            System.err.println("Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
+            System.err.println("❌ Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
         }
     }
 
@@ -336,15 +337,36 @@ public class HomeController {
         card.setOnMouseEntered(e -> card.setOpacity(0.8));
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
-            if (MenuController.getInstance() != null) {
-                if (parametreFacultatif != null) {
-                    chargerPageAvecParametre(chemin, parametreFacultatif, title);
-                } else {
-                    MenuController.getInstance().chargerPage(chemin);
-                    MenuController.getInstance().changerTitre(title);
-                }
-            } else {
+            if (MenuController.getInstance() == null) {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
+                return;
+            }
+
+            if ("APP_VISO_VIEW".equals(codeAction)) {
+                try {
+                    JSONObject requete = new JSONObject();
+                    requete.put("type", "REQUEST_VISIO_TOKEN");
+                    requete.put("roomName", "Salle_De_Crise");
+
+                    if (currentUser != null) {
+                        requete.put("identity", String.valueOf(currentUser.getId()));
+                        requete.put("displayName", currentUser.getPrenom() + " " + currentUser.getNom());
+                    } else {
+                        requete.put("identity", "0");
+                        requete.put("displayName", "Invité");
+                    }
+                    WebSocketService.getInstance().envoyerMessageBrut(requete.toString());
+                    System.out.println("⏳ Requête de token envoyée au NAS Synology...");
+
+                } catch (Exception ex) {
+                    System.err.println("❌ Erreur lors de l'action sur la carte Visio : " + ex.getMessage());
+                }
+            }
+            if (parametreFacultatif != null) {
+                chargerPageAvecParametre(chemin, parametreFacultatif, title);
+            } else {
+                MenuController.getInstance().chargerPage(chemin);
+                MenuController.getInstance().changerTitre(formaterTitreModule(title));
             }
         });
 
@@ -353,5 +375,12 @@ public class HomeController {
 
     private boolean hasPermission(String requiredPermission) {
         return currentUserPermissions != null && currentUserPermissions.contains(requiredPermission);
+    }
+
+    private String formaterTitreModule(String title) {
+        if (title == null) {
+            return "";
+        }
+        return title.replace('\n', ' ').replaceAll("\\s+", " ").trim();
     }
 }

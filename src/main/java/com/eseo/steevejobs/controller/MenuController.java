@@ -37,6 +37,8 @@ public class MenuController {
     private Button btnTicket;
     @FXML
     private Button btnFiles;
+    @FXML
+    private Button btnVisio;
 
     private Stage mainStage;
     private Label lblTitreHeader;
@@ -68,6 +70,11 @@ public class MenuController {
 
     public void chargerPage(String nomFichier) {
         TicketController.fermerChat();
+
+        if (VisioController.getActiveInstance() != null) {
+            VisioController.getActiveInstance().couperController();
+        }
+
         try {
             String chemin = "/com/eseo/steevejobs/view/" + nomFichier + "-view.fxml";
             FXMLLoader loader = new FXMLLoader(getClass().getResource(chemin));
@@ -207,6 +214,13 @@ public class MenuController {
     }
 
     @FXML
+    void afficherVisio(ActionEvent event) {
+        chargerPage("visio");
+        updateButtonStyles(btnVisio);
+        changerTitre("Visioconférence");
+    }
+
+    @FXML
     void afficherParametres(ActionEvent event) {
         chargerPage("parametres");
         updateButtonStyles(btnParametres);
@@ -217,7 +231,7 @@ public class MenuController {
         String STYLE_INACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
         String STYLE_ACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
 
-        Button[] tousLesBoutons = {btnAccueil, btnPlanning, btnTicket, btnFiles, btnParametres};
+        Button[] tousLesBoutons = {btnAccueil, btnPlanning, btnTicket, btnFiles, btnParametres, btnVisio};
 
         for (Button btn : tousLesBoutons) {
             if (btn != null) {
@@ -267,4 +281,6 @@ public class MenuController {
             mainPane.setCenter(vue);
         }
     }
+
+
 }

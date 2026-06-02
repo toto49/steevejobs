@@ -155,7 +155,7 @@ public class FichePayeService {
         int moisValeur = mois.getMonthValue();
 
         return plannings.stream()
-                .filter(p -> "Conge".equalsIgnoreCase(p.getType()))
+                .filter(p -> CongeUtil.estTypeConge(p.getType()))
                 .filter(p -> {
                     LocalDateTime debutMois = LocalDateTime.of(annee, moisValeur, 1, 0, 0);
                     LocalDateTime finMois   = debutMois.plusMonths(1);

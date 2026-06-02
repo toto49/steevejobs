@@ -83,6 +83,20 @@ CREATE TABLE `PLANNING`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
+CREATE TABLE `DEMANDE_CONGE`
+(
+    `id_demande_conge`    int(11) NOT NULL,
+    `jour_debut`          datetime NOT NULL,
+    `jour_fin`            datetime NOT NULL,
+    `statut`              enum('EN_ATTENTE','VALIDEE','REFUSEE') NOT NULL DEFAULT 'EN_ATTENTE',
+    `commentaire_employe` text DEFAULT NULL,
+    `commentaire_rh`      text DEFAULT NULL,
+    `date_demande`        datetime NOT NULL,
+    `id_user`             int(11) NOT NULL,
+    `id_planning`         int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 
 CREATE TABLE `PRODUITS`
 (
@@ -207,6 +221,13 @@ ALTER TABLE `PLANNING`
   ADD KEY `idx_planning_dates` (`jour_debut`,`jour_fin`);
 
 
+ALTER TABLE `DEMANDE_CONGE`
+    ADD PRIMARY KEY (`id_demande_conge`),
+  ADD KEY `idx_demande_conge_user` (`id_user`),
+  ADD KEY `idx_demande_conge_statut` (`statut`),
+  ADD KEY `idx_demande_conge_planning` (`id_planning`);
+
+
 ALTER TABLE `PRODUITS`
     ADD PRIMARY KEY (`id_produits`),
   ADD UNIQUE KEY `id_produits` (`id_produits`),
@@ -268,6 +289,10 @@ ALTER TABLE `PLANNING`
     MODIFY `id_planning` int (11) NOT NULL AUTO_INCREMENT;
 
 
+ALTER TABLE `DEMANDE_CONGE`
+    MODIFY `id_demande_conge` int (11) NOT NULL AUTO_INCREMENT;
+
+
 ALTER TABLE `PRODUITS`
     MODIFY `id_produits` int (11) NOT NULL AUTO_INCREMENT;
 
@@ -313,6 +338,10 @@ CASCADE;
 
 ALTER TABLE `PLANNING`
     ADD CONSTRAINT `PLANNING_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `USER` (`id_user`) ON DELETE CASCADE;
+
+
+ALTER TABLE `DEMANDE_CONGE`
+    ADD CONSTRAINT `DEMANDE_CONGE_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `USER` (`id_user`) ON DELETE CASCADE;
 
 
 ALTER TABLE `ROLE_PERMISSION`

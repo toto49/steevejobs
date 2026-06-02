@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1" minWidth="1040.0" prefHeight="580.0" prefWidth="1100.0" spacing="14.0"
+      xmlns="http://javafx.com/javafx/17.0.12"
+      fx:controller="com.eseo.steevejobs.controller.DemandesCongeController">
+
+    <padding>
+        <Insets bottom="8.0" left="8.0" right="8.0" top="8.0"/>
+    </padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="12.0">
+        <Label text="Demandes de congés"
+               style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="Filtrer :" style="-fx-text-fill: #4b5563;"/>
+        <ComboBox fx:id="comboFiltreStatut" prefHeight="34.0" prefWidth="180.0"
+                  onAction="#filtrerDemandes"/>
+    </HBox>
+
+    <HBox spacing="18.0" VBox.vgrow="ALWAYS">
+        <VBox HBox.hgrow="ALWAYS" minWidth="620.0" spacing="8.0"
+              style="-fx-background-color: #fafafa; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+            <padding>
+                <Insets bottom="12.0" left="12.0" right="12.0" top="12.0"/>
+            </padding>
+            <TableView fx:id="tableDemandes" VBox.vgrow="ALWAYS" minHeight="400.0">
+                <columns>
+                    <TableColumn fx:id="colEmploye" text="EMPLOYÉ" minWidth="140.0" prefWidth="180.0"/>
+                    <TableColumn fx:id="colDebut" text="DÉBUT" minWidth="90.0" prefWidth="100.0"/>
+                    <TableColumn fx:id="colFin" text="FIN" minWidth="90.0" prefWidth="100.0"/>
+                    <TableColumn fx:id="colJours" text="JOURS" minWidth="55.0" prefWidth="60.0"/>
+                    <TableColumn fx:id="colDateDemande" text="DEMANDÉ LE" minWidth="120.0" prefWidth="130.0"/>
+                    <TableColumn fx:id="colStatut" text="STATUT" minWidth="90.0" prefWidth="100.0"/>
+                </columns>
+                <placeholder>
+                    <Label text="Aucune demande trouvée" style="-fx-text-fill: #9ca3af;"/>
+                </placeholder>
+            </TableView>
+        </VBox>
+
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minWidth="360.0" prefWidth="400.0"
+                    style="-fx-background-color: transparent; -fx-background: transparent;">
+            <VBox spacing="12.0"
+                  style="-fx-background-color: #fafafa; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                <padding>
+                    <Insets bottom="16.0" left="16.0" right="16.0" top="16.0"/>
+                </padding>
+
+                <Label text="Détail de la demande" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                <Label fx:id="lblEmployeSelectionne" text="Sélectionnez une demande" wrapText="true"
+                       maxWidth="360.0" style="-fx-font-weight: bold;"/>
+
+                <Label text="Date de début" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                <DatePicker fx:id="dateDebutEdit" maxWidth="360.0"/>
+
+                <Label text="Date de fin" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                <DatePicker fx:id="dateFinEdit" maxWidth="360.0"/>
+
+                <Label text="Commentaire employé" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                <TextArea fx:id="txtCommentaireEmploye" editable="false" wrapText="true"
+                          prefRowCount="2" maxWidth="360.0"
+                          style="-fx-background-color: white; -fx-text-fill: #4b5563;"/>
+
+                <Separator/>
+
+                <Label text="Solde congés sur la période" style="-fx-font-weight: bold;"/>
+                <Label fx:id="lblSoldePeriode" text="-" wrapText="true" maxWidth="360.0"
+                       style="-fx-text-fill: #4b5563;"/>
+                <ProgressBar fx:id="progressSolde" maxWidth="360.0" prefWidth="360.0" progress="0.0"/>
+                <Label fx:id="lblSoldeDetail" text="-" wrapText="true" maxWidth="360.0"
+                       style="-fx-text-fill: #6b7280; -fx-font-size: 11px;"/>
+
+                <HBox spacing="8.0" alignment="CENTER_RIGHT">
+                    <Button fx:id="btnModifier" onAction="#enregistrerModifications" prefHeight="36.0" prefWidth="110.0"
+                            text="Modifier"
+                            style="-fx-background-color: #7A9FE0; -fx-text-fill: white; -fx-background-radius: 6; -fx-cursor: hand;"/>
+                    <Button fx:id="btnSupprimer" onAction="#supprimerConge" prefHeight="36.0" prefWidth="110.0"
+                            text="Supprimer"
+                            style="-fx-background-color: #e57373; -fx-text-fill: white; -fx-background-radius: 6; -fx-cursor: hand;"/>
+                    <Button fx:id="btnRefuser" onAction="#refuserDemande" prefHeight="36.0" prefWidth="100.0"
+                            text="Refuser"
+                            style="-fx-background-color: #e57373; -fx-text-fill: white; -fx-background-radius: 6; -fx-cursor: hand;"/>
+                    <Button fx:id="btnValider" onAction="#validerDemande" prefHeight="36.0" prefWidth="100.0"
+                            text="Valider"
+                            style="-fx-background-color: #5a8fd4; -fx-text-fill: white; -fx-background-radius: 6; -fx-cursor: hand;"/>
+                </HBox>
+            </VBox>
+        </ScrollPane>
+    </HBox>
+</VBox>
