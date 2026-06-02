@@ -10,7 +10,7 @@ Ce guide s'adresse aux **développeurs** et **administrateurs** qui installent S
 
 | Composant | Version minimale | Notes |
 |-----------|------------------|-------|
-| JDK | 21+ | [Liberica JDK Full](https://bell-sw.com/pages/downloads/) recommandé (JavaFX inclus) |
+| JDK | 25+ | [Liberica JDK Full](https://bell-sw.com/pages/downloads/) recommandé (JavaFX inclus) |
 | MySQL | 8.0+ | Base relationnelle métier |
 | Maven | 3.9+ | Ou utilisez `./mvnw` / `mvnw.cmd` |
 | Docker | récent | Serveur WebSocket (branche `websocket`) |
@@ -25,7 +25,7 @@ git clone https://github.com/toto49/steevejobs.git
 cd steevejobs
 ```
 
-Configurez le **JDK 21 Full** comme SDK dans IntelliJ IDEA ou Eclipse.
+Configurez le **JDK 25 Full** comme SDK dans IntelliJ IDEA ou Eclipse.
 
 ---
 
