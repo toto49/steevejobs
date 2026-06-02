@@ -412,7 +412,7 @@ public class AdminUserController {
         telField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
 
         ComboBox<String> roleBox = new ComboBox<>();
-        roleBox.getItems().addAll("Administrateur", "RH", "Employe");
+        roleBox.getItems().addAll("ADMIN", "RH", "Employe");
         roleBox.setPromptText("Sélectionnez un rôle");
         roleBox.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
         roleBox.setMaxWidth(Double.MAX_VALUE);

@@ -7,8 +7,8 @@ public enum AppModule {
     DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "document", "steevecommercial.png", "#F1CE6C"),
     TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "steevesupport.png", "#92B4F2", "services"),
     RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Fiches de Paies", "fiche-paye", "steeverh.png", "#7A9FE0"),
-    CALENDRIERRH("APP_RH_VIEW", "CALENDRIER\nRH", "Plannings des employés", "calendrier-rh", "steeverh.png", "#7A9FE0"),
-    CLIENTS("APP_RH_VIEW", "GESTION\nCLIENTS", "Création & Gestion des clients", "clients", "steevecommercial.png", "#FF99cc");
+    CALENDRIERRH("APP_CALENDRIER_RH_VIEW", "CALENDRIER\nRH", "Plannings des employés", "calendrier-rh", "steeverh.png", "#7A9FE0"),
+    CLIENTS("APP_RH_CLIENT_VIEW", "GESTION\nCLIENTS", "Création & Gestion des clients", "clients", "steevecommercial.png", "#FF99cc");
 
 
     private final String codeAction;
