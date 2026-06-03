@@ -20,6 +20,7 @@ import service.support.TestDataFactory;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -53,8 +54,9 @@ class DemandeCongeServiceTest {
     @Test
     void creerDemande_soldeSuffisant_enregistreLaDemande() throws SQLException {
         User employe = TestDataFactory.utilisateurActif(1, "employe@mail.fr");
-        LocalDateTime debut = LocalDateTime.of(2026, 6, 2, 8, 0);
-        LocalDateTime fin = LocalDateTime.of(2026, 6, 4, 18, 0);
+        LocalDate premierJour = LocalDate.now().plusDays(1);
+        LocalDateTime debut = LocalDateTime.of(premierJour, LocalTime.of(8, 0));
+        LocalDateTime fin = LocalDateTime.of(premierJour.plusDays(2), LocalTime.of(18, 0));
 
         when(planningDAO.findByUserId(1)).thenReturn(List.of());
         when(demandeCongeDAO.findByUserId(1)).thenReturn(List.of());

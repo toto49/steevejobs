@@ -2,9 +2,11 @@ package controller;
 
 import com.eseo.steevejobs.service.SessionService;
 import controller.support.JavaFxTestSupport;
+import dao.support.DaoIntegrationExtension;
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import service.support.TestDataFactory;
@@ -16,8 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * <p>
  * Cycle de vie : JavaFX initialisé une fois ; {@code @BeforeEach} pose un utilisateur connecté
  * via {@link com.eseo.steevejobs.service.SessionService} et {@link service.support.TestDataFactory}.
+ * Base H2 en mémoire via {@link DaoIntegrationExtension} pour les vues dont {@code initialize()} interroge la BDD.
  * </p>
  */
+@ExtendWith(DaoIntegrationExtension.class)
 class ControllerFxmlLoadTest {
 
     @BeforeAll

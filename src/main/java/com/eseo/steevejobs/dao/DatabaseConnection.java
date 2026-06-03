@@ -27,12 +27,17 @@ public class DatabaseConnection {
     private static HikariDataSource dataSource;
 
     static {
+        String dbUrl = dotenv.get("DB_URL");
+        if (dbUrl == null || dbUrl.isBlank()) {
+            if (TestRuntime.isEnabled()) {
+                return;
+            }
+        }
         try {
             HikariConfig config = new HikariConfig();
-            config.setJdbcUrl(dotenv.get("DB_URL"));
+            config.setJdbcUrl(dbUrl);
             config.setUsername(dotenv.get("DB_USER"));
             config.setPassword(dotenv.get("DB_PASSWORD"));
-
 
             config.setMaximumPoolSize(10);
             config.setMinimumIdle(2);
@@ -59,6 +64,9 @@ public class DatabaseConnection {
      * @throws SQLException si le pool est indisponible ou si l'obtention de connexion échoue
      */
     public static Connection getConnection() throws SQLException {
+        if (dataSource == null) {
+            throw new SQLException("Pool JDBC non initialisé (variables DB_* absentes ou mode test sans reconfigureForTests).");
+        }
         return dataSource.getConnection();
     }
 
