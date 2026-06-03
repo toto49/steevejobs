@@ -84,7 +84,7 @@ Exécutez la classe `com.eseo.steevejobs.config.DatabaseSeeder` depuis votre IDE
 # Windows
 .\mvnw.cmd clean install
 .\mvnw.cmd test
-.\mvnw.cmd javafx:run
+.\mvnw.cmd javafx:run    # point d'entrée : com.eseo.steevejobs.Launcher
 
 # Linux / macOS
 ./mvnw clean install
@@ -92,11 +92,7 @@ Exécutez la classe `com.eseo.steevejobs.config.DatabaseSeeder` depuis votre IDE
 ./mvnw javafx:run
 ```
 
-Sur Java 25, les tests Mockito peuvent nécessiter :
-
-```bash
-./mvnw test -Dnet.bytebuddy.experimental=true
-```
+Le plugin JavaFX et Surefire configurent déjà `-Dnet.bytebuddy.experimental=true` (Java 25 + Mockito). Ce flag n'est utile manuellement que depuis un lancement JUnit isolé dans l'IDE.
 
 **JavaFX multi-OS :** le `pom.xml` choisit automatiquement le bon classifier (`win`, `linux`, `mac`, `mac-aarch64`). En cas de besoin, forcez-le :
 

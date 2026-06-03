@@ -30,7 +30,7 @@ En fin de projet, l'équipe a aussi sollicité des **audits assistés par IA** (
 ## 2. Aide à la rédaction
 
 - **README**, guides (`SETUP`, `GUIDE_UTILISATEUR`, `ARCHITECTURE`, `DOCKER`, `TESTS`) : rédaction ou reformulation assistée, puis **relue et corrigée** par l'équipe (liens, chemins, stack réelle).
-- **Commentaires** dans le code : principalement rédigés par l'IA
+- **Commentaires** et **JavaDoc** dans le code : rédaction ou reformulation assistée, puis relecture par l'équipe.
 
 ---
 

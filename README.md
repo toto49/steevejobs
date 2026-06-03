@@ -89,7 +89,7 @@ git clone https://github.com/toto49/steevejobs.git
 cd steevejobs
 cp .env.example .env          # adapter DB, SMTP, WS…
 mysql -u root -p steevejobs < sql/steevejobs.sql
-./mvnw clean install && ./mvnw javafx:run
+./mvnw clean install && ./mvnw javafx:run   # Launcher → HelloApplication
 ```
 
 | Étape | Détail |
@@ -97,7 +97,7 @@ mysql -u root -p steevejobs < sql/steevejobs.sql
 | JDK | 25+ — [Liberica Full](https://bell-sw.com/pages/downloads/) recommandé |
 | BDD | MySQL 8 — script `sql/steevejobs.sql` |
 | Config | [`.env.example`](.env.example) → `.env` (ne pas committer) |
-| Admin | Exécuter `DatabaseSeeder` une fois au premier lancement |
+| Admin initial | Exécuter `DatabaseSeeder` une fois, puis changer le mot de passe admin |
 
 Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 
@@ -153,7 +153,9 @@ steevejobs/
 │   ├── dao/         # Accès MySQL
 │   ├── service/     # Logique métier
 │   ├── controller/  # Vues JavaFX (FXML)
-│   └── config/      # DatabaseSeeder, utilitaires
+│   ├── config/      # DatabaseSeeder, utilitaires
+│   ├── Launcher.java
+│   └── HelloApplication.java
 ├── src/main/resources/   # FXML, CSS, images
 ├── src/test/java/        # Tests unitaires (JUnit + Mockito)
 ├── sql/                  # Schéma BDD

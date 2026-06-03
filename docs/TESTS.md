@@ -6,7 +6,7 @@ Couvrir la logique métier des **services Java** (validation, sécurité, règle
 
 Les tests mockent les DAO avec Mockito : aucune base de données n'est requise pour les exécuter.
 
-**Principe retenu :** couvrir **un maximum de fichiers et de méthodes DAO**, dans la limite de **150 tests** (`mvn test`).
+**Principe retenu :** couvrir la logique métier des services et **chaque DAO métier** via des tests d'intégration H2 (`mvn test` → **~150 scénarios** exécutés).
 
 ## Organisation du code de test
 
@@ -43,20 +43,20 @@ src/test/java/
     ├── ConnexionServiceTest.java
     ├── CongeUtilTest.java
     ├── JwtServiceTest.java
-    ├── … (16 classes de test services)
+    ├── UserServiceTest.java, DemandeCongeServiceTest.java, … (16 classes)
     └── support/
         ├── MockitoJava25Support.java
         └── TestDataFactory.java
 ```
 
-**34 classes de test**, **150 scénarios** au total (`mvn test`).
+**34 classes de test JUnit**, **~150 scénarios** exécutés par Surefire (`mvn test`), dont **19 chargements FXML** via un test paramétré.
 
-| Couche | Classes | Tests |
-|--------|---------|-------|
-| Services (mockés) | 16 | 87 |
-| Controllers (JavaFX) | 5 | 25 |
-| DAO (H2 intégration) | 13 | 38 |
-| **Total** | **34** | **150** |
+| Couche | Classes | Méthodes `@Test` | Scénarios exécutés |
+|--------|---------|------------------|-------------------|
+| Services (mockés) | 16 | 87 | 87 |
+| Controllers (JavaFX) | 5 | 7 | 25 |
+| DAO (H2 intégration) | 13 | 38 | 38 |
+| **Total** | **34** | **132** | **~150** |
 
 ## Technologies
 
@@ -176,7 +176,7 @@ Les tests activent automatiquement le mode silencieux (`-Dsteevejobs.test=true`)
 ./mvnw test
 ```
 
-La CI GitHub Actions exécute la même commande sur chaque push/PR (`mvn -B test`).
+La CI GitHub Actions exécute `mvn -B test` sur chaque push/PR (Linux via `xvfb-run` pour le thread JavaFX).
 
 ### Compatibilité JDK 25+
 
