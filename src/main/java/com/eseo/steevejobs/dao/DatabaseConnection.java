@@ -28,28 +28,26 @@ public class DatabaseConnection {
 
     static {
         String dbUrl = dotenv.get("DB_URL");
-        if (dbUrl == null || dbUrl.isBlank()) {
-            if (TestRuntime.isEnabled()) {
-                return;
+        boolean skipInitSansDbEnTest = (dbUrl == null || dbUrl.isBlank()) && TestRuntime.isEnabled();
+        if (!skipInitSansDbEnTest) {
+            try {
+                HikariConfig config = new HikariConfig();
+                config.setJdbcUrl(dbUrl);
+                config.setUsername(dotenv.get("DB_USER"));
+                config.setPassword(dotenv.get("DB_PASSWORD"));
+
+                config.setMaximumPoolSize(10);
+                config.setMinimumIdle(2);
+                config.setConnectionTimeout(5000);
+                config.addDataSourceProperty("cachePrepStmts", "true");
+                config.addDataSourceProperty("prepStmtCacheSize", "250");
+                config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+                dataSource = new HikariDataSource(config);
+
+            } catch (Exception e) {
+                System.err.println("❌ Erreur critique lors de l'initialisation de la BDD : " + e.getMessage());
+                e.printStackTrace();
             }
-        }
-        try {
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl(dbUrl);
-            config.setUsername(dotenv.get("DB_USER"));
-            config.setPassword(dotenv.get("DB_PASSWORD"));
-
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
-            config.setConnectionTimeout(5000);
-            config.addDataSourceProperty("cachePrepStmts", "true");
-            config.addDataSourceProperty("prepStmtCacheSize", "250");
-            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-            dataSource = new HikariDataSource(config);
-
-        } catch (Exception e) {
-            System.err.println("❌ Erreur critique lors de l'initialisation de la BDD : " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
