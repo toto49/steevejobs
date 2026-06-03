@@ -1,15 +1,14 @@
 package com.eseo.steevejobs.model.Enum;
 
 public enum AppModule {
-    ADMINPANEL("APP_ADMINPANEL_VIEW", "GESTION\nPERMISSION", "Gestion, permissions", "adminpermission", "steevesecu.png", "#7F8C8D"),
-    ADMINUSER("APP_ADMINUSER_VIEW", "GESTION\nUTILISATEURS", "Gestion, utilisateur", "adminuser", "steevesecu.png", "#D67C72"),
-    STOCKS("APP_STOCKS_VIEW", "GESTION\nDES STOCKS", "Inventaire, alertes", "stock", "steevestock.png", "#76B89A"),
-    DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "document", "steevecommercial.png", "#F1CE6C"),
-    TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "steevesupport.png", "#92B4F2", "services"),
-    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Fiches de Paies", "fiche-paye", "steeverh.png", "#7A9FE0"),
-    CALENDRIERRH("APP_CALENDRIER_RH_VIEW", "CALENDRIER\nRH", "Plannings des employés", "calendrier-rh", "steeverh.png", "#7A9FE0"),
-    CLIENTS("APP_RH_CLIENT_VIEW", "GESTION\nCLIENTS", "Création & Gestion des clients", "clients", "steevecommercial.png", "#FF99cc");
-
+    ADMINPANEL("APP_ADMINPANEL_VIEW", "GESTION\nPERMISSION", "Gestion, permissions", "adminpermission", "steevesecu.png", "#8A9BB5"),
+    ADMINUSER("APP_ADMINUSER_VIEW", "GESTION\nUTILISATEURS", "Gestion, utilisateur", "adminuser", "steevesecu.png", "#F08682"),
+    STOCKS("APP_STOCKS_VIEW", "GESTION\nDES STOCKS", "Inventaire, alertes", "stock", "steevestock.png", "#5BBA96"),
+    DOCS("APP_DOCS_VIEW", "GESTION\nCOMMERCIALE", "Devis & Factures", "document", "steevecommercial.png", "#F3C86A"),
+    TICKETS("APP_TICKETS_VIEW", "SUPPORT", "Tickets & Assistance", "ticketsList", "steevesupport.png", "#7BC6F0"),
+    RH("APP_RH_VIEW", "RESSOURCES\nHUMAINES", "Fiches de Paies", "fiche-paye", "steeverh.png", "#A88BDD"),
+    CALENDRIERRH("APP_CALENDRIER_RH_VIEW", "CALENDRIER\nRH", "Plannings des employés", "calendrier-rh", "steeverh.png", "#A5AEFF"),
+    CLIENTS("APP_RH_CLIENT_VIEW", "GESTION\nCLIENTS", "Création & Gestion des clients", "clients", "steevecommercial.png", "#F59A76");
 
     private final String codeAction;
     private final String title;

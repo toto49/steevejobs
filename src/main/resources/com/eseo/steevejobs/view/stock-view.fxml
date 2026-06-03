@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
+<?import javafx.scene.text.Font?>
 <BorderPane xmlns:fx="http://javafx.com/fxml/1"
             prefHeight="768.0" prefWidth="1200.0"
             style="-fx-background-color: #f4f5f7;"
@@ -13,12 +13,13 @@
 
     <!-- HEADER -->
     <top>
-        <HBox alignment="CENTER_LEFT" prefHeight="60.0"
-              style="-fx-background-color: #82A9F1;">
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
             <padding><Insets left="20.0" right="20.0"/></padding>
-            <Label style="-fx-font-size: 24px; -fx-font-weight: bold;
-                          -fx-font-family: 'Comic Sans MS';"
-                   text="&lt; STOCKS" textFill="WHITE"/>
+            <Label text="STOCKS" textFill="WHITE">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
         </HBox>
     </top>
 
@@ -89,7 +90,7 @@
 
                 <!-- En-tête de la fiche -->
                 <VBox alignment="CENTER_LEFT" minHeight="55.0"
-                      style="-fx-background-color: #82A9F1; -fx-background-radius: 10 10 0 0;">
+                      style="-fx-background-color: #5584D5; -fx-background-radius: 10 10 0 0;">
                     <padding><Insets left="20.0" top="14.0" bottom="14.0"/></padding>
                     <Label text="Fiche Produit"
                            style="-fx-font-size: 18px; -fx-font-weight: bold;
