@@ -29,6 +29,9 @@
         <jpackage.dest>${project.build.directory}/dist</jpackage.dest>
         <jpackage.skip>false</jpackage.skip>
         <jpackage.executable>${java.home}/bin/jpackage</jpackage.executable>
+        <!-- jpackage n'accepte pas SNAPSHOT (CFBundleVersion macOS, etc.) -->
+        <jpackage.app.version>1.0</jpackage.app.version>
+        <jpackage.javafx.path>${project.build.directory}/javafx-libs</jpackage.javafx.path>
     </properties>
 
     <profiles>
@@ -184,6 +187,24 @@
             <groupId>io.github.mkpaz</groupId>
             <artifactId>atlantafx-base</artifactId>
             <version>2.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-base</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-controls</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-graphics</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-fxml</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -295,7 +316,7 @@
                 <version>3.8.1</version>
                 <executions>
                     <execution>
-                        <id>jpackage-copy-dependencies</id>
+                        <id>jpackage-copy-app-libs</id>
                         <phase>prepare-package</phase>
                         <goals>
                             <goal>copy-dependencies</goal>
@@ -303,6 +324,19 @@
                         <configuration>
                             <outputDirectory>${jpackage.input}/libs</outputDirectory>
                             <includeScope>runtime</includeScope>
+                            <excludeGroupIds>org.openjfx</excludeGroupIds>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>jpackage-copy-javafx</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${jpackage.javafx.path}</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <includeGroupIds>org.openjfx</includeGroupIds>
                         </configuration>
                     </execution>
                 </executions>
@@ -322,6 +356,7 @@
                             <skip>${jpackage.skip}</skip>
                             <executable>${jpackage.executable}</executable>
                             <arguments>
+                                <argument>--verbose</argument>
                                 <argument>--input</argument>
                                 <argument>${jpackage.input}</argument>
                                 <argument>--dest</argument>
@@ -329,7 +364,7 @@
                                 <argument>--name</argument>
                                 <argument>${app.name}</argument>
                                 <argument>--app-version</argument>
-                                <argument>${project.version}</argument>
+                                <argument>${jpackage.app.version}</argument>
                                 <argument>--vendor</argument>
                                 <argument>ESEO</argument>
                                 <argument>--main-jar</argument>
@@ -341,7 +376,7 @@
                                 <argument>--icon</argument>
                                 <argument>${app.icon}</argument>
                                 <argument>--module-path</argument>
-                                <argument>${jpackage.input}/libs</argument>
+                                <argument>${jpackage.javafx.path}</argument>
                                 <argument>--add-modules</argument>
                                 <argument>javafx.controls,javafx.fxml,javafx.graphics,javafx.base</argument>
                                 <argument>--java-options</argument>
