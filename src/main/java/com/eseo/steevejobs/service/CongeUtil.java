@@ -29,6 +29,9 @@ public final class CongeUtil {
     /** Couleur hexadécimale des demandes de congé en attente de validation RH. */
     public static final String COULEUR_DEMANDE_EN_ATTENTE = "#FFE0B2";
 
+    /**
+     * Constructeur privé : classe utilitaire non instanciable.
+     */
     private CongeUtil() {
     }
 

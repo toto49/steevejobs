@@ -30,34 +30,50 @@ import java.util.stream.Collectors;
  */
 public class TicketController {
 
+    /** Service de gestion des tickets. */
     private final TicketService ticketService = new TicketServiceImpl();
+    /** Service de gestion des utilisateurs. */
     private final UserService userService = new UserService();
 
+    /** Instance du contrôleur de détail ticket actuellement affichée. */
     private static TicketController activeInstance;
 
+    /** Label affichant le numéro du ticket. */
     @FXML
     private Label ticketTitleLabel;
+    /** Label affichant l'objet du ticket. */
     @FXML
     private Label ticketObjectLabel;
+    /** Conteneur des bulles de messages du fil de discussion. */
     @FXML
     private VBox chatMessagesContainer;
+    /** Champ de saisie d'un nouveau message. */
     @FXML
     private TextField messageInput;
+    /** Label affichant le service du ticket. */
     @FXML
     private Label serviceLabel;
+    /** Label affichant le statut du ticket. */
     @FXML
     private Label statusLabel;
+    /** Label affichant la date de création du ticket. */
     @FXML
     private Label dateLabel;
+    /** Bouton de fermeture ou réouverture du ticket. */
     @FXML
     private Button actionButton;
+    /** Panneau défilant contenant les messages. */
     @FXML
     private ScrollPane messageScrollPane;
+    /** Label affichant la description du ticket. */
     @FXML
     private Label descriptionLabel;
 
+    /** Ticket actuellement affiché dans le chat. */
     private Ticket currentTicket;
+    /** Identifiant du ticket affiché, ou -1 si aucun. */
     private int viewingTicketId = -1;
+    /** Utilisateur connecté consultant le ticket. */
     private User currentUser;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
@@ -105,6 +121,9 @@ public class TicketController {
         activeInstance = null;
     }
 
+    /**
+     * Réinitialise l'état interne du chat actif sans fermer la vue.
+     */
     private void libererSessionChat() {
         viewingTicketId = -1;
         currentTicket = null;
@@ -134,6 +153,9 @@ public class TicketController {
         });
     }
 
+    /**
+     * Marque le ticket comme non lu et envoie une notification WebSocket aux destinataires concernés.
+     */
     private void notifierMiseAJourTicket() {
         try {
             if (WebSocketService.getInstance() != null) {
@@ -218,6 +240,12 @@ public class TicketController {
         });
     }
 
+    /**
+     * Construit une bulle de message alignée selon l'auteur.
+     *
+     * @param message message à afficher
+     * @return conteneur graphique du message
+     */
     private HBox creerMessageBubble(Message message) {
         HBox messageWrapper = new HBox();
         messageWrapper.setPadding(new Insets(5, 0, 5, 0));
@@ -286,6 +314,9 @@ public class TicketController {
         });
     }
 
+    /**
+     * Met à jour les labels de statut et l'état du champ de saisie selon le ticket courant.
+     */
     private void updateStatusUI() {
         if (currentTicket == null) return;
 
@@ -341,6 +372,12 @@ public class TicketController {
         }
     }
 
+    /**
+     * Affiche une alerte d'avertissement stylisée.
+     *
+     * @param title titre de la fenêtre
+     * @param content message affiché
+     */
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle(title);
@@ -350,6 +387,11 @@ public class TicketController {
         alert.showAndWait();
     }
 
+    /**
+     * Applique la feuille de style popup aux boutons d'une boîte de dialogue.
+     *
+     * @param dp panneau de dialogue cible
+     */
     private void appliquerStyleDialog(DialogPane dp) {
         java.net.URL popupUrl = getClass().getResource("/style/popup.css");
         if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());

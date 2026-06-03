@@ -21,6 +21,7 @@ import java.time.LocalTime;
  */
 public class HeuresTravailService {
 
+    /** Accès persistance aux heures de travail. */
     private final HeuresTravailDAO heuresTravailDAO;
 
     /**
@@ -117,6 +118,17 @@ public class HeuresTravailService {
         return total;
     }
 
+    /**
+     * Valide les paramètres de saisie des heures de travail d'une journée.
+     *
+     * @param idUser   identifiant employé strictement positif
+     * @param dateJour date de saisie (obligatoire, non future)
+     * @param debutM   début du créneau matin (couplé à {@code finM})
+     * @param finM     fin du créneau matin
+     * @param debutA   début du créneau après-midi (couplé à {@code finA})
+     * @param finA     fin du créneau après-midi
+     * @throws IllegalArgumentException si identifiant, date ou créneaux horaires sont invalides
+     */
     private void validerParametresSaisie(int idUser, LocalDate dateJour,
                                          LocalTime debutM, LocalTime finM,
                                          LocalTime debutA, LocalTime finA)

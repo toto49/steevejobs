@@ -20,6 +20,7 @@ import java.util.List;
  */
 public class UserService {
 
+    /** Accès persistance aux comptes utilisateurs. */
     private final UserDAO userDAO;
 
     /**

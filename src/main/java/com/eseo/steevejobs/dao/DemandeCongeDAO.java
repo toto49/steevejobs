@@ -206,6 +206,11 @@ public class DemandeCongeDAO {
         }
     }
 
+    /**
+     * Fragment SQL SELECT avec jointure employé pour les lectures de demandes.
+     *
+     * @return requête {@code SELECT} de base (sans clause {@code WHERE})
+     */
     private String baseSelectSql() {
         return """
                 SELECT d.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif
@@ -214,6 +219,13 @@ public class DemandeCongeDAO {
                 """;
     }
 
+    /**
+     * Construit une demande de congé à partir d'une ligne de résultat jointe.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return demande hydratée avec employé
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private DemandeConge mapRow(ResultSet rs) throws SQLException {
         User employe = new User(
                 rs.getInt("id_user"),
@@ -242,6 +254,13 @@ public class DemandeCongeDAO {
         return demande;
     }
 
+    /**
+     * Lit {@code id_planning} ; retourne {@code 0} si la colonne est absente, NULL ou illisible.
+     *
+     * @param rs curseur contenant éventuellement {@code id_planning}
+     * @return identifiant de planning, ou {@code 0} par défaut
+     * @throws SQLException propagée uniquement si la lecture échoue hors colonne manquante
+     */
     private int lireIdPlanning(ResultSet rs) throws SQLException {
         try {
             int id = rs.getInt("id_planning");

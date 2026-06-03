@@ -340,10 +340,11 @@ public class ProduitDAO {
     }
 
     /**
-     * Méthode utilitaire privée.
+     * Construit un produit à partir d'une ligne de la table {@code PRODUITS}.
      *
-     * Permet de centraliser le mapping ResultSet -> Objet Produit
-     * et d'éviter la duplication de code.
+     * @param rs curseur positionné sur la ligne courante
+     * @return produit hydraté
+     * @throws SQLException en cas d'erreur de lecture JDBC
      */
     private Produit mapRowToProduit(ResultSet rs) throws SQLException {
         return new Produit(

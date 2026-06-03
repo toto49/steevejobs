@@ -29,22 +29,37 @@ import java.util.ResourceBundle;
  */
 public class ClientsController implements Initializable {
 
+    /** Champ de recherche textuelle sur les clients et fournisseurs. */
     @FXML private TextField searchField;
+    /** Filtre par type de tiers (tous, client, fournisseur). */
     @FXML private ComboBox<String> comboTypeFiltre;
+    /** Tableau listant les tiers filtrés. */
     @FXML private TableView<Tiers> tableClients;
+    /** Colonnes du tableau : {@code colType}, {@code colNom}, {@code colPrenom}, {@code colEmail}, {@code colTel}, {@code colSiret}. */
     @FXML private TableColumn<Tiers, String> colType, colNom, colPrenom, colEmail, colTel, colSiret;
+    /** Libellé indiquant le nombre de clients affichés. */
     @FXML private Label lblNbClients;
+    /** Labels détail : {@code detailType}, {@code detailNom}, {@code detailPrenom}, {@code detailEmail}, {@code detailTel}, {@code detailAdresse}, {@code detailSiret}, {@code detailNumTva}. */
     @FXML private Label detailType, detailNom, detailPrenom, detailEmail, detailTel, detailAdresse, detailSiret, detailNumTva;
+    /** Boutons {@code btnModifier} et {@code btnSupprimer} du tiers sélectionné. */
     @FXML private Button btnModifier, btnSupprimer;
 
+    /** Service d'accès et de persistance des tiers. */
     private final TiersService tiersService = new TiersService();
+    /** Liste observable complète des clients et fournisseurs chargés. */
     private ObservableList<Tiers> tousLesClients = FXCollections.observableArrayList();
+    /** Tiers actuellement sélectionné dans le tableau. */
     private Tiers clientSelectionne = null;
 
     // ─────────────────────────────────────────────────────────────
     // CSS
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Applique les feuilles de style principale et popup à une scène.
+     *
+     * @param scene scène cible
+     */
     private void applyCSS(Scene scene) {
         java.net.URL styleUrl = getClass().getResource("/style/style.css");
         java.net.URL popupUrl = getClass().getResource("/style/popup.css");
@@ -52,6 +67,11 @@ public class ClientsController implements Initializable {
         if (popupUrl != null) scene.getStylesheets().add(popupUrl.toExternalForm());
     }
 
+    /**
+     * Applique la feuille de style popup et les classes des boutons OK/Annuler.
+     *
+     * @param dp panneau de dialogue
+     */
     private void appliquerStyleDialog(DialogPane dp) {
         java.net.URL popupUrl = getClass().getResource("/style/popup.css");
         if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
@@ -67,6 +87,12 @@ public class ClientsController implements Initializable {
     // Helpers UI
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Crée un champ texte vide avec style formulaire.
+     *
+     * @param prompt texte d'aide
+     * @return champ texte configuré
+     */
     private TextField champForm(String prompt) {
         TextField tf = new TextField();
         tf.setPromptText(prompt);
@@ -74,12 +100,23 @@ public class ClientsController implements Initializable {
         return tf;
     }
 
+    /**
+     * Crée un champ texte prérempli avec style formulaire.
+     *
+     * @param valeur valeur initiale
+     * @return champ texte configuré
+     */
     private TextField champFormValeur(String valeur) {
         TextField tf = new TextField(valeur != null ? valeur : "");
         tf.getStyleClass().add("champform");
         return tf;
     }
 
+    /**
+     * Crée une liste déroulante des types de tiers pour un formulaire.
+     *
+     * @return combo box des types client/fournisseur
+     */
     private ComboBox<TiersType> comboFormType() {
         ComboBox<TiersType> cb = new ComboBox<>();
         cb.setItems(FXCollections.observableArrayList(TiersType.values()));
@@ -89,6 +126,12 @@ public class ClientsController implements Initializable {
         return cb;
     }
 
+    /**
+     * Construit l'en-tête stylisé d'une popup de formulaire.
+     *
+     * @param titre titre affiché
+     * @return barre d'en-tête horizontale
+     */
     private HBox buildHeader(String titre) {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
@@ -101,12 +144,23 @@ public class ClientsController implements Initializable {
         return header;
     }
 
+    /**
+     * Crée un label de formulaire avec la classe CSS dédiée.
+     *
+     * @param texte libellé
+     * @return label stylisé
+     */
     private Label labelChamp(String texte) {
         Label l = new Label(texte);
         l.getStyleClass().add("label-style");
         return l;
     }
 
+    /**
+     * Crée un label réservé aux messages d'erreur de validation.
+     *
+     * @return label d'erreur vide
+     */
     private Label erreurLabel() {
         Label l = new Label("");
         l.getStyleClass().addAll("label-style", "label-erreur");
@@ -134,6 +188,9 @@ public class ClientsController implements Initializable {
         btnSupprimer.setDisable(true);
     }
 
+    /**
+     * Configure les fabriques de valeurs des colonnes du tableau des tiers.
+     */
     private void configurerColonnes() {
         colType.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getType().name()));
         colNom.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getNom()));
@@ -146,11 +203,17 @@ public class ClientsController implements Initializable {
                 data.getValue().getSiret() != null ? data.getValue().getSiret() : ""));
     }
 
+    /**
+     * Initialise la liste des filtres par type (tous, client, fournisseur).
+     */
     private void configurerFiltreType() {
         comboTypeFiltre.setItems(FXCollections.observableArrayList("Tous", "Client", "Fournisseur"));
         comboTypeFiltre.setValue("Tous");
     }
 
+    /**
+     * Branche la sélection du tableau sur l'affichage du détail et l'état des boutons.
+     */
     private void configurerSelectionTableau() {
         tableClients.getSelectionModel().selectedItemProperty().addListener((obs, ancien, nouveau) -> {
             if (nouveau != null) {
@@ -166,6 +229,10 @@ public class ClientsController implements Initializable {
     // Popup Nouveau Client
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Ouvre le dialogue de création d'un client ou fournisseur.
+     * Liaison FXML : bouton d'ajout.
+     */
     @FXML
     private void ouvrirFormulaireCreation() {
         Dialog<Void> dialog = new Dialog<>();
@@ -336,6 +403,10 @@ public class ClientsController implements Initializable {
     // Popup Modifier Client
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Ouvre le dialogue de modification du tiers sélectionné.
+     * Liaison FXML : {@code btnModifier}.
+     */
     @FXML
     private void modifierClient() {
         if (clientSelectionne == null) return;
@@ -499,6 +570,12 @@ public class ClientsController implements Initializable {
     // Suppression
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Supprime le tiers sélectionné après confirmation.
+     * Liaison FXML : {@code btnSupprimer}.
+     *
+     * @throws SQLException affichée via alerte en cas d'échec
+     */
     @FXML
     private void supprimerClient() {
         if (clientSelectionne == null) return;
@@ -527,6 +604,10 @@ public class ClientsController implements Initializable {
     // Filtre / Recherche
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Filtre le tableau selon la recherche textuelle et le type sélectionné.
+     * Liaison FXML : {@code searchField}, {@code comboTypeFiltre}.
+     */
     @FXML
     private void filtrer() {
         String recherche = searchField.getText().toLowerCase().trim();
@@ -553,6 +634,9 @@ public class ClientsController implements Initializable {
     // Chargement & détail
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Recharge la liste complète des tiers depuis la base de données.
+     */
     private void chargerTousClients() {
         try {
             tousLesClients.setAll(tiersService.obtenirTousLesTiers());
@@ -563,6 +647,11 @@ public class ClientsController implements Initializable {
         }
     }
 
+    /**
+     * Affiche les informations du tiers dans le panneau de détail.
+     *
+     * @param client tiers sélectionné
+     */
     private void afficherDetail(Tiers client) {
         detailType.setText(client.getType().name());
         detailNom.setText(client.getNom());
@@ -574,6 +663,9 @@ public class ClientsController implements Initializable {
         detailNumTva.setText(client.getNum_tva() != null ? client.getNum_tva() : "Non renseigné");
     }
 
+    /**
+     * Vide le panneau de détail et désactive les actions.
+     */
     private void viderDetail() {
         clientSelectionne = null;
         detailType.setText(""); detailNom.setText(""); detailPrenom.setText("");
@@ -587,6 +679,12 @@ public class ClientsController implements Initializable {
     // Dialogs utilitaires
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Affiche une alerte d'erreur.
+     *
+     * @param title titre de la fenêtre
+     * @param msg message affiché
+     */
     private void showError(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title); a.setHeaderText(null); a.setContentText(msg);
@@ -594,6 +692,12 @@ public class ClientsController implements Initializable {
         a.showAndWait();
     }
 
+    /**
+     * Affiche une alerte d'information.
+     *
+     * @param title titre de la fenêtre
+     * @param msg message affiché
+     */
     private void showInfo(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         a.setTitle(title); a.setHeaderText(null); a.setContentText(msg);

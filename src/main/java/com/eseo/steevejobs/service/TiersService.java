@@ -17,6 +17,7 @@ import java.util.List;
  */
 public class TiersService {
 
+    /** Accès persistance aux tiers clients et fournisseurs. */
     private final TiersDAO tiersDAO;
 
     /**
@@ -187,6 +188,12 @@ public class TiersService {
         return tiersDAO.deactivateTiers(id);
     }
 
+    /**
+     * Valide les champs obligatoires et les formats d'un tiers client ou fournisseur.
+     *
+     * @param tiers entité tiers à contrôler
+     * @throws IllegalArgumentException si nom, type, e-mail, SIRET ou numéro de TVA sont invalides
+     */
     private void validerTiers(Tiers tiers) throws IllegalArgumentException {
         if (tiers == null) {
             throw new IllegalArgumentException("Les données du tiers sont vides.");

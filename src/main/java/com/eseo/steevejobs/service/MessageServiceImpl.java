@@ -15,6 +15,7 @@ import java.util.List;
  */
 public class MessageServiceImpl implements MessageService {
 
+    /** Accès persistance aux messages de tickets. */
     private final MessageDAO messageDAO;
 
     /**
@@ -33,6 +34,9 @@ public class MessageServiceImpl implements MessageService {
         this.messageDAO = messageDAO;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Message getMessage(int id) {
         try {
@@ -42,6 +46,9 @@ public class MessageServiceImpl implements MessageService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Message> getMessagesByAuteur(int auteurId) {
         try {
@@ -51,6 +58,9 @@ public class MessageServiceImpl implements MessageService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Message> getMessagesByTicketId(int ticketId) {
         try {
@@ -60,6 +70,9 @@ public class MessageServiceImpl implements MessageService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Message createMessage(Message message) {
         try {
@@ -70,6 +83,9 @@ public class MessageServiceImpl implements MessageService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean deleteMessage(int id) {
         try {

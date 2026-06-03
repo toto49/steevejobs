@@ -17,6 +17,13 @@ import java.util.List;
  */
 public class UserDAO {
 
+    /**
+     * Construit un utilisateur à partir d'une ligne {@code USER}, y compris les champs de sécurité.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return utilisateur hydraté
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private User mapUser(ResultSet rs) throws SQLException {
         User user = new User(
                 rs.getInt("id_user"),
@@ -340,6 +347,12 @@ public class UserDAO {
         return users;
     }
 
+    /**
+     * Transforme un terme de recherche en motif {@code LIKE} avec caractères spéciaux échappés.
+     *
+     * @param searchTerm texte saisi (non vide côté appelant)
+     * @return motif entouré de {@code %} avec {@code \}, {@code %} et {@code _} échappés
+     */
     private String toLikePattern(String searchTerm) {
         String escaped = searchTerm
                 .replace("\\", "\\\\")

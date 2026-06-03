@@ -25,8 +25,15 @@ import java.util.Optional;
  */
 public class VisioDAO {
 
+    /** Fuseau horaire utilisé pour les conversions date/heure JDBC. */
     private static final ZoneId FUSEAU_HORAIRE = ZoneId.systemDefault();
 
+    /**
+     * Convertit une date/heure locale en {@link Timestamp} JDBC.
+     *
+     * @param dateHeure date/heure locale, ou {@code null}
+     * @return horodatage JDBC, ou {@code null} si l'entrée est {@code null}
+     */
     private static Timestamp localVersTimestamp(LocalDateTime dateHeure) {
         if (dateHeure == null) {
             return null;
@@ -34,6 +41,12 @@ public class VisioDAO {
         return Timestamp.from(dateHeure.atZone(FUSEAU_HORAIRE).toInstant());
     }
 
+    /**
+     * Convertit un {@link Timestamp} JDBC en date/heure locale.
+     *
+     * @param timestamp horodatage JDBC, ou {@code null}
+     * @return date/heure locale, ou {@code null} si l'entrée est {@code null}
+     */
     private static LocalDateTime timestampVersLocal(Timestamp timestamp) {
         if (timestamp == null) {
             return null;
@@ -41,6 +54,13 @@ public class VisioDAO {
         return timestamp.toInstant().atZone(FUSEAU_HORAIRE).toLocalDateTime();
     }
 
+    /**
+     * Lit {@code heure_programmee} via objet JDBC ou repli sur {@link Timestamp}.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return heure programmée locale, ou {@code null} si absente en base
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private static LocalDateTime lireHeureProgrammee(ResultSet rs) throws SQLException {
         LocalDateTime depuisObjet = rs.getObject("heure_programmee", LocalDateTime.class);
         if (depuisObjet != null) {

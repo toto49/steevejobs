@@ -17,6 +17,7 @@ import java.util.List;
  */
 public class PlanningService {
 
+    /** Accès persistance aux événements de planning. */
     private final PlanningDAO planningDAO;
 
     /**
@@ -132,6 +133,12 @@ public class PlanningService {
         return planningDAO.findAll();
     }
 
+    /**
+     * Valide les données d'un événement planning avant création ou modification.
+     *
+     * @param planning événement à contrôler
+     * @throws IllegalArgumentException si utilisateur, type, dates ou durée sont invalides
+     */
     private void validerPlanning(Planning planning) throws IllegalArgumentException {
         if (planning == null) {
             throw new IllegalArgumentException("Les données du planning sont vides.");

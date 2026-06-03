@@ -47,35 +47,57 @@ import java.util.Locale;
  */
 public class CalendrierController {
 
+    /** Classe CSS du bouton « Mes heures » (état par défaut). */
     private static final String STYLE_CLASSE_HEURES = "btn-mes-heures";
+    /** Classe CSS du bouton « Mes heures » lorsque la saisie est active. */
     private static final String STYLE_CLASSE_HEURES_ACTIF = "btn-mes-heures-actif";
+    /** Classe CSS du bouton « Mes heures » lorsque la saisie est inactive. */
     private static final String STYLE_CLASSE_HEURES_INACTIF = "btn-mes-heures-inactif";
+    /** Nombre minimal de caractères pour déclencher la recherche d'employé (vue RH). */
     private static final int RECHERCHE_EMPLOYE_MIN_CHARS = 2;
+    /** Nombre maximal de suggestions affichées dans le combo employé. */
     private static final int RECHERCHE_EMPLOYE_MAX_SUGGESTIONS = 8;
 
+    /** Libellés des en-têtes : lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche. */
     @FXML
     private Label lundiLabel, mardiLabel, mercrediLabel, jeudiLabel, vendrediLabel, samediLabel, dimancheLabel;
+    /** Boutons « heures » : lundi à dimanche (saisie des heures travaillées). */
     @FXML
     private Button lundiHeuresBtn, mardiHeuresBtn, mercrediHeuresBtn, jeudiHeuresBtn, vendrediHeuresBtn, samediHeuresBtn, dimancheHeuresBtn;
+    /** Libellé affichant l'intervalle de dates de la semaine courante. */
     @FXML
     private Label labelSemaine;
+    /** Sélecteur de date pour naviguer vers une semaine donnée. */
     @FXML
     private DatePicker datePickerSemaine;
+    /** Liste déroulante de recherche et sélection d'employé (vue RH). */
     @FXML
     private ComboBox<User> comboEmploye;
+    /** Grille hebdomadaire affichant le planning et les événements. */
     @FXML
     private GridPane gridPlanning;
 
+    /** Date du lundi de la semaine actuellement affichée. */
     private LocalDate dateDebutSemaineAffichee;
+    /** Événements de planning chargés pour l'employé affiché. */
     private List<Planning> events;
+    /** Utilisateur actuellement connecté à l'application. */
     private User utilisateurConnecte;
+    /** Utilisateur dont le planning est affiché dans la grille. */
     private User utilisateurAffiche;
+    /** Service d'accès aux événements de planning. */
     private PlanningService planningService;
+    /** Service de gestion des heures de travail saisies. */
     private HeuresTravailService heuresTravailService;
+    /** Service de gestion des demandes de congés. */
     private DemandeCongeService demandeCongeService;
+    /** Service de recherche et chargement des employés. */
     private UserService userService;
+    /** Indique une mise à jour programmatique du combo employé (évite les boucles). */
     private boolean miseAJourRechercheEmploye;
+    /** Identifiant de l'employé actuellement sélectionné en vue RH. */
     private int employeSelectionneId = -1;
+    /** Demandes de congés en attente affichées sur le calendrier employé. */
     private List<DemandeConge> demandesEnAttente = new ArrayList<>();
 
 
@@ -143,6 +165,11 @@ public class CalendrierController {
         return planningService.obtenirPlanningsParUtilisateur(utilisateurAffiche.getId());
     }
 
+    /**
+     * Recharge les événements de planning et les demandes en attente pour l'employé affiché.
+     *
+     * @throws SQLException en cas d'erreur d'accès base de données
+     */
     private void rechargerDonneesPlanning() throws SQLException {
         events = initEvent();
         if (estCalendrierEmploye() && utilisateurAffiche != null) {
@@ -152,20 +179,36 @@ public class CalendrierController {
         }
     }
 
+    /**
+     * Indique si la vue courante est le calendrier employé (sans sélecteur RH).
+     *
+     * @return {@code true} si {@code comboEmploye} est absent
+     */
     private boolean estCalendrierEmploye() {
         return comboEmploye == null;
     }
 
+    /**
+     * Indique si l'événement de planning correspond à un congé.
+     *
+     * @param event événement à tester
+     * @return {@code true} si le type est un congé
+     */
     private boolean estEvenementConge(Planning event) {
         return event != null && CongeUtil.estTypeConge(event.getType());
     }
 
+    /**
+     * Configure le combo de recherche d'employé pour la vue RH.
+     */
     private void initialiserSelecteurEmploye() {
         comboEmploye.setEditable(true);
         comboEmploye.setItems(FXCollections.observableArrayList());
         comboEmploye.setPromptText("Nom, prénom ou email…");
         comboEmploye.setConverter(new StringConverter<>() {
             /**
+             * Affiche le nom complet de l'employé dans le combo.
+             *
              * @param user employé à afficher
              * @return nom complet formaté
              */
@@ -175,6 +218,8 @@ public class CalendrierController {
             }
 
             /**
+             * Résout un employé à partir du texte saisi dans le combo.
+             *
              * @param string saisie utilisateur
              * @return employé correspondant ou {@code null}
              */
@@ -226,6 +271,9 @@ public class CalendrierController {
         });
     }
 
+    /**
+     * Efface la sélection employé et vide la grille de planning.
+     */
     private void reinitialiserSelectionEmploye() {
         utilisateurAffiche = null;
         employeSelectionneId = -1;
@@ -239,6 +287,11 @@ public class CalendrierController {
         }
     }
 
+    /**
+     * Vérifie qu'un employé est sélectionné en vue RH ; affiche une alerte sinon.
+     *
+     * @return {@code true} si un employé est sélectionné ou si la vue est employé
+     */
     private boolean employeRhSelectionne() {
         if (comboEmploye == null) {
             return true;
@@ -255,6 +308,11 @@ public class CalendrierController {
         return false;
     }
 
+    /**
+     * Lance une recherche asynchrone d'employés correspondant à la saisie du combo RH.
+     *
+     * @param saisie texte saisi par l'utilisateur
+     */
     private void proposerEmployesCorrespondants(String saisie) {
         if (saisie == null || saisie.trim().length() < RECHERCHE_EMPLOYE_MIN_CHARS) {
             Platform.runLater(() -> {
@@ -294,6 +352,11 @@ public class CalendrierController {
         recherche.setDaemon(true);
         recherche.start();
     }
+    /**
+     * Applique la feuille de style popup aux boutons d'une boîte de dialogue.
+     *
+     * @param dp panneau de dialogue à styliser
+     */
     private void appliquerStyleDialog(DialogPane dp) {
         try {
             java.net.URL popupUrl = getClass().getResource("/style/popup.css");
@@ -307,6 +370,12 @@ public class CalendrierController {
         if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
     }
 
+    /**
+     * Charge le planning de l'employé sélectionné et met à jour le combo de recherche.
+     *
+     * @param employe employé choisi
+     * @throws SQLException en cas d'erreur de chargement du planning
+     */
     private void appliquerEmployeSelectionne(User employe) throws SQLException {
         if (employe == null || employe.getId() == employeSelectionneId) {
             return;
@@ -337,6 +406,12 @@ public class CalendrierController {
         });
     }
 
+    /**
+     * Formate le nom complet d'un employé (prénom + nom).
+     *
+     * @param user employé à formater
+     * @return nom affichable ou chaîne vide
+     */
     private String formaterNomEmploye(User user) {
         if (user == null) {
             return "";
@@ -346,6 +421,11 @@ public class CalendrierController {
         return (prenom + " " + nom).trim();
     }
 
+    /**
+     * Affiche une alerte d'erreur stylisée.
+     *
+     * @param message texte du message
+     */
     private void afficherErreur(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Erreur");
@@ -617,6 +697,12 @@ public class CalendrierController {
     }
 
     // --- CORRECTION : Tranches de 15 minutes ---
+    /**
+     * Crée une liste déroulante d'horaires par tranches de 15 minutes.
+     *
+     * @param moment {@code "matin"} ou {@code "aprem"} pour la plage horaire
+     * @return combo box éditable des horaires
+     */
     private ComboBox<String> creerComboBoxTemps(String moment) {
         ComboBox<String> cb = new ComboBox<>();
         if (moment.equals("matin")){
@@ -641,6 +727,13 @@ public class CalendrierController {
         return cb;
     }
 
+    /**
+     * Calcule la durée en minutes entre deux horaires au format {@code HH:mm}.
+     *
+     * @param debut heure de début
+     * @param fin heure de fin
+     * @return durée en minutes, ou 0 si le format est invalide
+     */
     private long calculerDureeMinutes(String debut, String fin) {
         try {
             LocalTime tDebut = LocalTime.parse(debut);
@@ -693,6 +786,13 @@ public class CalendrierController {
         }
     }
 
+    /**
+     * Place un bloc d'événement de planning dans la grille pour un jour donné.
+     *
+     * @param event événement à afficher
+     * @param date jour de la cellule
+     * @param afficherBoutons {@code true} pour afficher modifier/supprimer sur la dernière case visible
+     */
     private void placerEvenementDansGrille(Planning event, LocalDate date, boolean afficherBoutons) {
         int col = date.getDayOfWeek().getValue();
         int hDebut = date.isEqual(event.getJourDebut().toLocalDate()) ? event.getJourDebut().getHour() : 8;
@@ -706,6 +806,12 @@ public class CalendrierController {
         GridPane.setMargin(eventBlock, new Insets(2));
     }
 
+    /**
+     * Place un bloc de demande de congé en attente dans la grille pour un jour donné.
+     *
+     * @param demande demande à afficher
+     * @param date jour de la cellule
+     */
     private void placerDemandeEnAttenteDansGrille(DemandeConge demande, LocalDate date) {
         int col = date.getDayOfWeek().getValue();
         int hDebut = date.isEqual(demande.getJourDebut().toLocalDate()) ? demande.getJourDebut().getHour() : 8;
@@ -719,6 +825,13 @@ public class CalendrierController {
         GridPane.setMargin(bloc, new Insets(2));
     }
 
+    /**
+     * Construit le nœud visuel d'une demande de congé en attente.
+     *
+     * @param demande demande source
+     * @param date jour affiché dans la cellule
+     * @return bloc vertical stylisé
+     */
     private Node creerBlocDemandeEnAttente(DemandeConge demande, LocalDate date) {
         VBox box = new VBox(2);
         box.getStyleClass().add("event-block");
@@ -750,6 +863,13 @@ public class CalendrierController {
         return box;
     }
 
+    /**
+     * Construit le nœud visuel d'un événement de planning.
+     *
+     * @param event événement source
+     * @param afficherBoutons {@code true} pour les boutons modifier et supprimer
+     * @return bloc vertical stylisé
+     */
     private Node creerBlocEvenement(Planning event, boolean afficherBoutons) {
         VBox box = new VBox(2);
         box.getStyleClass().add("event-block");
@@ -940,6 +1060,11 @@ public class CalendrierController {
         });
     }
 
+    /**
+     * Ouvre le formulaire de modification pour un événement non lié aux congés.
+     *
+     * @param event événement à modifier
+     */
     private void modifierEvenement(Planning event) {
         if (estEvenementConge(event)) {
             afficherInfoCongeNonModifiable();
@@ -948,6 +1073,11 @@ public class CalendrierController {
         afficherFormulaire(event);
     }
 
+    /**
+     * Affiche le dialogue d'ajout ou de modification d'un événement de planning.
+     *
+     * @param eventToEdit événement existant à modifier, ou {@code null} pour une création
+     */
     private void afficherFormulaire(Planning eventToEdit) {
         boolean isEdit = (eventToEdit != null);
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -1120,6 +1250,13 @@ public class CalendrierController {
     }
 
 
+    /**
+     * Crée un bloc label + champ pour le formulaire de demande de congés.
+     *
+     * @param titre libellé du champ
+     * @param champ contrôle JavaFX associé
+     * @return conteneur vertical
+     */
     private VBox creerChampDemandeConge(String titre, Node champ) {
         Label lbl = new Label(titre);
         lbl.setStyle("-fx-font-weight: bold; -fx-text-fill: #475569; -fx-font-size: 12px;");
@@ -1127,6 +1264,9 @@ public class CalendrierController {
         return bloc;
     }
 
+    /**
+     * Informe l'utilisateur que les congés ne sont pas modifiables depuis le calendrier.
+     */
     private void afficherInfoCongeNonModifiable() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Congés");
@@ -1142,6 +1282,14 @@ public class CalendrierController {
         alert.showAndWait();
     }
 
+    /**
+     * Ajoute une ligne label + champ à une grille de formulaire.
+     *
+     * @param g grille cible
+     * @param label texte du label
+     * @param field contrôle associé
+     * @param row index de ligne
+     */
     private void ajouterLigneForm(GridPane g, String label, Node field, int row) {
         Label lbl = new Label(label);
         lbl.getStyleClass().add("label-style");
@@ -1149,6 +1297,18 @@ public class CalendrierController {
         g.add(field, 1, row);
     }
 
+    /**
+     * Enregistre ou met à jour un événement de planning puis rafraîchit l'affichage.
+     *
+     * @param start date-heure de début
+     * @param end date-heure de fin
+     * @param type type d'événement
+     * @param desc description
+     * @param couleur couleur hexadécimale
+     * @param idExistant identifiant existant, ou valeur négative pour une création
+     * @param existant instance existante en mode édition
+     * @throws SQLException en cas d'erreur persistance
+     */
     private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc,
                                              String couleur, int idExistant, Planning existant) throws SQLException {
         if (utilisateurAffiche == null) {
@@ -1178,6 +1338,11 @@ public class CalendrierController {
         }
     }
 
+    /**
+     * Demande confirmation puis supprime un événement de planning non lié aux congés.
+     *
+     * @param event événement à supprimer
+     */
     private void supprimerEvenement(Planning event) {
         if (estEvenementConge(event)) {
             afficherInfoCongeNonModifiable();
@@ -1204,6 +1369,11 @@ public class CalendrierController {
         });
     }
 
+    /**
+     * Applique la feuille de style popup aux boutons d'une alerte.
+     *
+     * @param alert alerte à styliser
+     */
     private void appliquerStyleAlert(Alert alert) {
         DialogPane dp = alert.getDialogPane();
         dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());

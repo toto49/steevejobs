@@ -42,20 +42,33 @@ import java.util.concurrent.CompletableFuture;
  */
 public class FichePayeController implements Initializable {
 
+    /** Filtre par employé pour le tableau des fiches. */
     @FXML private ComboBox<User> comboEmployeFiltre;
+    /** Filtre par année pour le tableau des fiches. */
     @FXML private ComboBox<Integer> comboAnneeFiltre;
+    /** Tableau listant les fiches de paie filtrées. */
     @FXML private TableView<FichePaye> tableFiches;
+    /** Colonne affichant le nom de l'employé. */
     @FXML private TableColumn<FichePaye, String> colEmploye;
+    /** Colonne affichant l'e-mail de l'employé. */
     @FXML private TableColumn<FichePaye, String> colEmail;
+    /** Colonne affichant le service ou rôle de l'employé. */
     @FXML private TableColumn<FichePaye, String> colService;
+    /** Colonne affichant le mois de la fiche. */
     @FXML private TableColumn<FichePaye, String> colMois;
+    /** Colonne affichant le poste de l'employé. */
     @FXML private TableColumn<FichePaye, String> colPoste;
+    /** Colonne des actions (ouvrir PDF, supprimer). */
     @FXML private TableColumn<FichePaye, Void> colActions;
+    /** Libellé indiquant le nombre de fiches affichées. */
     @FXML private Label lblNbFiches;
 
+    /** Service de gestion et génération des fiches de paie. */
     private final FichePayeService fichePayeService = new FichePayeService();
+    /** Service de chargement des employés pour les filtres. */
     private final UserService userService = new UserService();
 
+    /** Format d'affichage du mois de paie (libellé long en français). */
     private static final DateTimeFormatter FMT_MOIS = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH);
 
     /**
@@ -76,6 +89,9 @@ public class FichePayeController implements Initializable {
     // CONFIGURATION
     // ==========================================
 
+    /**
+     * Configure les colonnes du tableau et la cellule d'actions par ligne.
+     */
     private void configurerColonnes() {
         colEmploye.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getEmploye().getPrenom() + " " + data.getValue().getEmploye().getNom()));
@@ -126,6 +142,9 @@ public class FichePayeController implements Initializable {
         });
     }
 
+    /**
+     * Charge la liste des employés dans le filtre combo.
+     */
     private void chargerFiltreEmployes() {
         try {
             ObservableList<User> employes = FXCollections.observableArrayList();
@@ -133,9 +152,21 @@ public class FichePayeController implements Initializable {
             employes.addAll(userService.getAllUsers());
             comboEmployeFiltre.setItems(employes);
             comboEmployeFiltre.setConverter(new StringConverter<>() {
+                /**
+                 * Affiche le nom de l'employé dans le filtre.
+                 *
+                 * @param u employé ou {@code null} pour « Tous »
+                 * @return libellé affiché
+                 */
                 @Override public String toString(User u) {
                     return u == null ? "Tous les employés" : u.getPrenom() + " " + u.getNom();
                 }
+                /**
+                 * Non utilisé pour un filtre en lecture seule.
+                 *
+                 * @param s chaîne saisie
+                 * @return toujours {@code null}
+                 */
                 @Override public User fromString(String s) { return null; }
             });
         } catch (SQLException e) {
@@ -143,6 +174,9 @@ public class FichePayeController implements Initializable {
         }
     }
 
+    /**
+     * Initialise le filtre combo des années (courante et cinq précédentes).
+     */
     private void chargerFiltreAnnees() {
         int anneeActuelle = LocalDateTime.now().getYear();
         ObservableList<Integer> annees = FXCollections.observableArrayList();
@@ -152,9 +186,21 @@ public class FichePayeController implements Initializable {
         }
         comboAnneeFiltre.setItems(annees);
         comboAnneeFiltre.setConverter(new StringConverter<>() {
+            /**
+             * Affiche l'année dans le filtre combo.
+             *
+             * @param a année ou {@code null} pour « Toutes »
+             * @return libellé affiché
+             */
             @Override public String toString(Integer a) {
                 return a == null ? "Toutes les années" : String.valueOf(a);
             }
+            /**
+             * Non utilisé pour un filtre en lecture seule.
+             *
+             * @param s chaîne saisie
+             * @return toujours {@code null}
+             */
             @Override public Integer fromString(String s) { return null; }
         });
     }
@@ -163,6 +209,10 @@ public class FichePayeController implements Initializable {
     // ACTIONS
     // ==========================================
 
+    /**
+     * Navigue vers la vue calendrier RH.
+     * Liaison FXML : bouton calendrier.
+     */
     @FXML
     private void ouvrirCalendrierRh() {
         if (MenuController.getInstance() != null) {
@@ -171,6 +221,12 @@ public class FichePayeController implements Initializable {
         }
     }
 
+    /**
+     * Ouvre le dialogue de génération d'une fiche de paie et l'envoie sur le NAS.
+     * Liaison FXML : bouton de génération.
+     *
+     * @throws SQLException affichée via alerte en cas d'échec
+     */
     @FXML
     private void ouvrirFormulaireGeneration() {
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -233,9 +289,21 @@ public class FichePayeController implements Initializable {
         }
 
         comboEmploye.setConverter(new StringConverter<User>() {
+            /**
+             * Affiche l'employé et son poste dans le formulaire de génération.
+             *
+             * @param u employé sélectionné
+             * @return libellé affiché
+             */
             @Override public String toString(User u) {
                 return u == null ? "" : u.getPrenom() + " " + u.getNom() + " — " + u.getPoste();
             }
+            /**
+             * Non utilisé pour une sélection par liste.
+             *
+             * @param s chaîne saisie
+             * @return toujours {@code null}
+             */
             @Override public User fromString(String s) { return null; }
 
         });
@@ -441,6 +509,12 @@ public class FichePayeController implements Initializable {
         }
     }
 
+    /**
+     * Filtre le tableau des fiches selon l'employé et l'année sélectionnés.
+     * Liaison FXML : filtres employé et année.
+     *
+     * @throws SQLException affichée via alerte en cas d'échec
+     */
     @FXML
     private void filtrerParEmploye() {
         User employe = comboEmployeFiltre.getValue();
@@ -469,6 +543,11 @@ public class FichePayeController implements Initializable {
     // GESTION PDF
     // ==========================================
 
+    /**
+     * Ouvre le fichier PDF local associé à une fiche de paie.
+     *
+     * @param fiche fiche dont le PDF doit être ouvert
+     */
     private void ouvrirPdf(FichePaye fiche) {
         try {
             File f = new File(fiche.getUrl());
@@ -482,6 +561,11 @@ public class FichePayeController implements Initializable {
         }
     }
 
+    /**
+     * Demande confirmation puis supprime une fiche de paie et son fichier.
+     *
+     * @param fiche fiche à supprimer
+     */
     private void confirmerSuppression(FichePaye fiche) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Supprimer la fiche");
@@ -518,6 +602,9 @@ public class FichePayeController implements Initializable {
     // CHARGEMENT
     // ==========================================
 
+    /**
+     * Recharge toutes les fiches de paie dans le tableau.
+     */
     private void chargerToutesFiches() {
         try {
             tableFiches.setItems(FXCollections.observableArrayList(fichePayeService.findAll()));
@@ -531,6 +618,11 @@ public class FichePayeController implements Initializable {
     // MESSAGES
     // ==========================================
 
+    /**
+     * Affiche une alerte d'erreur.
+     *
+     * @param msg message affiché
+     */
     private void afficherErreur(String msg) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Erreur");
@@ -540,6 +632,11 @@ public class FichePayeController implements Initializable {
         alert.showAndWait();
     }
 
+    /**
+     * Affiche une alerte de succès.
+     *
+     * @param msg message affiché
+     */
     private void afficherSucces(String msg) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Succès");

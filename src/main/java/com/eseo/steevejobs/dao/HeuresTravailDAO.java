@@ -103,6 +103,14 @@ public class HeuresTravailDAO {
         return null;
     }
 
+    /**
+     * Affecte une heure SQL ou {@code NULL} sur un paramètre préparé.
+     *
+     * @param stmt  requête préparée cible
+     * @param index index du paramètre (base 1)
+     * @param time  heure à persister, ou {@code null} pour SQL NULL
+     * @throws SQLException en cas d'erreur d'affectation JDBC
+     */
     private void setTimeOrNull(PreparedStatement stmt, int index, LocalTime time) throws SQLException {
         if (time != null) {
             stmt.setTime(index, Time.valueOf(time));
@@ -111,11 +119,26 @@ public class HeuresTravailDAO {
         }
     }
 
+    /**
+     * Lit une colonne TIME et la convertit en {@link LocalTime}.
+     *
+     * @param rs         curseur de résultat
+     * @param columnName nom de la colonne TIME
+     * @return heure locale, ou {@code null} si la valeur SQL est NULL
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private LocalTime getLocalTime(ResultSet rs, String columnName) throws SQLException {
         Time time = rs.getTime(columnName);
         return time != null ? time.toLocalTime() : null;
     }
 
+    /**
+     * Construit un employé à partir des colonnes {@code USER} du résultat joint.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return employé hydraté
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private User extractUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id_user"),

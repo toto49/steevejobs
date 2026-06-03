@@ -19,8 +19,11 @@ import java.util.Map;
  */
 public class PermissionService {
 
+    /** Accès persistance aux permissions et associations rôle-permission. */
     private final PermissionDAO permissionDAO;
+    /** Cache mémoire des identifiants de permission par nom de rôle. */
     private final Map<String, List<Integer>> roleCache = new HashMap<>();
+    /** Nom du rôle protégé contre toute modification via cette couche. */
     private static final String ROLE_SUPER_ADMIN = "SuperAdmin";
 
     /**
@@ -172,6 +175,12 @@ public class PermissionService {
         }
     }
 
+    /**
+     * Valide le nom d'un rôle avant lecture ou modification des permissions associées.
+     *
+     * @param nomRole nom du rôle (obligatoire, longueur maximale 50 caractères)
+     * @throws IllegalArgumentException si le nom est absent ou trop long
+     */
     private void validerNomRole(String nomRole) {
         if (nomRole == null || nomRole.trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom du rôle est obligatoire.");
@@ -182,12 +191,24 @@ public class PermissionService {
         }
     }
 
+    /**
+     * Valide l'identifiant technique d'une permission.
+     *
+     * @param idPermission identifiant strictement positif attendu
+     * @throws IllegalArgumentException si l'identifiant est nul ou négatif
+     */
     private void validerIdPermission(int idPermission) {
         if (idPermission <= 0) {
             throw new IllegalArgumentException("L'ID de la permission est invalide.");
         }
     }
 
+    /**
+     * Valide le code action d'une permission applicative.
+     *
+     * @param codeAction code normalisé (majuscules, chiffres, underscore ; max 100 caractères)
+     * @throws IllegalArgumentException si le code est absent, trop long ou mal formé
+     */
     private void validerCodeAction(String codeAction) {
         if (codeAction == null || codeAction.trim().isEmpty()) {
             throw new IllegalArgumentException("Le code action est obligatoire.");

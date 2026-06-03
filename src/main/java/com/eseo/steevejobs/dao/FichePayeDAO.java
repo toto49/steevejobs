@@ -290,6 +290,13 @@ public class FichePayeDAO {
         return 0;
     }
 
+    /**
+     * Construit un employé à partir des colonnes {@code USER} du résultat joint.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return employé hydraté (taux salarial et patronal inclus)
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private User mapUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id_user"),
@@ -307,6 +314,13 @@ public class FichePayeDAO {
         );
     }
 
+    /**
+     * Construit une fiche de paie à partir d'une ligne de résultat jointe.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return fiche de paie avec employé associé
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private FichePaye mapFichePaye(ResultSet rs) throws SQLException {
         return new FichePaye(
                 rs.getInt("id_paye"),

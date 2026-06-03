@@ -25,44 +25,70 @@ public class StockController {
     // ──────────────────────────────────────────────────────────────
     // Barre du haut
     // ──────────────────────────────────────────────────────────────
+    /** Champ de recherche de produits. */
     @FXML private TextField searchField;
+    /** Label affichant le nombre de produits listés. */
     @FXML private Label labelNbProduits;
 
     // ──────────────────────────────────────────────────────────────
     // Tableau
     // ──────────────────────────────────────────────────────────────
+    /** Tableau listant les produits en stock. */
     @FXML private TableView<Produit> tableProduits;
+    /** Colonne identifiant du produit. */
     @FXML private TableColumn<Produit, Number> colId;
+    /** Colonne nom du produit. */
     @FXML private TableColumn<Produit, String> colNom;
+    /** Colonne quantité ou poids du produit. */
     @FXML private TableColumn<Produit, Number> colQuantite;
+    /** Colonne statut stock du produit. */
     @FXML private TableColumn<Produit, String> colStatut;
 
     // ──────────────────────────────────────────────────────────────
     // Fiche produit
     // ──────────────────────────────────────────────────────────────
+    /** Label affichant le nom du produit sélectionné. */
     @FXML private Label ficheNom;
+    /** Label affichant le prix du produit sélectionné. */
     @FXML private Label fichePrix;
+    /** Label affichant la TVA du produit sélectionné. */
     @FXML private Label ficheTva;
+    /** Label affichant la quantité du produit sélectionné. */
     @FXML private Label ficheQte;
+    /** Label affichant le poids du produit sélectionné. */
     @FXML private Label fichePoids;
+    /** Label affichant le seuil d'alerte du produit sélectionné. */
     @FXML private Label ficheSeuilAlerte;
+    /** Label affichant le statut du produit sélectionné. */
     @FXML private Label ficheStatut;
 
+    /** Bouton d'entrée de stock depuis la fiche produit. */
     @FXML private Button btnFicheEntree;
+    /** Bouton de sortie de stock depuis la fiche produit. */
     @FXML private Button btnFicheSortie;
+    /** Bouton d'ajustement de stock depuis la fiche produit. */
     @FXML private Button btnFicheAjuster;
+    /** Bouton de modification du produit sélectionné. */
     @FXML private Button btnFicheModifier;
 
     // ──────────────────────────────────────────────────────────────
     // Données
     // ──────────────────────────────────────────────────────────────
+    /** Service de gestion des produits. */
     private final ProduitService produitService = new ProduitService();
+    /** Liste observable des produits affichés dans le tableau. */
     private final ObservableList<Produit> data = FXCollections.observableArrayList();
+    /** Produit actuellement sélectionné dans le tableau. */
     private Produit produitSelectionne = null;
 
     // ──────────────────────────────────────────────────────────────
     // Chargement CSS global (optionnel)
     // ──────────────────────────────────────────────────────────────
+    /**
+     * Applique la feuille de style globale à une scène.
+     *
+     * @param scene scène cible
+     */
     private void applyCSS(Scene scene) {
         var url = getClass().getResource("/style/style.css");
         if (url != null) scene.getStylesheets().add(url.toExternalForm());
@@ -84,6 +110,12 @@ public class StockController {
 
         colQuantite.setCellValueFactory(c -> new SimpleIntegerProperty(c.getValue().getQuantite()));
         colQuantite.setCellFactory(col -> new TableCell<>() {
+            /**
+             * Affiche la quantité ou le poids selon le type de produit.
+             *
+             * @param val valeur numérique de la cellule
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override protected void updateItem(Number val, boolean empty) {
                 super.updateItem(val, empty);
                 if (empty) { setText(null); return; }
@@ -95,6 +127,12 @@ public class StockController {
         colStatut.setCellValueFactory(c -> new SimpleStringProperty(calculerStatut(c.getValue())));
         colStatut.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
+            /**
+             * Affiche un badge coloré selon le statut stock du produit.
+             *
+             * @param statut libellé du statut
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override protected void updateItem(String statut, boolean empty) {
                 super.updateItem(statut, empty);
                 if (empty || statut == null) { setGraphic(null); return; }
@@ -116,8 +154,20 @@ public class StockController {
         refreshTable();
     }
 
+    /**
+     * Lance la recherche lors de la saisie clavier.
+     * Liaison FXML : {@code searchField}.
+     *
+     * @param e événement clavier (non utilisé)
+     */
     @FXML private void onSearchRealTime(KeyEvent e) { onSearch(); }
 
+    /**
+     * Calcule le libellé de statut stock d'un produit.
+     *
+     * @param p produit évalué
+     * @return statut affiché (En stock, A recommander, Rupture ou Inactif)
+     */
     private String calculerStatut(Produit p) {
         if (!p.isActif()) return "Inactif";
         int seuil = p.getSeuilAlerte();
@@ -135,6 +185,12 @@ public class StockController {
         return "En stock";
     }
 
+    /**
+     * Retourne le style CSS inline d'un badge selon le statut.
+     *
+     * @param statut libellé du statut
+     * @return chaîne de styles JavaFX
+     */
     private String styleBadge(String statut) {
         return switch (statut) {
             case "En stock" -> "-fx-background-color:#d1fae5; -fx-text-fill:#065f46; -fx-padding:4 8; -fx-background-radius:6;";
@@ -143,11 +199,21 @@ public class StockController {
         };
     }
 
+    /**
+     * Met à jour la fiche produit lors d'une sélection dans le tableau.
+     *
+     * @param p produit sélectionné ou {@code null}
+     */
     private void afficherFiche(Produit p) {
         produitSelectionne = p;
         rafraichirFiche(p);
     }
 
+    /**
+     * Rafraîchit le contenu de la fiche produit et l'état des boutons d'action.
+     *
+     * @param p produit affiché ou {@code null} pour l'état vide
+     */
     private void rafraichirFiche(Produit p) {
 
 
@@ -183,24 +249,40 @@ public class StockController {
     }
 
 
+    /**
+     * Enregistre une entrée de stock pour le produit sélectionné.
+     * Liaison FXML : {@code btnFicheEntree}.
+     */
     @FXML
     private void onFicheEntree() {
         if (produitSelectionne != null)
             entreeDepuisLigne(produitSelectionne);
     }
 
+    /**
+     * Enregistre une sortie de stock pour le produit sélectionné.
+     * Liaison FXML : {@code btnFicheSortie}.
+     */
     @FXML
     private void onFicheSortie() {
         if (produitSelectionne != null)
             sortieDepuisLigne(produitSelectionne);
     }
 
+    /**
+     * Ajuste le stock du produit sélectionné à une valeur absolue.
+     * Liaison FXML : {@code btnFicheAjuster}.
+     */
     @FXML
     private void onFicheAjuster() {
         if (produitSelectionne != null)
             ajusterDepuisLigne(produitSelectionne);
     }
 
+    /**
+     * Ouvre la popup de modification du produit sélectionné.
+     * Liaison FXML : {@code btnFicheModifier}.
+     */
     @FXML
     private void onFicheModifier() {
         if (produitSelectionne != null)
@@ -210,6 +292,10 @@ public class StockController {
     // ─────────────────────────────────────────────────────────────
     // Popup Nouveau Produit
     // ─────────────────────────────────────────────────────────────
+    /**
+     * Ouvre la popup de création d'un nouveau produit.
+     * Liaison FXML : bouton nouveau produit.
+     */
     @FXML
     private void onNouveauProduit() {
 
@@ -382,6 +468,9 @@ public class StockController {
     // ─────────────────────────────────────────────────────────────
     // Popup Modifier Produit
     // ─────────────────────────────────────────────────────────────
+    /**
+     * Ouvre la popup de modification du produit actuellement sélectionné.
+     */
     @FXML
     private void ouvrirPopupModifierProduit() {
 
@@ -543,6 +632,12 @@ public class StockController {
             }
         }
     }
+    /**
+     * Construit l'en-tête visuel d'une popup (titre centré à gauche).
+     *
+     * @param titre texte affiché
+     * @return conteneur d'en-tête
+     */
     private HBox buildHeader(String titre) {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
@@ -557,6 +652,11 @@ public class StockController {
     // ─────────────────────────────────────────────────────────────
     // Actions stock
     // ─────────────────────────────────────────────────────────────
+    /**
+     * Demande et enregistre une entrée de stock pour un produit.
+     *
+     * @param p produit concerné
+     */
     private void entreeDepuisLigne(Produit p) {
         if (p == null) return;
         try {
@@ -576,6 +676,11 @@ public class StockController {
         }
     }
 
+    /**
+     * Demande et enregistre une sortie de stock pour un produit.
+     *
+     * @param p produit concerné
+     */
     private void sortieDepuisLigne(Produit p) {
         if (p == null) return;
         try {
@@ -595,6 +700,11 @@ public class StockController {
         }
     }
 
+    /**
+     * Demande et enregistre un ajustement absolu de stock pour un produit.
+     *
+     * @param p produit concerné
+     */
     private void ajusterDepuisLigne(Produit p) {
         if (p == null) return;
         try {
@@ -614,6 +724,11 @@ public class StockController {
         }
     }
 
+    /**
+     * Recharge la fiche produit après une action stock si le produit est toujours sélectionné.
+     *
+     * @param id identifiant du produit modifié
+     */
     private void rechargerFicheApresAction(int id) {
         if (produitSelectionne != null && produitSelectionne.getId() == id) {
             try {
@@ -625,12 +740,19 @@ public class StockController {
     // ─────────────────────────────────────────────────────────────
     // Recherche / Refresh
     // ─────────────────────────────────────────────────────────────
+    /**
+     * Réinitialise la recherche et recharge la liste complète des produits.
+     * Liaison FXML : bouton actualiser.
+     */
     @FXML
     private void onRefresh() {
         searchField.clear();
         refreshTable();
     }
 
+    /**
+     * Filtre le tableau par nom ou recharge la liste complète si la recherche est vide.
+     */
     private void onSearch() {
         String term = searchField.getText() == null ? "" : searchField.getText().trim();
         if (term.isEmpty()) {
@@ -645,6 +767,9 @@ public class StockController {
         updateCompteur();
     }
 
+    /**
+     * Recharge tous les produits depuis la base et met à jour le compteur.
+     */
     private void refreshTable() {
         try {
             data.setAll(produitService.obtenirTousLesProduits());
@@ -654,6 +779,9 @@ public class StockController {
         updateCompteur();
     }
 
+    /**
+     * Met à jour le label indiquant le nombre de produits affichés.
+     */
     private void updateCompteur() {
         if (labelNbProduits != null)
             labelNbProduits.setText(data.size() + " produit(s)");
@@ -663,6 +791,13 @@ public class StockController {
     // Dialogs & helpers
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Demande à l'utilisateur un entier positif via une boîte de dialogue.
+     *
+     * @param title titre de la fenêtre
+     * @param msg message explicatif
+     * @return valeur saisie ou {@code null} si annulé ou invalide
+     */
     private Integer askPositiveInt(String title, String msg) {
         TextInputDialog d = new TextInputDialog();
         d.setTitle(title);
@@ -684,6 +819,13 @@ public class StockController {
         }
     }
 
+    /**
+     * Demande à l'utilisateur un nombre décimal positif via une boîte de dialogue.
+     *
+     * @param title titre de la fenêtre
+     * @param msg message explicatif
+     * @return valeur saisie ou {@code null} si annulé ou invalide
+     */
     private BigDecimal askPositiveBigDecimal(String title, String msg) {
         TextInputDialog d = new TextInputDialog();
         d.setTitle(title);
@@ -706,6 +848,11 @@ public class StockController {
     }
 
 
+    /**
+     * Applique la feuille de style popup à un panneau de dialogue.
+     *
+     * @param pane panneau cible
+     */
     private void appliquerStyleDialog(DialogPane pane) {
         if (pane == null) return;
 
@@ -719,6 +866,11 @@ public class StockController {
         pane.getStyleClass().add("popup-root");
     }
 
+    /**
+     * Affiche une boîte de dialogue d'erreur stylisée.
+     *
+     * @param msg message à afficher
+     */
     private void afficherErreur(String msg) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle("Erreur");
@@ -729,6 +881,11 @@ public class StockController {
         a.showAndWait();
     }
 
+    /**
+     * Affiche une boîte de dialogue de succès stylisée.
+     *
+     * @param msg message à afficher
+     */
     private void afficherSucces(String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         a.setTitle("Succès");

@@ -17,6 +17,7 @@ import java.util.List;
  */
 public class ProduitService {
 
+    /** Accès persistance au catalogue produits. */
     private final ProduitDAO produitDAO;
 
     /**
@@ -257,6 +258,12 @@ public class ProduitService {
         return produitDAO.getById(idProduit);
     }
 
+    /**
+     * Valide les champs obligatoires et les contraintes métier d'un produit.
+     *
+     * @param produit entité produit à contrôler
+     * @throws IllegalArgumentException si nom, prix, stock ou TVA sont invalides
+     */
     private void validerProduit(Produit produit) throws IllegalArgumentException {
         if (produit == null) {
             throw new IllegalArgumentException("Les données du produit sont vides.");

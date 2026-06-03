@@ -26,8 +26,10 @@ import java.util.Optional;
  */
 public class VisioService {
 
+    /** Fuseau horaire local utilisé pour les comparaisons de dates de réunion. */
     private static final ZoneId FUSEAU_HORAIRE = ZoneId.systemDefault();
 
+    /** Accès persistance aux salons de visioconférence. */
     private final VisioDAO visioDAO;
 
     /**
@@ -90,6 +92,12 @@ public class VisioService {
         return validerHeureProgrammee(heureProg);
     }
 
+    /**
+     * Passe en statut {@link VisioStatut#EN_COURS} les réunions planifiées dont l'heure est échue.
+     * <p>
+     * Journalise le nombre de salons activés sauf en mode test ({@link TestRuntime}).
+     * </p>
+     */
     private void activerSalonsPlanifiesEligibles() {
         int misAJour = visioDAO.activerSalonsPlanifiesEligibles(LocalDateTime.now(FUSEAU_HORAIRE));
         if (misAJour > 0 && !TestRuntime.isEnabled()) {
@@ -97,11 +105,29 @@ public class VisioService {
         }
     }
 
+    /**
+     * Indique si un salon correspond à une visioconférence instantanée.
+     *
+     * @param typeReunion       libellé de type de réunion en base
+     * @param heureProgrammee   date-heure planifiée, ou {@code null} pour un salon immédiat
+     * @return {@code true} si le salon est de type instantané ou sans horaire programmé
+     */
     private boolean estSalonInstantane(String typeReunion, LocalDateTime heureProgrammee) {
         return ReunionType.INSTANTANEE.name().equals(typeReunion)
                 || (typeReunion == null && heureProgrammee == null);
     }
 
+    /**
+     * Détermine si un utilisateur est autorisé à rejoindre un salon.
+     * <p>
+     * Les salons instantanés et certains salons en cours sans planification sont publics ;
+     * les réunions planifiées sont réservées au créateur et aux invités enregistrés.
+     * </p>
+     *
+     * @param info   métadonnées d'accès du salon
+     * @param userId identifiant de l'utilisateur demandeur
+     * @return {@code true} si l'accès est accordé
+     */
     private boolean estAccesAutorise(SalonAccesInfo info, int userId) {
         if (info.type() == ReunionType.INSTANTANEE) {
             return true;

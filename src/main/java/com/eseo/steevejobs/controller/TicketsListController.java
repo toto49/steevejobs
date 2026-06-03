@@ -31,25 +31,38 @@ import java.util.stream.Collectors;
  */
 public class TicketsListController implements ParametrizedController {
 
+    /** Service de gestion des tickets. */
     private final TicketService ticketService = new TicketServiceImpl();
+    /** Service de gestion des utilisateurs. */
     private UserService userService;
+    /** Service de session utilisateur. */
     private SessionService sessionService;
+    /** Utilisateur connecté consultant la liste. */
     private User currentUser;
 
+    /** Conteneur des cartes de tickets affichées. */
     @FXML
     private VBox ticketsContainer;
+    /** Label affichant le titre de la page tickets. */
     @FXML
     private Label titlepageticket;
 
+    /** Liste complète des tickets chargés depuis la base. */
     private List<Ticket> tousLesTicketsBDD;
+    /** Instance de la liste tickets actuellement affichée. */
     private static TicketsListController activeInstance;
+    /** Filtre de service appliqué à la liste, ou null pour mes tickets. */
     private String filtreActuel = null;
 
+    /** Bouton de filtre sur les tickets en cours. */
     @FXML
     private Button btnFiltreEnCours;
+    /** Bouton de filtre sur les tickets archivés. */
     @FXML
     private Button btnFiltreArchives;
+    /** Indique si le filtre archives est actif. */
     private boolean modeArchivesActif = false;
+    /** Indique si un chargement de tickets est en cours. */
     private boolean isFetching = false;
 
     /**
@@ -108,6 +121,11 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Charge la liste des tickets en base de manière asynchrone.
+     *
+     * @param actionApresChargement callback exécuté après le chargement, ou {@code null}
+     */
     private void chargerTicketsBDDAsync(Runnable actionApresChargement) {
         if (TestRuntime.isEnabled()) {
             this.tousLesTicketsBDD = List.of();
@@ -131,6 +149,9 @@ public class TicketsListController implements ParametrizedController {
         });
     }
 
+    /**
+     * Filtre et affiche les tickets selon le mode courant (mes tickets, service ou archives).
+     */
     private void rafraichirAffichageLocal() {
         if (tousLesTicketsBDD == null) return;
         activeInstance = this;
@@ -163,6 +184,11 @@ public class TicketsListController implements ParametrizedController {
         chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
 
+    /**
+     * Trie les tickets et remplit le conteneur avec les cartes visuelles.
+     *
+     * @param liste tickets à afficher
+     */
     private void remplirLeContainer(List<Ticket> liste) {
         liste.sort((t1, t2) -> {
             boolean jeSuisAuteur1 = (t1.getAuteur() != null && t1.getAuteur().getId() == currentUser.getId());
@@ -188,6 +214,12 @@ public class TicketsListController implements ParametrizedController {
         ticketsContainer.getChildren().setAll(cartesVisuelles);
     }
 
+    /**
+     * Construit une carte cliquable représentant un ticket dans la liste.
+     *
+     * @param ticket ticket source
+     * @return conteneur graphique de la carte
+     */
     private HBox creerTicketCard(Ticket ticket) {
         String id = String.valueOf(ticket.getId());
         HBox card = new HBox();
@@ -403,6 +435,11 @@ public class TicketsListController implements ParametrizedController {
         dialog.showAndWait();
     }
 
+    /**
+     * Ouvre la vue détail d'un ticket dans la zone centrale du menu.
+     *
+     * @param ticketId identifiant du ticket à ouvrir
+     */
     private void handleOpenTicket(String ticketId) {
         try {
             activeInstance = null;
@@ -446,6 +483,9 @@ public class TicketsListController implements ParametrizedController {
         rafraichirAffichageLocal();
     }
 
+    /**
+     * Met en surbrillance le bouton de filtre actif (en cours ou archives).
+     */
     private void mettreAJourStyleBoutons() {
         String styleActif = "-fx-background-color: #5882D6; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;";
         String styleInactif = "-fx-background-color: white; -fx-text-fill: #5882D6; -fx-border-color: #5882D6; -fx-border-radius: 5; -fx-font-weight: bold; -fx-cursor: hand;";
@@ -459,12 +499,23 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Indique si un ticket correspond au filtre en cours ou archives.
+     *
+     * @param t ticket évalué
+     * @return {@code true} si le ticket doit apparaître dans le mode actif
+     */
     private boolean correspondAuModeActuel(Ticket t) {
         String statut = t.getStatut().name().toUpperCase();
         boolean estFerme = statut.equals("FERME") || statut.equals("RESOLU");
         return modeArchivesActif == estFerme;
     }
 
+    /**
+     * Applique la feuille de style popup aux boutons d'une boîte de dialogue.
+     *
+     * @param dp panneau de dialogue cible
+     */
     private void appliquerStyleDialog(DialogPane dp) {
         java.net.URL popupUrl = getClass().getResource("/style/popup.css");
         if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());

@@ -26,23 +26,32 @@ import java.io.IOException;
  */
 public class BienvenueController {
 
+    /** Texte d'accueil affiché sur la page de connexion. */
     @FXML
     private Label welcomeText;
 
+    /** Service de mémorisation de l'e-mail de connexion. */
     private final SessionService prefService = new SessionService();
+    /** Service d'authentification et de gestion des utilisateurs. */
     private final UserService userService = new UserService();
 
+    /** Message d'erreur ou de confirmation affiché sous le formulaire. */
     @FXML
     private Text errror_connexion;
+    /** Champ de saisie de l'adresse e-mail. */
     @FXML
     private TextField mail_connexion;
+    /** Champ de saisie du mot de passe. */
     @FXML
     private PasswordField mdp_connexion;
+    /** Case à cocher pour mémoriser l'e-mail saisi. */
     @FXML
     private CheckBox save_connexion;
 
     /**
      * Préremplit l'email sauvegardé et lie la touche Entrée du mot de passe à la connexion.
+     *
+     * @throws RuntimeException non propagée ; erreurs affichées dans l'interface
      */
     @FXML
     public void initialize() {

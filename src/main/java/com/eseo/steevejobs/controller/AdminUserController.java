@@ -32,57 +32,85 @@ import java.util.List;
  */
 public class AdminUserController {
 
+    /** Nombre de lignes affichées par page dans le tableau. */
     private final int ROWS_PER_PAGE = 10;
+    /** Titre de l'en-tête de la page de gestion des utilisateurs. */
     @FXML
     private Label headerTitle;
+    /** Champ de recherche textuelle sur les utilisateurs. */
     @FXML
     private TextField searchField;
+    /** Bouton d'ouverture du formulaire de création d'utilisateur. */
     @FXML
     private Button addUserBtn;
+    /** Tableau paginé des utilisateurs. */
     @FXML
     private TableView<User> userTable;
+    /** Colonne de cases à cocher du tableau. */
     @FXML
     private TableColumn<User, String> colCheckbox;
+    /** Colonne affichant le nom complet de l'utilisateur. */
     @FXML
     private TableColumn<User, String> colName;
+    /** Colonne affichant le poste de l'utilisateur. */
     @FXML
     private TableColumn<User, String> colJob;
+    /** Colonne affichant le rôle de l'utilisateur. */
     @FXML
     private TableColumn<User, String> colRole;
+    /** Colonne affichant le statut actif ou inactif. */
     @FXML
     private TableColumn<User, String> colStatus;
+    /** Colonne des actions (modifier, activer/désactiver). */
     @FXML
     private TableColumn<User, Void> colActions;
+    /** Libellé indiquant le nombre total d'employés filtrés. */
     @FXML
     private Label paginationInfoLabel;
+    /** Contrôle de pagination du tableau. */
     @FXML
     private Pagination pagination;
+    /** Titre de l'en-tête du panneau de détail. */
     @FXML
     private Label detailsHeaderTitle;
+    /** Nom affiché dans le panneau de détail. */
     @FXML
     private Label detailsName;
+    /** Poste affiché dans le panneau de détail. */
     @FXML
     private Label detailsJob;
+    /** Titre de la section informations personnelles. */
     @FXML
     private Label personalInfoHeader;
+    /** Libellé du champ e-mail dans le détail. */
     @FXML
     private Label lblEmail;
+    /** Valeur de l'e-mail dans le panneau de détail. */
     @FXML
     private Label detailsEmailVal;
+    /** Libellé du champ téléphone dans le détail. */
     @FXML
     private Label lblPhone;
+    /** Valeur du téléphone dans le panneau de détail. */
     @FXML
     private Label detailsPhoneVal;
+    /** Libellé du champ adresse dans le détail. */
     @FXML
     private Label lblAddress;
+    /** Valeur de l'adresse dans le panneau de détail. */
     @FXML
     private Label detailsAddressVal;
+    /** Titre de la section événements du panneau de détail. */
     @FXML
     private Label eventsHeader;
+    /** Conteneur des cartes d'événements associées à l'utilisateur. */
     @FXML
     private VBox eventsContainer;
+    /** Service d'accès et de persistance des utilisateurs. */
     private final UserService userService;
+    /** Liste observable complète des utilisateurs chargés. */
     private final ObservableList<User> masterUserList;
+    /** Liste filtrée selon la recherche, source de la pagination. */
     private FilteredList<User> filteredList;
 
     /**
@@ -96,6 +124,8 @@ public class AdminUserController {
     /**
      * Configure les colonnes du tableau, charge les utilisateurs et branche la recherche.
      * En mode test, initialise uniquement la pagination sans accès base de données.
+     *
+     * @throws SQLException non propagée ; affichée via une alerte en cas d'échec de chargement
      */
     @FXML
     public void initialize() {
@@ -117,6 +147,9 @@ public class AdminUserController {
         );
     }
 
+    /**
+     * Configure les fabriques de valeurs et la colonne d'actions du tableau utilisateurs.
+     */
     private void setupTableColumns() {
         colName.setCellValueFactory(cellData -> {
             User u = cellData.getValue();
@@ -143,6 +176,9 @@ public class AdminUserController {
         setupActionsColumn();
     }
 
+    /**
+     * Charge tous les utilisateurs depuis la base et initialise la liste filtrée et la pagination.
+     */
     private void loadDataFromDatabase() {
         try {
             List<User> usersFromDb = userService.getAllUsers();
@@ -158,6 +194,9 @@ public class AdminUserController {
         }
     }
 
+    /**
+     * Branche le champ de recherche sur le prédicat de filtrage et la pagination.
+     */
     private void setupSearchFilter() {
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             filteredList.setPredicate(user -> {
@@ -178,12 +217,21 @@ public class AdminUserController {
         });
     }
 
+    /**
+     * Recalcule le nombre de pages et associe la fabrique de pages à la pagination.
+     */
     private void setupPagination() {
         int pageCount = (int) Math.ceil((double) filteredList.size() / ROWS_PER_PAGE);
         pagination.setPageCount(pageCount == 0 ? 1 : pageCount);
         pagination.setPageFactory(this::createPage);
     }
 
+    /**
+     * Construit le contenu d'une page du tableau paginé.
+     *
+     * @param pageIndex index de la page (0-based)
+     * @return nœud racine vide ; les lignes sont portées par {@code userTable}
+     */
     private Node createPage(int pageIndex) {
         int fromIndex = pageIndex * ROWS_PER_PAGE;
         int toIndex = Math.min(fromIndex + ROWS_PER_PAGE, filteredList.size());
@@ -204,10 +252,18 @@ public class AdminUserController {
         return new VBox();
     }
 
+    /**
+     * Met à jour le libellé indiquant le nombre total d'employés filtrés.
+     */
     private void updatePaginationInfo() {
         paginationInfoLabel.setText(filteredList.size() + " employés au total");
     }
 
+    /**
+     * Affiche les informations détaillées de l'utilisateur sélectionné dans le panneau latéral.
+     *
+     * @param user utilisateur dont le détail doit être affiché
+     */
     private void updateUserDetails(User user) {
         String prenom = user.getPrenom() != null ? user.getPrenom() : "";
         String nom = user.getNom() != null ? user.getNom() : "";
@@ -229,6 +285,9 @@ public class AdminUserController {
         }
     }
 
+    /**
+     * Réinitialise le panneau de détail lorsqu'aucun utilisateur n'est sélectionné.
+     */
     private void clearUserDetails() {
         detailsName.setText("");
         detailsJob.setText("");
@@ -238,6 +297,9 @@ public class AdminUserController {
         eventsContainer.getChildren().clear();
     }
 
+    /**
+     * Configure la colonne d'actions avec menu modifier et activer/désactiver.
+     */
     private void setupActionsColumn() {
         colActions.setCellFactory(param -> new TableCell<>() {
             private final MenuButton menuButton = new MenuButton("⋮");
@@ -289,6 +351,11 @@ public class AdminUserController {
         });
     }
 
+    /**
+     * Ouvre une fenêtre modale pour modifier le profil ou réinitialiser le mot de passe.
+     *
+     * @param user utilisateur à éditer
+     */
     private void showEditUserPopup(User user) {
         Label message = new Label("Modifier les informations de l'utilisateur :");
         message.setStyle("-fx-font-size: 14px; -fx-padding: 10; -fx-text-fill: black; -fx-font-weight: bold;");
@@ -412,6 +479,12 @@ public class AdminUserController {
         });
     }
 
+    /**
+     * Ouvre une fenêtre modale de création d'utilisateur et envoie les identifiants par e-mail.
+     * Liaison FXML : {@code addUserBtn}.
+     *
+     * @param actionEvent événement du bouton (non utilisé)
+     */
     @FXML
     private void CreateUser(ActionEvent actionEvent) {
         Label message = new Label("Entrez les informations du nouvel utilisateur :");
@@ -514,6 +587,14 @@ public class AdminUserController {
         });
     }
 
+    /**
+     * Crée une carte d'événement affichée dans le panneau latéral.
+     *
+     * @param time libellé horaire ou date
+     * @param title titre de l'événement
+     * @param color couleur de fond (CSS)
+     * @return conteneur vertical stylisé
+     */
     private VBox createEventCard(String time, String title, String color) {
         VBox card = new VBox(5);
         card.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 8;");
@@ -529,6 +610,13 @@ public class AdminUserController {
         return card;
     }
 
+    /**
+     * Affiche une boîte de dialogue d'information ou d'erreur.
+     *
+     * @param type type d'alerte JavaFX
+     * @param title titre de la fenêtre
+     * @param content message affiché
+     */
     private void showAlert(Alert.AlertType type, String title, String content) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
@@ -537,6 +625,13 @@ public class AdminUserController {
         alert.showAndWait();
     }
 
+    /**
+     * Affiche une boîte de confirmation et retourne le choix de l'utilisateur.
+     *
+     * @param title titre de la fenêtre
+     * @param content message affiché
+     * @return {@code true} si l'utilisateur a confirmé (OK)
+     */
     private boolean showConfirmation(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(title);

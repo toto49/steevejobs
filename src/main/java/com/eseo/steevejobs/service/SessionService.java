@@ -11,10 +11,14 @@ import java.util.prefs.Preferences;
  * </p>
  */
 public class SessionService {
+    /** Utilisateur actuellement authentifié en session applicative. */
     private static User utilisateurConnecte;
 
+    /** Jeton JWT émis pour l'enregistrement WebSocket. */
     private static String tokenJWT;
+    /** Clé de préférence locale pour l'e-mail de connexion mémorisé. */
     private static final String CLE_EMAIL = "email_utilisateur";
+    /** Nœud de préférences utilisateur pour la persistance locale de session. */
     private final Preferences prefs;
 
     /**

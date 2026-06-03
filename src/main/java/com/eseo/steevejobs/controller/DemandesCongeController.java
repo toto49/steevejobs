@@ -22,55 +22,82 @@ import java.util.List;
  */
 public class DemandesCongeController {
 
+    /** Format d'affichage des dates de congé dans le tableau et le détail. */
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    /** Format d'affichage des dates de soumission de demande. */
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    /** Service de gestion des demandes de congés. */
     private final DemandeCongeService demandeCongeService = new DemandeCongeService();
+    /** Ensemble des demandes chargées depuis la base. */
     private List<DemandeConge> toutesLesDemandes;
+    /** Demande actuellement sélectionnée dans le tableau. */
     private DemandeConge demandeSelectionnee;
+    /** Callback exécuté après traitement d'une demande (rafraîchissement parent). */
     private Runnable onDemandeTraitee;
 
+    /** Filtre par statut des demandes affichées. */
     @FXML
     private ComboBox<String> comboFiltreStatut;
+    /** Tableau listant les demandes de congés. */
     @FXML
     private TableView<DemandeConge> tableDemandes;
+    /** Colonne affichant le nom de l'employé demandeur. */
     @FXML
     private TableColumn<DemandeConge, String> colEmploye;
+    /** Colonne affichant la date de début de l'absence. */
     @FXML
     private TableColumn<DemandeConge, String> colDebut;
+    /** Colonne affichant la date de fin de l'absence. */
     @FXML
     private TableColumn<DemandeConge, String> colFin;
+    /** Colonne affichant le nombre de jours demandés. */
     @FXML
     private TableColumn<DemandeConge, String> colJours;
+    /** Colonne affichant la date de soumission de la demande. */
     @FXML
     private TableColumn<DemandeConge, String> colDateDemande;
+    /** Colonne affichant le statut de la demande. */
     @FXML
     private TableColumn<DemandeConge, String> colStatut;
+    /** Libellé du nom de l'employé sélectionné dans le détail. */
     @FXML
     private Label lblEmployeSelectionne;
+    /** Sélecteur de date de début en édition. */
     @FXML
     private DatePicker dateDebutEdit;
+    /** Sélecteur de date de fin en édition. */
     @FXML
     private DatePicker dateFinEdit;
+    /** Zone de texte du commentaire employé. */
     @FXML
     private TextArea txtCommentaireEmploye;
+    /** Libellé de la période de solde affichée. */
     @FXML
     private Label lblSoldePeriode;
+    /** Barre de progression du solde de congés utilisé. */
     @FXML
     private ProgressBar progressSolde;
+    /** Détail textuel du solde de congés. */
     @FXML
     private Label lblSoldeDetail;
+    /** Bouton de modification de la demande sélectionnée. */
     @FXML
     private Button btnModifier;
+    /** Bouton de suppression de la demande sélectionnée. */
     @FXML
     private Button btnSupprimer;
+    /** Bouton de validation de la demande par la RH. */
     @FXML
     private Button btnValider;
+    /** Bouton de refus de la demande par la RH. */
     @FXML
     private Button btnRefuser;
 
     /**
      * Initialise filtres, colonnes du tableau et charge les demandes.
+     *
+     * @throws SQLException non propagée ; affichée via alerte en cas d'échec de chargement
      */
     @FXML
     public void initialize() {
@@ -100,12 +127,18 @@ public class DemandesCongeController {
         this.onDemandeTraitee = onDemandeTraitee;
     }
 
+    /**
+     * Exécute le callback enregistré après traitement d'une demande.
+     */
     private void notifierDemandeTraitee() {
         if (onDemandeTraitee != null) {
             onDemandeTraitee.run();
         }
     }
 
+    /**
+     * Configure les fabriques de valeurs des colonnes du tableau des demandes.
+     */
     private void configurerColonnes() {
         colEmploye.setCellValueFactory(data -> new SimpleStringProperty(formaterNom(data.getValue())));
         colDebut.setCellValueFactory(data -> new SimpleStringProperty(
@@ -261,6 +294,9 @@ public class DemandesCongeController {
         });
     }
 
+    /**
+     * Charge toutes les demandes de congés de façon asynchrone.
+     */
     private void chargerDemandes() {
         Thread chargement = new Thread(() -> {
             try {
@@ -277,10 +313,18 @@ public class DemandesCongeController {
         chargement.start();
     }
 
+    /**
+     * Relance le chargement des demandes après une action utilisateur.
+     */
     private void recharger() {
         chargerDemandes();
     }
 
+    /**
+     * Affiche le détail et le solde de la demande sélectionnée.
+     *
+     * @param demande demande à afficher, ou {@code null} pour vider le panneau
+     */
     private void afficherDetail(DemandeConge demande) {
         if (demande == null) {
             lblEmployeSelectionne.setText("Sélectionnez une demande");
@@ -315,6 +359,11 @@ public class DemandesCongeController {
         actualiserSoldeDetail(demande, annee, enAttente);
     }
 
+    /**
+     * Affiche ou masque les boutons d'action selon le statut de la demande.
+     *
+     * @param demande demande courante, ou {@code null}
+     */
     private void mettreAJourBoutons(DemandeConge demande) {
         boolean enAttente = demande != null && demande.getStatut() == StatutDemandeConge.EN_ATTENTE;
         boolean validee = demande != null && demande.getStatut() == StatutDemandeConge.VALIDEE;
@@ -325,12 +374,22 @@ public class DemandesCongeController {
         configurerBouton(btnRefuser, enAttente, enAttente);
     }
 
+    /**
+     * Configure la visibilité et l'état actif d'un bouton d'action.
+     *
+     * @param bouton bouton cible
+     * @param visible {@code true} pour afficher le bouton
+     * @param actif {@code true} pour activer le bouton
+     */
     private void configurerBouton(Button bouton, boolean visible, boolean actif) {
         bouton.setVisible(visible);
         bouton.setManaged(visible);
         bouton.setDisable(!actif);
     }
 
+    /**
+     * Recalcule l'affichage du solde lorsque les dates d'édition changent.
+     */
     private void actualiserSoldeApresChangementDates() {
         if (demandeSelectionnee == null || dateDebutEdit.getValue() == null) {
             return;
@@ -339,6 +398,13 @@ public class DemandesCongeController {
         actualiserSoldeDetail(demandeSelectionnee, dateDebutEdit.getValue().getYear(), enAttente);
     }
 
+    /**
+     * Calcule et affiche le solde de congés pour la demande et la période données.
+     *
+     * @param demande demande concernée
+     * @param annee année de référence pour le solde
+     * @param enAttente {@code true} si la demande est en attente
+     */
     private void actualiserSoldeDetail(DemandeConge demande, int annee, boolean enAttente) {
         LocalDate debut = dateDebutEdit.getValue() != null ? dateDebutEdit.getValue() : demande.getJourDebut().toLocalDate();
         LocalDate fin = dateFinEdit.getValue() != null ? dateFinEdit.getValue() : demande.getJourFin().toLocalDate();
@@ -363,6 +429,14 @@ public class DemandesCongeController {
         calculSolde.start();
     }
 
+    /**
+     * Met à jour les indicateurs visuels du solde de congés.
+     *
+     * @param solde solde calculé
+     * @param joursDemande nombre de jours de la demande courante
+     * @param enAttente {@code true} si la demande est en attente
+     * @param statut statut de la demande
+     */
     private void afficherSolde(SoldeConge solde, long joursDemande, boolean enAttente, StatutDemandeConge statut) {
         lblSoldePeriode.setText("Période " + solde.getAnnee());
         progressSolde.setProgress(solde.getRatioUtilise());
@@ -381,6 +455,11 @@ public class DemandesCongeController {
         }
     }
 
+    /**
+     * Vérifie qu'une demande en attente est sélectionnée.
+     *
+     * @return {@code true} si la sélection est valide pour validation ou refus
+     */
     private boolean verifierSelectionEnAttente() {
         if (demandeSelectionnee == null) {
             afficherErreur("Sélectionnez une demande.");
@@ -393,6 +472,13 @@ public class DemandesCongeController {
         return true;
     }
 
+    /**
+     * Indique si une demande correspond au filtre de statut choisi.
+     *
+     * @param demande demande à tester
+     * @param filtre libellé du filtre combo
+     * @return {@code true} si la demande doit apparaître dans le tableau filtré
+     */
     private boolean correspondFiltre(DemandeConge demande, String filtre) {
         if (filtre == null || filtre.equals("Toutes")) {
             return true;
@@ -405,6 +491,12 @@ public class DemandesCongeController {
         };
     }
 
+    /**
+     * Formate le nom de l'employé associé à une demande.
+     *
+     * @param demande demande source
+     * @return nom complet ou chaîne vide
+     */
     private String formaterNom(DemandeConge demande) {
         if (demande == null || demande.getEmploye() == null) {
             return "";
@@ -414,6 +506,12 @@ public class DemandesCongeController {
         return (prenom + " " + nom).trim();
     }
 
+    /**
+     * Retourne le libellé français d'un statut de demande.
+     *
+     * @param statut statut enum
+     * @return libellé affichable
+     */
     private String formatStatut(StatutDemandeConge statut) {
         return switch (statut) {
             case EN_ATTENTE -> "En attente";
@@ -422,6 +520,11 @@ public class DemandesCongeController {
         };
     }
 
+    /**
+     * Affiche une alerte d'erreur stylisée.
+     *
+     * @param message texte du message
+     */
     private void afficherErreur(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Erreur");
@@ -431,6 +534,12 @@ public class DemandesCongeController {
         alert.showAndWait();
     }
 
+    /**
+     * Affiche une alerte d'information stylisée.
+     *
+     * @param titre titre de la fenêtre
+     * @param message texte du message
+     */
     private void afficherInfo(String titre, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(titre);
@@ -440,6 +549,11 @@ public class DemandesCongeController {
         alert.showAndWait();
     }
 
+    /**
+     * Applique la feuille de style popup à une alerte.
+     *
+     * @param alert alerte à styliser
+     */
     private void styliserAlert(Alert alert) {
         DialogPane dp = alert.getDialogPane();
         dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());

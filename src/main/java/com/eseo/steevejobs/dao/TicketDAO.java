@@ -19,8 +19,10 @@ import java.util.List;
  */
 public class TicketDAO {
 
+    /** Sous-requête SQL : date du dernier message d'un ticket. */
     private static final String SQL_DERNIERE_ACTIVITE =
             "(SELECT MAX(date_envoi) FROM MESSAGES m WHERE m.id_ticket = t.id_tickets)";
+    /** Clause {@code ORDER BY} basée sur la dernière activité ou la date d'ouverture. */
     private static final String SQL_ORDER_BY_ACTIVITE =
             "ORDER BY COALESCE(" + SQL_DERNIERE_ACTIVITE + ", t.date_ouverture) DESC";
 
@@ -394,6 +396,13 @@ public class TicketDAO {
             stmt.executeUpdate();
         }
     }
+    /**
+     * Construit un ticket à partir d'une ligne de résultat (auteur joint, dernière activité).
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return ticket hydraté avec indicateurs de non-lecture et date d'activité
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private Ticket mapperTicket(ResultSet rs) throws SQLException {
         User auteur = new User(
                 rs.getInt("id_user"),

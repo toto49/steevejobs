@@ -36,25 +36,40 @@ import java.util.concurrent.TimeUnit;
  */
 public class HomeController {
 
+    /** Cache des images de modules par chemin de ressource. */
     private static final Map<String, Image> IMAGE_CACHE = new HashMap<>();
+    /** Utilisateur connecté pour le filtrage des modules affichés. */
     private User currentUser;
+    /** Cache des codes de permission du dernier utilisateur chargé. */
     private static List<String> cachedPermissions = null;
+    /** Durée de validité du cache des permissions (millisecondes). */
     private static final long CACHE_TTL_MS = 30_000;
+    /** Horodatage du dernier remplissage du cache des permissions. */
     private static long cacheTimestamp = -1;
 
+    /** Grille affichant les cartes des modules applicatifs. */
     @FXML
     private FlowPane appsGrid;
 
+    /** Compteur global de tickets non lus pour la vue technicien (staff). */
     public static int notificationsTech = 0;
+    /** Compteur global de tickets non lus pour la vue auteur (demandeur). */
     public static int notificationsAuteur = 0;
 
+    /** Instance du contrôleur d'accueil actuellement affichée. */
     private static HomeController activeInstance;
 
+    /** Badge de notification sur la carte tickets (vue staff). */
     private Label badgeCarteTech;
+    /** Badge de notification sur la carte tickets (vue demandeur). */
     private Label badgeCarteAuteur;
+    /** Identifiant utilisateur associé au cache des permissions. */
     private static int cachedUserId = -1;
+    /** Service de chargement des permissions utilisateur. */
     private final PermissionService permissionService = new PermissionService();
+    /** Liste des codes d'action autorisés pour l'utilisateur courant. */
     private List<String> currentUserPermissions;
+    /** Planificateur de rafraîchissement périodique des permissions. */
     private ScheduledExecutorService permissionScheduler;
 
     /**
@@ -221,6 +236,9 @@ public class HomeController {
         }
     }
 
+    /**
+     * Démarre une tâche planifiée qui vérifie les permissions toutes les 30 secondes.
+     */
     private void demarrerSchedulerPermissions() {
         if (permissionScheduler != null && !permissionScheduler.isShutdown()) {
             permissionScheduler.shutdown();
@@ -253,6 +271,9 @@ public class HomeController {
         }, 30, 30, TimeUnit.SECONDS);
     }
 
+    /**
+     * Reconstruit la grille des cartes de modules selon les permissions de l'utilisateur.
+     */
     private void renderAppCenter() {
         if (!Platform.isFxApplicationThread()) {
             Platform.runLater(this::renderAppCenter);
@@ -311,6 +332,13 @@ public class HomeController {
         }
     }
 
+    /**
+     * Charge une vue FXML paramétrée dans la zone centrale du menu.
+     *
+     * @param chemin nom de base de la vue (sans suffixe {@code -view.fxml})
+     * @param parametre donnée passée au contrôleur paramétrable
+     * @param titreCard titre affiché dans l'en-tête du menu
+     */
     private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/" + chemin + "-view.fxml"));
@@ -328,6 +356,19 @@ public class HomeController {
         }
     }
 
+    /**
+     * Crée une carte cliquable représentant un module applicatif.
+     *
+     * @param title titre principal
+     * @param subtitle sous-titre
+     * @param badge badge de notification optionnel
+     * @param bgColor couleur de fond CSS
+     * @param chemin chemin de navigation du module
+     * @param nomFichierImage nom du fichier image dans {@code /images/}
+     * @param parametreFacultatif paramètre transmis au contrôleur cible, ou {@code null}
+     * @param codeAction code permission / action du module
+     * @return carte horizontale interactive
+     */
     private HBox createAppCard(String title, String subtitle, Label badge, String bgColor, String chemin, String nomFichierImage, String parametreFacultatif, String codeAction) {
         HBox card = new HBox();
         card.setMinSize(250, 220);
@@ -413,10 +454,22 @@ public class HomeController {
         return card;
     }
 
+    /**
+     * Vérifie si l'utilisateur connecté possède la permission demandée.
+     *
+     * @param requiredPermission code action requis
+     * @return {@code true} si la permission est accordée
+     */
     private boolean hasPermission(String requiredPermission) {
         return currentUserPermissions != null && currentUserPermissions.contains(requiredPermission);
     }
 
+    /**
+     * Normalise le titre d'un module pour l'affichage dans l'en-tête du menu.
+     *
+     * @param title titre brut de la carte
+     * @return titre sur une seule ligne
+     */
     private String formaterTitreModule(String title) {
         if (title == null) {
             return "";

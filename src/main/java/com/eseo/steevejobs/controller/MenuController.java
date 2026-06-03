@@ -29,29 +29,42 @@ import java.io.IOException;
  */
 public class MenuController {
 
+    /** Singleton du contrôleur menu pour accès depuis les autres vues. */
     private static MenuController instance;
 
+    /** Bouton basculant l'affichage en mode liste. */
     @FXML
     public Button btnListView;
+    /** Conteneur principal de la mise en page. */
     @FXML
     private BorderPane mainPane;
+    /** Bouton de navigation vers l'accueil. */
     @FXML
     private Button btnAccueil;
+    /** Bouton de navigation vers les paramètres. */
     @FXML
     private Button btnParametres;
+    /** Bouton de navigation vers le calendrier. */
     @FXML
     private Button btnPlanning;
+    /** Bouton de navigation vers les tickets. */
     @FXML
     private Button btnTicket;
+    /** Bouton de navigation vers les documents. */
     @FXML
     private Button btnFiles;
+    /** Bouton de navigation vers la visioconférence. */
     @FXML
     private Button btnVisio;
 
+    /** Fenêtre principale de l'application. */
     private Stage mainStage;
+    /** Label affichant le titre global du header. */
     private Label lblTitreHeader;
 
+    /** Badge de notification sur le bouton accueil. */
     private Label badgeAccueil;
+    /** Badge de notification sur le bouton tickets. */
     private Label badgeTicket;
 
     /**
@@ -82,6 +95,9 @@ public class MenuController {
         WebSocketService.getInstance().connecter();
     }
 
+    /**
+     * Enregistre les callbacks WebSocket pour les notifications tickets.
+     */
     private void enregistrerCallbacksWebSocket() {
         WebSocketUiBridge.getInstance().setTicketCallbacks(new WebSocketUiBridge.TicketCallbacks() {
             /**
@@ -183,6 +199,12 @@ public class MenuController {
         Platform.runLater(() -> mettreAJourBadge(typeCible, nombreExact));
     }
 
+    /**
+     * Met à jour le badge correspondant au type de destinataire.
+     *
+     * @param typeCible {@code TECH} ou {@code AUTEUR}
+     * @param nombre nombre à afficher sur le badge
+     */
     private void mettreAJourBadge(String typeCible, int nombre) {
         Label badge;
         if ("TECH".equals(typeCible)) {
@@ -210,6 +232,11 @@ public class MenuController {
         }
     }
 
+    /**
+     * Incrémente le compteur affiché sur un badge de notification.
+     *
+     * @param badge label badge à mettre à jour
+     */
     private void incrementerBadge(Label badge) {
         if (badge == null) return;
 
@@ -222,6 +249,12 @@ public class MenuController {
         }
     }
 
+    /**
+     * Installe ou récupère le badge de notification superposé à l'icône d'un bouton menu.
+     *
+     * @param bouton bouton de navigation concerné
+     * @return label badge ou {@code null} si le bouton est invalide
+     */
     private Label installerBadge(Button bouton) {
         if (bouton == null) {
             return null;
@@ -255,6 +288,12 @@ public class MenuController {
         return badge;
     }
 
+    /**
+     * Affiche la page d'accueil.
+     * Liaison FXML : {@code btnAccueil}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void afficherAccueil(ActionEvent event) {
         chargerPage("home");
@@ -272,6 +311,12 @@ public class MenuController {
         }
     }
 
+    /**
+     * Affiche la page calendrier.
+     * Liaison FXML : {@code btnPlanning}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void afficherPlanning(ActionEvent event) {
         chargerPage("calendrier");
@@ -279,6 +324,12 @@ public class MenuController {
         changerTitre("Calendrier");
     }
 
+    /**
+     * Affiche la liste des tickets de l'utilisateur connecté.
+     * Liaison FXML : {@code btnTicket}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void afficherTicket(ActionEvent event) {
         TicketController.fermerChat();
@@ -308,6 +359,12 @@ public class MenuController {
         }
     }
 
+    /**
+     * Affiche la page documents utilisateur.
+     * Liaison FXML : {@code btnFiles}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void afficherFiles(ActionEvent event) {
         chargerPage("documentUser");
@@ -315,6 +372,12 @@ public class MenuController {
         changerTitre("Document");
     }
 
+    /**
+     * Affiche la page visioconférence.
+     * Liaison FXML : {@code btnVisio}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void afficherVisio(ActionEvent event) {
         chargerPage("visio");
@@ -322,6 +385,12 @@ public class MenuController {
         changerTitre("Visioconférence");
     }
 
+    /**
+     * Affiche la page paramètres.
+     * Liaison FXML : {@code btnParametres}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void afficherParametres(ActionEvent event) {
         chargerPage("parametres");
@@ -329,6 +398,11 @@ public class MenuController {
         changerTitre("Paramètres");
     }
 
+    /**
+     * Met en surbrillance le bouton de navigation actif et réinitialise les autres.
+     *
+     * @param boutonActif bouton correspondant à la page affichée
+     */
     private void updateButtonStyles(Button boutonActif) {
         String STYLE_INACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
         String STYLE_ACTIF = "-fx-cursor: hand; -fx-background-color: transparent;";
@@ -354,6 +428,12 @@ public class MenuController {
         }
     }
 
+    /**
+     * Extrait le chemin SVG affiché comme graphique d'un bouton menu.
+     *
+     * @param btn bouton dont l'icône est recherchée
+     * @return icône SVG ou {@code null} si introuvable
+     */
     private SVGPath extraireIcone(Button btn) {
         Object graphic = btn.getGraphic();
         if (graphic instanceof StackPane stack) {

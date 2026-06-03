@@ -23,14 +23,20 @@ import java.util.stream.Collectors;
  */
 public class TicketServiceImpl implements TicketService {
 
+    /** Accès persistance aux tickets. */
     private final TicketDAO     ticketDAO;
+    /** Service de gestion des messages rattachés aux tickets. */
     private final MessageService messageService;
 
+    /** Format d'affichage des dates d'ouverture de ticket. */
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    /** Longueur maximale autorisée pour le sujet d'un ticket. */
     private static final int SUJET_MAX_LENGTH       = 255;
+    /** Longueur maximale autorisée pour la description d'un ticket. */
     private static final int DESCRIPTION_MAX_LENGTH = 5000;
+    /** Longueur maximale autorisée pour le contenu d'un message. */
     private static final int CONTENU_MAX_LENGTH     = 5000;
 
     /**
@@ -52,6 +58,9 @@ public class TicketServiceImpl implements TicketService {
         this.messageService = messageService;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Ticket creerTicket(Ticket ticket) {
         validerTicket(ticket);
@@ -66,6 +75,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Ticket getTicketById(int id) {
         if (id <= 0) {
@@ -78,6 +90,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Ticket> getAllTickets() {
         try {
@@ -89,6 +104,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Ticket> getTicketsByAuteur(int userId) {
         if (userId <= 0) {
@@ -104,6 +122,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Message ajouterMessage(int ticketId, Message message) {
         if (ticketId <= 0) {
@@ -136,6 +157,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Ticket changerStatut(int ticketId, StatutTicket nouveauStatut) {
         if (ticketId <= 0) {
@@ -157,6 +181,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Message> getMessagesDuTicket(int ticketId) {
         if (ticketId <= 0) {
@@ -167,12 +194,18 @@ public class TicketServiceImpl implements TicketService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String formatTicketDate(LocalDateTime date) {
         if (date == null) return "N/A";
         return date.format(DATE_FORMATTER);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getNombreTicketsNonLusAdmin(String service, int idCurrentUser) {
         validerService(service);
@@ -186,6 +219,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getNombreTicketsNonLusAuteur(int idAuteur) {
         if (idAuteur <= 0) {
@@ -198,6 +234,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void marquerTicketLu(int idTicket, boolean estAdmin) {
         if (idTicket <= 0) {
@@ -210,6 +249,9 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void marquerTicketNonLu(int idTicket, boolean cibleAdmin) {
         if (idTicket <= 0) {
@@ -236,6 +278,12 @@ public class TicketServiceImpl implements TicketService {
         return "Ouvert il y a " + heures + " heure(s)";
     }
 
+    /**
+     * Valide les champs obligatoires d'un ticket avant création.
+     *
+     * @param ticket entité ticket à contrôler
+     * @throws IllegalArgumentException si sujet, description, service ou auteur sont invalides
+     */
     private void validerTicket(Ticket ticket) throws IllegalArgumentException {
         if (ticket == null) {
             throw new IllegalArgumentException("Les données du ticket sont vides.");
@@ -264,6 +312,12 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * Valide le contenu et l'auteur d'un message avant persistance.
+     *
+     * @param message entité message à contrôler
+     * @throws IllegalArgumentException si contenu ou auteur sont invalides
+     */
     private void validerMessage(Message message) throws IllegalArgumentException {
         if (message == null) {
             throw new IllegalArgumentException("Les données du message sont vides.");
@@ -282,6 +336,12 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * Valide le service destinataire d'un ticket ({@code ADMIN} ou {@code RH}).
+     *
+     * @param service libellé de service attendu
+     * @throws IllegalArgumentException si le service est absent ou non autorisé
+     */
     private void validerService(String service) throws IllegalArgumentException {
         if (service == null || service.trim().isEmpty()) {
             throw new IllegalArgumentException("Le service du ticket est obligatoire.");

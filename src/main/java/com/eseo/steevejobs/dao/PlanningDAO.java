@@ -246,6 +246,13 @@ public class PlanningDAO {
         return 0;
     }
 
+    /**
+     * Construit un employé à partir des colonnes {@code USER} du résultat joint.
+     *
+     * @param rs curseur positionné sur la ligne courante
+     * @return employé hydraté
+     * @throws SQLException en cas d'erreur de lecture JDBC
+     */
     private User extractUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id_user"),

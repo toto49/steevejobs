@@ -45,6 +45,11 @@ public class MailService {
             props.put("mail.smtp.starttls.required", "true");
 
             Session session = Session.getInstance(props, new Authenticator() {
+                /**
+                 * Fournit les identifiants SMTP extraits de l'URL de configuration.
+                 *
+                 * @return couple utilisateur / mot de passe pour l'authentification du serveur mail
+                 */
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(usernameNAS, passwordNAS);

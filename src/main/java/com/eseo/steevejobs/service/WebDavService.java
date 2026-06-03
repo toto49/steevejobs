@@ -27,13 +27,24 @@ import java.util.logging.Logger;
  */
 public class WebDavService {
 
+    /** Journaliseur des opérations WebDAV (requêtes, erreurs réseau). */
     private static final Logger LOGGER = Logger.getLogger(WebDavService.class.getName());
+    /** Instance {@link Dotenv} chargée à la demande pour la configuration NAS. */
     private static Dotenv dotenv;
 
+    /**
+     * Désactive la vérification du nom d'hôte pour le client HTTP interne (compatibilité certificat NAS local).
+     */
     static {
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
     }
 
+    /**
+     * Charge et met en cache l'instance {@link Dotenv} pour la configuration WebDAV.
+     *
+     * @return instance dotenv initialisée
+     * @throws RuntimeException si le fichier {@code .env} est introuvable ou illisible
+     */
     private static Dotenv getDotenv() {
         if (dotenv == null) {
             try {
@@ -167,16 +178,39 @@ public class WebDavService {
         }
     }
 
+    /**
+     * Construit un contexte SSL acceptant tous les certificats (usage NAS local).
+     *
+     * @return contexte TLS initialisé avec un gestionnaire de confiance permissif
+     * @throws Exception en cas d'échec d'initialisation du contexte SSL
+     */
     private static SSLContext creerSSLContextInsecable() throws Exception {
         TrustManager[] trustAllCerts = new TrustManager[]{
                 new X509TrustManager() {
+                    /**
+                     * Retourne une liste vide d'émetteurs acceptés (confiance totale).
+                     *
+                     * @return {@code null} ; aucun filtrage par émetteur
+                     */
                     public X509Certificate[] getAcceptedIssuers() {
                         return null;
                     }
 
+                    /**
+                     * N'effectue aucune vérification du certificat client.
+                     *
+                     * @param certs    chaîne de certificats présentée par le client
+                     * @param authType algorithme d'authentification demandé
+                     */
                     public void checkClientTrusted(X509Certificate[] certs, String authType) {
                     }
 
+                    /**
+                     * N'effectue aucune vérification du certificat serveur.
+                     *
+                     * @param certs    chaîne de certificats présentée par le serveur
+                     * @param authType algorithme d'authentification demandé
+                     */
                     public void checkServerTrusted(X509Certificate[] certs, String authType) {
                     }
                 }

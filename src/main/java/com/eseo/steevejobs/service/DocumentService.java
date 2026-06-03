@@ -23,8 +23,11 @@ import java.util.concurrent.CompletableFuture;
  */
 public class DocumentService {
 
+    /** Accès persistance aux documents commerciaux. */
     private final DocumentDAO         documentDAO;
+    /** Accès persistance aux lignes de composition. */
     private final ComposerDAO         composerDAO;
+    /** Générateur PDF local pour les documents commerciaux. */
     private final PdfGeneratorService pdfService;
 
     /**
@@ -230,6 +233,12 @@ public class DocumentService {
         return documentDAO.updateStatut(id, statut);
     }
 
+    /**
+     * Valide l'entête d'un document commercial avant persistance.
+     *
+     * @param document entité document à contrôler
+     * @throws IllegalArgumentException si un champ obligatoire est absent ou incohérent
+     */
     private void validerDocument(Document document) throws IllegalArgumentException {
         if (document == null) {
             throw new IllegalArgumentException("Les données du document sont vides.");
@@ -263,6 +272,12 @@ public class DocumentService {
         }
     }
 
+    /**
+     * Valide la liste des lignes de détail d'un document.
+     *
+     * @param lignes lignes produit à contrôler (non nulles)
+     * @throws IllegalArgumentException si une ligne contient un produit, une quantité ou un prix invalide
+     */
     private void validerLignes(List<Composer> lignes) throws IllegalArgumentException {
         if (lignes == null) {
             throw new IllegalArgumentException("La liste des lignes produits est nulle.");

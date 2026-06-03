@@ -22,11 +22,16 @@ import java.util.List;
  */
 public class FichePayeService {
 
+    /** Accès persistance aux fiches de paie. */
     private final FichePayeDAO        fichePayeDAO;
+    /** Accès persistance au planning (déduction des jours de congé). */
     private final PlanningDAO         planningDAO;
+    /** Générateur PDF local pour les bulletins de paie. */
     private final PdfGeneratorService pdfService;
 
+    /** Seuil minimal exclusif du salaire brut (doit être strictement positif). */
     private static final double SALAIRE_MINIMUM_LEGAL = 0;
+    /** Plafond maximal du salaire brut autorisé en saisie. */
     private static final double SALAIRE_MAXIMUM       = 100_000.0;
 
     /**
@@ -139,6 +144,17 @@ public class FichePayeService {
         return fichePayeDAO.deleteFichePaye(id);
     }
 
+    /**
+     * Valide les paramètres requis à la génération d'une fiche de paie.
+     *
+     * @param employe                   employé concerné (identifiant valide)
+     * @param mois                      mois de paie (non futur)
+     * @param salaireBrut               salaire brut strictement positif et dans les bornes autorisées
+     * @param tauxCotisationsPatronales taux patronal compris dans {@code [0, 1[}
+     * @param heuresTravaillees         heures travaillées strictement positives
+     * @param tauxHoraire               taux horaire strictement positif
+     * @throws IllegalArgumentException si un paramètre est absent ou hors plage
+     */
     private void validerParametresGeneration(User employe, LocalDateTime mois,
                                              double salaireBrut,
                                              double tauxCotisationsPatronales,
@@ -181,6 +197,18 @@ public class FichePayeService {
         }
     }
 
+    /**
+     * Compte les jours de congé d'un employé intersectant le mois de paie cible.
+     * <p>
+     * Seuls les événements planning de type congé sont pris en compte ; les périodes
+     * chevauchant le mois sont tronquées aux bornes du mois civil.
+     * </p>
+     *
+     * @param employeId identifiant de l'employé
+     * @param mois      mois de référence (année et numéro de mois utilisés)
+     * @return total de jours de congé sur le mois
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     private long compterJoursConge(int employeId, LocalDateTime mois) throws SQLException {
         List<Planning> plannings = planningDAO.findByUserId(employeId);
         int annee      = mois.getYear();

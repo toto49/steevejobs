@@ -25,8 +25,11 @@ import java.util.List;
  */
 public class DemandeCongeService {
 
+    /** Accès persistance aux demandes de congé. */
     private final DemandeCongeDAO demandeCongeDAO;
+    /** Accès persistance au planning (événements congé). */
     private final PlanningDAO planningDAO;
+    /** Service de création et mise à jour des événements planning. */
     private final PlanningService planningService;
 
     /**
@@ -235,6 +238,20 @@ public class DemandeCongeService {
         }
     }
 
+    /**
+     * Vérifie que le solde restant couvre les nouveaux jours demandés lors d'une modification.
+     * <p>
+     * Pour une demande déjà validée, les jours précédemment comptabilisés sont réintégrés
+     * au solde disponible avant comparaison.
+     * </p>
+     *
+     * @param demande      demande en cours de modification
+     * @param annee        année civile de référence pour le calcul
+     * @param joursNouveaux nombre de jours après modification
+     * @param joursAnciens  nombre de jours avant modification
+     * @throws IllegalArgumentException si le solde effectif est insuffisant
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     private void verifierSoldeModification(DemandeConge demande, int annee, long joursNouveaux, long joursAnciens)
             throws SQLException {
         SoldeConge solde = calculerSoldeConge(demande.getEmploye().getId(), annee, demande.getId());
@@ -248,6 +265,17 @@ public class DemandeCongeService {
         }
     }
 
+    /**
+     * Recherche l'événement planning lié à une demande de congé validée.
+     * <p>
+     * Priorité à {@link DemandeConge#getIdPlanning()} ; à défaut, recherche par chevauchement
+     * de dates parmi les événements de type congé de l'employé.
+     * </p>
+     *
+     * @param demande demande dont le planning associé est recherché
+     * @return événement planning trouvé, ou {@code null} si aucune correspondance
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     private Planning trouverPlanningAssocie(DemandeConge demande) throws SQLException {
         if (demande.getIdPlanning() > 0) {
             Planning planning = planningDAO.getById(demande.getIdPlanning());
@@ -264,6 +292,15 @@ public class DemandeCongeService {
                 .orElse(null);
     }
 
+    /**
+     * Indique si deux intervalles de dates-heure se chevauchent (bornes ouvertes).
+     *
+     * @param debut1 début de la première période
+     * @param fin1   fin de la première période
+     * @param debut2 début de la seconde période
+     * @param fin2   fin de la seconde période
+     * @return {@code true} si les périodes ont une intersection non vide
+     */
     private boolean datesSeChevauchent(LocalDateTime debut1, LocalDateTime fin1,
                                        LocalDateTime debut2, LocalDateTime fin2) {
         return debut1.isBefore(fin2) && fin1.isAfter(debut2);
@@ -362,6 +399,13 @@ public class DemandeCongeService {
         return new SoldeConge(annee, CongeUtil.JOURS_CONGE_ANNUELS, joursPris, joursEnAttente);
     }
 
+    /**
+     * Valide une période de congé proposée à la création.
+     *
+     * @param debut date-heure de début (obligatoire, non passée)
+     * @param fin   date-heure de fin (obligatoire, postérieure ou égale au début)
+     * @throws IllegalArgumentException si les dates sont nulles, incohérentes ou passées
+     */
     private void validerPeriode(LocalDateTime debut, LocalDateTime fin) {
         if (debut == null || fin == null) {
             throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");

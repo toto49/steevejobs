@@ -12,6 +12,7 @@ import org.json.JSONArray;
  */
 public final class WebSocketUiBridge {
 
+    /** Instance singleton du pont UI. */
     private static final WebSocketUiBridge INSTANCE = new WebSocketUiBridge();
 
     /**
@@ -79,9 +80,14 @@ public final class WebSocketUiBridge {
         void onTicketNotification(String targetType, boolean pushEnabled);
     }
 
+    /** Handlers visio enregistrés par le contrôleur actif ; {@code null} si aucun écran visio ouvert. */
     private volatile VisioCallbacks visioCallbacks;
+    /** Handlers tickets enregistrés par le contrôleur actif ; {@code null} si aucun écran ticket ouvert. */
     private volatile TicketCallbacks ticketCallbacks;
 
+    /**
+     * Constructeur privé : instance singleton du pont UI.
+     */
     private WebSocketUiBridge() {
     }
 

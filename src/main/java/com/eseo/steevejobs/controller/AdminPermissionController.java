@@ -28,19 +28,25 @@ import java.util.List;
  */
 public class AdminPermissionController {
 
+    /** Liste déroulante de sélection du rôle à configurer. */
     @FXML
     private ComboBox<String> roleComboBox;
 
+    /** Conteneur affichant les interrupteurs de permissions par action. */
     @FXML
     private VBox permissionsContainer;
 
+    /** Service d'accès aux permissions et à leur affectation par rôle. */
     private PermissionService permissionService;
 
+    /** Cache de l'ensemble des permissions applicatives synchronisées. */
     private List<Permission> toutesLesPermissionsCache;
 
     /**
      * Initialise la liste des rôles, synchronise les permissions et charge le rôle ADMIN par défaut.
      * Ne charge pas les données en mode test ({@link com.eseo.steevejobs.util.TestRuntime}).
+     *
+     * @throws RuntimeException non propagée ; erreurs traitées dans l'interface ou ignorées en arrière-plan
      */
     @FXML
     public void initialize() {
@@ -91,6 +97,14 @@ public class AdminPermissionController {
         }).start();
     }
 
+    /**
+     * Construit un interrupteur visuel pour activer ou révoquer une permission pour le rôle donné.
+     *
+     * @param perm permission représentée
+     * @param isSelected {@code true} si la permission est déjà active pour le rôle
+     * @param nomRole identifiant du rôle concerné
+     * @return conteneur horizontal avec interrupteur et libellé
+     */
     private HBox createCustomSwitch(Permission perm, boolean isSelected, String nomRole) {
         HBox container = new HBox(15);
         container.setAlignment(Pos.CENTER_LEFT);
@@ -158,6 +172,15 @@ public class AdminPermissionController {
         return container;
     }
 
+    /**
+     * Met à jour l'apparence d'un interrupteur selon son état activé ou désactivé.
+     *
+     * @param isSelected {@code true} pour l'état activé
+     * @param bg rectangle de fond de l'interrupteur
+     * @param thumb curseur circulaire
+     * @param yes libellé « activé »
+     * @param no libellé « désactivé »
+     */
     private void updateSwitchVisuals(boolean isSelected, Rectangle bg, Circle thumb, Label yes, Label no) {
         if (isSelected) {
             bg.setFill(Color.web("#2ECC71"));

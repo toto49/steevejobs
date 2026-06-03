@@ -32,25 +32,43 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ModifierDocumentController implements Initializable {
 
+    /** Liste déroulante du type de document. */
     @FXML private ComboBox<DocumentType> comboType;
+    /** Liste déroulante du tiers associé. */
     @FXML private ComboBox<Tiers> comboTiers;
+    /** Sélecteur de date du document. */
     @FXML private DatePicker datePicker;
+    /** Liste déroulante du statut du document. */
     @FXML private ComboBox<DocumentStatut> comboStatut;
+    /** Liste déroulante du produit à ajouter. */
     @FXML private ComboBox<Produit> comboProduit;
+    /** Champ de saisie de la quantité. */
     @FXML private TextField txtQuantite;
+    /** Champ de saisie du prix de vente. */
     @FXML private TextField txtPrixVente;
+    /** Bouton d'ajout d'une ligne au document. */
     @FXML private Button btnAjouterLigne;
+    /** Tableau des lignes du document. */
     @FXML private TableView<Composer> tableLignes;
+    /** Colonnes lignes : {@code colProduit}, {@code colQuantite}, {@code colPrixUnitaire}, {@code colTotalLigne}. */
     @FXML private TableColumn<Composer, String> colProduit, colQuantite, colPrixUnitaire, colTotalLigne;
+    /** Colonne des actions sur chaque ligne. */
     @FXML private TableColumn<Composer, Void> colActions;
+    /** Labels d'affichage des totaux HT, TVA et TTC. */
     @FXML private Label lblTotalHT, lblTVA, lblTotalTTC;
+    /** Boutons d'annulation et de modification du document. */
     @FXML private Button btnAnnuler, btnModifier;
 
+    /** Service d'accès aux tiers. */
     private final TiersService tiersService = new TiersService();
+    /** Service d'accès aux produits. */
     private final ProduitService produitService = new ProduitService();
+    /** Service de gestion des documents. */
     private final DocumentService documentService = new DocumentService();
 
+    /** Lignes composant le document en cours de modification. */
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
+    /** Document chargé pour modification. */
     private Document documentModification;
 
     /**
@@ -88,17 +106,24 @@ public class ModifierDocumentController implements Initializable {
         }
     }
 
+    /**
+     * Configure les listes déroulantes et le remplissage automatique du prix produit.
+     */
     private void configurerComboBox() {
         comboType.setItems(FXCollections.observableArrayList(DocumentType.values()));
         comboStatut.setItems(FXCollections.observableArrayList(DocumentStatut.values()));
 
         comboTiers.setConverter(new StringConverter<>() {
+            /** @param t tiers affiché dans la liste */
             @Override public String toString(Tiers t) { return t == null ? "" : t.getNom() + (t.getPrenom() != null ? " " + t.getPrenom() : ""); }
+            /** @param s saisie utilisateur (non convertie) */
             @Override public Tiers fromString(String s) { return null; }
         });
 
         comboProduit.setConverter(new StringConverter<>() {
+            /** @param p produit affiché dans la liste */
             @Override public String toString(Produit p) { return p == null ? "" : p.getNom(); }
+            /** @param s saisie utilisateur (non convertie) */
             @Override public Produit fromString(String s) { return null; }
         });
 
@@ -110,6 +135,9 @@ public class ModifierDocumentController implements Initializable {
         });
     }
 
+    /**
+     * Configure les colonnes du tableau des lignes et le bouton de suppression.
+     */
     private void configurerTableLignes() {
         colProduit.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getProduit().getNom()));
 
@@ -135,12 +163,21 @@ public class ModifierDocumentController implements Initializable {
                     updateTotaux();
                 });
             }
+            /**
+             * Affiche le bouton de suppression de ligne ou une cellule vide.
+             *
+             * @param item non utilisé
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override protected void updateItem(Void item, boolean empty) {
                 setGraphic(empty ? null : btnSuppr);
             }
         });
     }
 
+    /**
+     * Charge la liste des tiers et des produits actifs depuis la base.
+     */
     private void chargerDonnees() {
         try {
             comboTiers.setItems(FXCollections.observableArrayList(tiersService.findAll()));
@@ -150,6 +187,10 @@ public class ModifierDocumentController implements Initializable {
         }
     }
 
+    /**
+     * Ajoute une ligne produit au document en cours de modification.
+     * Liaison FXML : {@code btnAjouterLigne}.
+     */
     @FXML
     private void ajouterLigne() {
         Produit produit = comboProduit.getValue();
@@ -193,6 +234,9 @@ public class ModifierDocumentController implements Initializable {
         }
     }
 
+    /**
+     * Recalcule et affiche les totaux HT, TVA et TTC du document.
+     */
     private void updateTotaux() {
         BigDecimal totalHT = BigDecimal.ZERO;
         for (Composer ligne : lignes) {
@@ -206,6 +250,10 @@ public class ModifierDocumentController implements Initializable {
         lblTotalTTC.setText(String.format("%.2f €", totalTTC));
     }
 
+    /**
+     * Enregistre les modifications du document et régénère le PDF sur le NAS.
+     * Liaison FXML : {@code btnModifier}.
+     */
     @FXML
     private void modifierDocument() {
         if (comboType.getValue() == null || comboTiers.getValue() == null
@@ -264,15 +312,29 @@ public class ModifierDocumentController implements Initializable {
         }
     }
 
+    /**
+     * Ferme la fenêtre de modification.
+     * Liaison FXML : {@code btnAnnuler}.
+     */
     @FXML
     private void fermer() {
         ((Stage) btnAnnuler.getScene().getWindow()).close();
     }
 
+    /**
+     * Affiche une boîte de dialogue d'erreur.
+     *
+     * @param msg message à afficher
+     */
     private void afficherErreur(String msg) {
         new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
     }
 
+    /**
+     * Affiche une boîte de dialogue de succès.
+     *
+     * @param msg message à afficher
+     */
     private void afficherSucces(String msg) {
         new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
     }

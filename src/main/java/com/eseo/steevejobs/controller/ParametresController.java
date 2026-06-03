@@ -27,29 +27,42 @@ import java.util.prefs.Preferences;
  */
 public class ParametresController {
 
+    /** Champ de saisie de l'ancien mot de passe. */
     @FXML
     private PasswordField ancienMdpField;
+    /** Champ de saisie du nouveau mot de passe. */
     @FXML
     private PasswordField nouveauMdpField;
+    /** Champ de confirmation du nouveau mot de passe. */
     @FXML
     private PasswordField confirmerMdpField;
+    /** Champ de saisie de l'adresse e-mail. */
     @FXML
     private TextField mailField;
+    /** Champ de saisie du numéro de téléphone. */
     @FXML
     private TextField telField;
+    /** Champ de saisie du nom. */
     @FXML
     private TextField nomField;
+    /** Champ de saisie du prénom. */
     @FXML
     private TextField prenomField;
 
+    /** Case à cocher d'activation des notifications push. */
     @FXML
     private CheckBox pushNotificationsToggle;
+    /** Case à cocher de mémorisation de l'e-mail de connexion. */
     @FXML
     private CheckBox ConnexionCheck;
 
+    /** Préférences utilisateur locales. */
     private Preferences prefs;
+    /** Service de gestion des utilisateurs. */
     private UserService userService;
+    /** Service de session utilisateur. */
     private SessionService sessionService;
+    /** Utilisateur dont le profil est affiché. */
     private User currentUser;
 
     /**
@@ -76,6 +89,11 @@ public class ParametresController {
         ConnexionCheck.setSelected(isConnexionSaved);
     }
 
+    /**
+     * Préremplit les champs du formulaire avec les données de l'utilisateur connecté.
+     *
+     * @param user utilisateur dont le profil est affiché
+     */
     private void setUtilisateurConnecte(User user) {
         this.currentUser = user;
         if (user != null) {
@@ -86,6 +104,12 @@ public class ParametresController {
         }
     }
 
+    /**
+     * Active ou désactive la mémorisation de l'email de connexion.
+     * Liaison FXML : {@code ConnexionCheck}.
+     *
+     * @param event événement de la case à cocher (non utilisé)
+     */
     @FXML
     void toggleConnexionSave(ActionEvent event) {
         if (currentUser == null) return;
@@ -97,6 +121,12 @@ public class ParametresController {
         }
     }
 
+    /**
+     * Enregistre les informations personnelles modifiées et envoie un email de confirmation.
+     * Liaison FXML : bouton d'enregistrement du profil.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void enregistrerInformations(ActionEvent event) {
         if (currentUser == null) return;
@@ -136,6 +166,12 @@ public class ParametresController {
         }
     }
 
+    /**
+     * Valide et enregistre le nouveau mot de passe après vérification de l'ancien.
+     * Liaison FXML : bouton de validation sécurité.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void validerSecurite(ActionEvent event) {
         if (currentUser == null) return;
@@ -182,6 +218,12 @@ public class ParametresController {
         }
     }
 
+    /**
+     * Enregistre la préférence de notifications push et envoie un message de test si activé.
+     * Liaison FXML : {@code pushNotificationsToggle}.
+     *
+     * @param event événement de la case à cocher (non utilisé)
+     */
     @FXML
     void testpush(ActionEvent event) {
         boolean isPushEnabled = pushNotificationsToggle.isSelected();
@@ -193,11 +235,24 @@ public class ParametresController {
         }
     }
 
+    /**
+     * Gère le clic sur le bouton retour (journalisation uniquement).
+     * Liaison FXML : bouton retour.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     void handleRetour(ActionEvent event) {
         System.out.println("Clic sur le bouton Retour.");
     }
 
+    /**
+     * Affiche une boîte de dialogue modale.
+     *
+     * @param type type d'alerte
+     * @param title titre de la fenêtre
+     * @param content message affiché
+     */
     private void showAlert(Alert.AlertType type, String title, String content) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
