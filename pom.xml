@@ -303,7 +303,6 @@
                         <configuration>
                             <outputDirectory>${jpackage.input}/libs</outputDirectory>
                             <includeScope>runtime</includeScope>
-                            <excludeScope>test</excludeScope>
                         </configuration>
                     </execution>
                 </executions>
