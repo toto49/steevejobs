@@ -18,6 +18,12 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.PlanningService}.
+ * <p>
+ * Valide règles métier sur dates, utilisateur obligatoire et erreurs de persistance mockée.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class PlanningServiceTest {
 

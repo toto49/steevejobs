@@ -10,10 +10,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object dédié aux opérations sur la table des messages.
+ * Accès aux données de la table {@code MESSAGES}.
+ * <p>
+ * Les lectures joignent {@code USER} (auteur), {@code TICKETS} et {@code USER} (auteur du ticket).
+ * Chaque opération s'exécute en auto-commit ; les {@link SQLException} sont propagées.
+ * </p>
  */
 public class MessageDAO {
 
+    /**
+     * Insère un message et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO MESSAGES} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
+     *
+     * @param message message à persister ; l'identifiant est mis à jour après insertion
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public void createMessage(Message message) throws SQLException {
         String sql = "INSERT INTO MESSAGES (contenu, piece_jointe, date_envoi, id_auteur, id_ticket) VALUES (?, ?, ?, ?, ?)";
 
@@ -36,6 +49,12 @@ public class MessageDAO {
         }
     }
 
+    /**
+     * Met à jour un message existant.
+     *
+     * @param message message avec identifiant et champs modifiés
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public void updateMessage(Message message) throws SQLException {
         String sql = "UPDATE MESSAGES SET contenu = ?, piece_jointe = ?, date_envoi = ?, id_auteur = ?, id_ticket = ? WHERE id_messages = ?";
 
@@ -53,6 +72,13 @@ public class MessageDAO {
         }
     }
 
+    /**
+     * Supprime un message par identifiant.
+     *
+     * @param id identifiant du message
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean deleteMessage(int id) throws SQLException {
         String sql = "DELETE FROM MESSAGES WHERE id_messages = ?";
 
@@ -66,6 +92,13 @@ public class MessageDAO {
         }
     }
 
+    /**
+     * Recherche un message par identifiant avec auteur et ticket jointés.
+     *
+     * @param id identifiant du message
+     * @return message trouvé, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public Message getById(int id) throws SQLException {
         String sql = "SELECT m.*, " +
                 "u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, " +
@@ -135,6 +168,13 @@ public class MessageDAO {
         }
     }
 
+    /**
+     * Liste les messages d'un ticket, triés par date d'envoi croissante.
+     *
+     * @param ticketId identifiant du ticket
+     * @return liste des messages (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<Message> findByTicketId(int ticketId) throws SQLException {
         List<Message> messages = new ArrayList<>();
         String sql = "SELECT m.*, " +
@@ -206,6 +246,13 @@ public class MessageDAO {
         return messages;
     }
 
+    /**
+     * Liste les messages rédigés par un auteur, triés par date d'envoi décroissante.
+     *
+     * @param auteurId identifiant de l'auteur
+     * @return liste des messages (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<Message> findByAuteurId(int auteurId) throws SQLException {
         List<Message> messages = new ArrayList<>();
         String sql = "SELECT m.*, " +
@@ -276,6 +323,12 @@ public class MessageDAO {
         return messages;
     }
 
+    /**
+     * Liste tous les messages, triés par date d'envoi décroissante.
+     *
+     * @return liste complète (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<Message> findAll() throws SQLException {
         List<Message> messages = new ArrayList<>();
         String sql = "SELECT m.*, " +
@@ -344,6 +397,16 @@ public class MessageDAO {
         return messages;
     }
 
+    /**
+     * Supprime tous les messages associés à un ticket.
+     * <p>
+     * SQL : {@code DELETE FROM MESSAGES WHERE id_ticket = ?}.
+     * </p>
+     *
+     * @param ticketId identifiant du ticket
+     * @return nombre de lignes supprimées
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int deleteByTicketId(int ticketId) throws SQLException {
         String sql = "DELETE FROM MESSAGES WHERE id_ticket = ?";
 
@@ -356,6 +419,12 @@ public class MessageDAO {
         }
     }
 
+    /**
+     * Compte le nombre total de messages enregistrés.
+     *
+     * @return nombre de messages ({@code 0} si la table est vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countMessages() throws SQLException {
         String sql = "SELECT COUNT(*) FROM MESSAGES";
 
@@ -370,6 +439,13 @@ public class MessageDAO {
         return 0;
     }
 
+    /**
+     * Compte le nombre de messages d'un ticket.
+     *
+     * @param ticketId identifiant du ticket
+     * @return nombre de messages ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countByTicketId(int ticketId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM MESSAGES WHERE id_ticket = ?";
 
@@ -387,6 +463,13 @@ public class MessageDAO {
         return 0;
     }
 
+    /**
+     * Compte le nombre de messages rédigés par un auteur.
+     *
+     * @param auteurId identifiant de l'auteur
+     * @return nombre de messages ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countByAuteurId(int auteurId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM MESSAGES WHERE id_auteur = ?";
 

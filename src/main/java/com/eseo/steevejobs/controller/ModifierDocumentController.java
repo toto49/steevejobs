@@ -26,6 +26,10 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML du formulaire de modification de document commercial.
+ * Liaisons FXML : combos type/tiers/statut, tableau des lignes, totaux HT/TVA/TTC.
+ */
 public class ModifierDocumentController implements Initializable {
 
     @FXML private ComboBox<DocumentType> comboType;
@@ -49,6 +53,12 @@ public class ModifierDocumentController implements Initializable {
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
     private Document documentModification;
 
+    /**
+     * Configure combos, tableau des lignes et charge tiers/produits.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerComboBox();
@@ -57,6 +67,11 @@ public class ModifierDocumentController implements Initializable {
         tableLignes.setItems(lignes);
     }
 
+    /**
+     * Préremplit le formulaire avec le document à modifier.
+     *
+     * @param document document source ; ne doit pas être {@code null}
+     */
     public void setDocument(Document document) {
         this.documentModification = document;
 

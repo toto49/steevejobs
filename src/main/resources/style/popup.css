@@ -156,3 +156,148 @@
 .dialog-pane:header *.header-panel {
     -fx-background-color: transparent;
 }
+
+/* ───────────────────────────────────────────────
+   DATE PICKER
+   ─────────────────────────────────────────────── */
+.date-picker {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-min-height: 35;
+}
+
+.date-picker .text-field {
+    -fx-text-fill: #1e293b;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: none;
+}
+
+.date-picker:focused {
+    -fx-border-color: #6588d9;
+    -fx-effect: dropshadow(three-pass-box, rgba(101, 136, 217, 0.3), 4, 0, 0, 0);
+}
+
+.date-picker-custom > .arrow-button {
+    -fx-background-color: #6a8bce;
+    -fx-background-radius: 5;
+    -fx-background-insets: 0;
+    -fx-padding: 10 15 10 15;
+    -fx-cursor: hand;
+}
+
+.date-picker-custom > .arrow-button > .arrow {
+    -fx-background-color: white;
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+}
+
+.date-picker-custom > .arrow-button:hover {
+    -fx-background-color: #b3e5fc;
+}
+
+.date-picker-popup {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 10, 0, 0, 5);
+}
+
+.date-picker-popup .month-year-pane {
+    -fx-background-color: #6a8bce;
+    -fx-background-radius: 10 10 0 0;
+}
+
+.date-picker-popup .month-year-pane .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.date-picker-popup .month-year-pane .left-button .left-arrow,
+.date-picker-popup .month-year-pane .right-button .right-arrow {
+    -fx-background-color: white;
+}
+
+.date-picker-popup .calendar-grid {
+    -fx-background-color: white;
+    -fx-background-radius: 5;
+    -fx-padding: 10;
+}
+
+.date-picker-popup .calendar-grid .day-name-cell {
+    -fx-text-fill: #6a8bce;
+    -fx-font-weight: bold;
+}
+
+.date-picker-popup .day-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+    -fx-background-radius: 30;
+}
+
+.date-picker-popup .day-cell:hover {
+    -fx-background-color: #e1f5fe;
+    -fx-text-fill: #01579b;
+}
+
+.date-picker-popup .day-cell:selected {
+    -fx-background-color: #6a8bce;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.date-picker-popup .today {
+    -fx-border-color: #6a8bce;
+    -fx-border-radius: 30;
+    -fx-border-width: 1;
+}
+
+.date-picker-popup .week-number-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #776a6a;
+}
+
+/* ───────────────────────────────────────────────
+   CALENDRIER — BOUTONS "MES HEURES"
+   ─────────────────────────────────────────────── */
+.button.btn-mes-heures {
+    -fx-background-insets: 0 !important;
+    -fx-padding: 4 12 !important;
+    -fx-font-size: 11px !important;
+    -fx-cursor: hand;
+}
+
+.button.btn-mes-heures-actif {
+    -fx-background-color: #e1f5fe !important;
+    -fx-text-fill: #01579b !important;
+    -fx-border-color: #01579b !important;
+    -fx-border-width: 1 !important;
+    -fx-border-radius: 20 !important;
+    -fx-background-radius: 20 !important;
+}
+
+.button.btn-mes-heures-actif:hover {
+    -fx-background-color: #b3e5fc !important;
+}
+
+.button.btn-mes-heures-actif:focused,
+.button.btn-mes-heures-inactif:focused {
+    -fx-background-radius: 20 !important;
+    -fx-background-insets: 0 !important;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.button.btn-mes-heures-inactif,
+.button.btn-mes-heures-inactif:disabled {
+    -fx-background-color: #e0e0e0 !important;
+    -fx-text-fill: #a0a0a0 !important;
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-background-radius: 20 !important;
+    -fx-opacity: 1;
+}

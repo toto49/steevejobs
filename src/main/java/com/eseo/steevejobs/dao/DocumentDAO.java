@@ -11,19 +11,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object dédié aux opérations sur la table des documents.
+ * Accès aux données de la table {@code DOCUMENTS}.
  * <p>
- * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- * et sauvegarder les objets {@link com.eseo.steevejobs.model.Document} en base de données.
+ * Les lectures enrichissent les documents via {@code LEFT JOIN} sur {@code TIERS} et {@code USER}
+ * (vendeur/éditeur). Chaque opération s'exécute en auto-commit ;
+ * les {@link SQLException} sont propagées à l'appelant.
  * </p>
  */
 public class DocumentDAO {
 
     /**
-     * Créer un nouveau document
+     * Insère un nouveau document et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO DOCUMENTS} ; {@code id_vendeur} est NULL si l'éditeur est absent.
+     * </p>
      *
-     * @param document le document à créer
-     * @throws SQLException exception SQL
+     * @param document document à persister ; l'identifiant est mis à jour après insertion
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public void createDocument(Document document) throws SQLException {
         String sql = "INSERT INTO DOCUMENTS (type, date, total_ht, total_ttc, statut, url, id_tiers, id_vendeur) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -56,11 +60,14 @@ public class DocumentDAO {
     }
 
     /**
-     * Mettre à jour un document existant
+     * Met à jour l'ensemble des champs d'un document existant.
+     * <p>
+     * SQL : {@code UPDATE DOCUMENTS} filtré par {@code id_documents}.
+     * </p>
      *
-     * @param document le document à mettre à jour
-     * @return true si mis à jour, false sinon
-     * @throws SQLException exception SQL
+     * @param document document avec identifiant et champs modifiés
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean updateDocument(Document document) throws SQLException {
         String sql = "UPDATE DOCUMENTS SET type = ?, date = ?, total_ht = ?, total_ttc = ?, statut = ?, url = ?, id_tiers = ?, id_vendeur = ? WHERE id_documents = ?";
@@ -91,6 +98,17 @@ public class DocumentDAO {
         return rowsAffected > 0;
     }
 
+    /**
+     * Met à jour uniquement l'URL associée à un document.
+     * <p>
+     * SQL : {@code UPDATE DOCUMENTS SET url = ? WHERE id_documents = ?}.
+     * </p>
+     *
+     * @param id  identifiant du document
+     * @param url nouvelle URL du fichier
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean updateUrl(int id, String url) throws SQLException {
         String sql = "UPDATE DOCUMENTS SET url = ? WHERE id_documents = ?";
 
@@ -103,11 +121,14 @@ public class DocumentDAO {
     }
 
     /**
-     * Supprimer un document par son ID
+     * Supprime un document par identifiant.
+     * <p>
+     * SQL : {@code DELETE FROM DOCUMENTS WHERE id_documents = ?}.
+     * </p>
      *
-     * @param id l'ID du document
-     * @return true si supprimé, false sinon
-     * @throws SQLException exception SQL
+     * @param id identifiant du document
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean deleteDocument(int id) throws SQLException {
         String sql = "DELETE FROM DOCUMENTS WHERE id_documents = ?";
@@ -123,11 +144,11 @@ public class DocumentDAO {
     }
 
     /**
-     * Récupérer un document par son ID
+     * Recherche un document par identifiant avec tiers et éditeur jointés.
      *
-     * @param id l'ID du document
-     * @return le document trouvé, null sinon
-     * @throws SQLException exception SQL
+     * @param id identifiant du document
+     * @return document trouvé, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public Document getById(int id) throws SQLException {
         String sql = "SELECT d.*, " +
@@ -194,11 +215,11 @@ public class DocumentDAO {
     }
 
     /**
-     * Récupérer tous les documents d'un tiers
+     * Liste les documents d'un tiers, triés par date décroissante.
      *
-     * @param tiersId l'ID du tiers
-     * @return la liste des documents du tiers
-     * @throws SQLException exception SQL
+     * @param tiersId identifiant du tiers
+     * @return liste des documents du tiers (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public List<Document> findByTiersId(int tiersId) throws SQLException {
         List<Document> documents = new ArrayList<>();
@@ -268,10 +289,10 @@ public class DocumentDAO {
 
 
     /**
-     * Récupérer tous les documents
+     * Liste tous les documents, triés par date décroissante.
      *
-     * @return la liste de tous les documents
-     * @throws SQLException exception SQL
+     * @return liste complète des documents (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public List<Document> findAll() throws SQLException {
         List<Document> documents = new ArrayList<>();
@@ -337,12 +358,15 @@ public class DocumentDAO {
     }
 
     /**
-     * Mettre à jour le statut d'un document
+     * Met à jour uniquement le statut d'un document.
+     * <p>
+     * SQL : {@code UPDATE DOCUMENTS SET statut = ? WHERE id_documents = ?}.
+     * </p>
      *
-     * @param id     l'ID du document
-     * @param statut le nouveau statut
-     * @return true si mis à jour, false sinon
-     * @throws SQLException exception SQL
+     * @param id     identifiant du document
+     * @param statut nouveau statut
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean updateStatut(int id, DocumentStatut statut) throws SQLException {
         String sql = "UPDATE DOCUMENTS SET statut = ? WHERE id_documents = ?";

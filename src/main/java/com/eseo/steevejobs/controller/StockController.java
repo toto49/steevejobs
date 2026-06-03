@@ -16,6 +16,10 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.Optional;
 
+/**
+ * Contrôleur FXML de gestion du stock produits.
+ * Liaisons FXML : {@code tableProduits}, {@code searchField}, fiche produit et actions stock.
+ */
 public class StockController {
 
     // ──────────────────────────────────────────────────────────────
@@ -67,6 +71,9 @@ public class StockController {
     // ──────────────────────────────────────────────────────────────
     // Initialisation
     // ──────────────────────────────────────────────────────────────
+    /**
+     * Configure le tableau, la recherche et charge la liste des produits.
+     */
     @FXML
     public void initialize() {
 

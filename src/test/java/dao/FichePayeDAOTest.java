@@ -15,6 +15,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.FichePayeDAO}.
+ * <p>
+ * Couvre création, lecture par identifiant, liste par employé et comptage.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class FichePayeDAOTest {
 

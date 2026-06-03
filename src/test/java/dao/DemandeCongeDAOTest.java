@@ -16,6 +16,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.DemandeCongeDAO}.
+ * <p>
+ * Vérifie création, lecture par identifiant, filtre par statut et par employé.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class DemandeCongeDAOTest {
 

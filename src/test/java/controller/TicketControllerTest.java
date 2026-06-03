@@ -17,6 +17,13 @@ import service.support.TestDataFactory;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests unitaires du contrôleur de détail ticket et du chat associé.
+ * <p>
+ * Cycle de vie : {@code @BeforeEach} instancie le contrôleur sur le thread FX avec champs injectés
+ * et session utilisateur ; {@code @AfterEach} ferme le chat et réinitialise la session.
+ * </p>
+ */
 class TicketControllerTest {
 
     private TicketController controller;

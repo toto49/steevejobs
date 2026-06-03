@@ -9,6 +9,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * Tests unitaires du contrôleur de liste de tickets (titre de page selon le filtre).
+ * <p>
+ * Cycle de vie : initialisation JavaFX en {@code @BeforeAll} ; exécution des scénarios sur le thread FX.
+ * </p>
+ */
 class TicketsListControllerTest {
 
     @BeforeAll

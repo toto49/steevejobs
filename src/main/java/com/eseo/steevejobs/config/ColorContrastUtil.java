@@ -14,10 +14,22 @@ public final class ColorContrastUtil {
     /** Seuil : au-dessus → fond clair → texte noir ; en dessous → texte blanc. */
     private static final double BLACK_TEXT_MIN_LUMINANCE = 0.70;
 
+    /**
+     * Retourne la couleur de texte (#000000 ou #ffffff) adaptée au fond.
+     *
+     * @param backgroundColor couleur de fond (hex, rgb, nom CSS)
+     * @return {@code "#000000"} sur fond clair, {@code "#ffffff"} sinon
+     */
     public static String textFillForBackground(String backgroundColor) {
         return isLightBackground(backgroundColor) ? "#000000" : "#ffffff";
     }
 
+    /**
+     * Détermine si le fond est suffisamment clair pour un texte noir.
+     *
+     * @param backgroundColor couleur de fond à analyser
+     * @return {@code true} si la luminance dépasse le seuil interne ; {@code true} par défaut si la couleur est invalide
+     */
     public static boolean isLightBackground(String backgroundColor) {
         Color color = parseColor(backgroundColor);
         if (color == null) {

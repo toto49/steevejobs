@@ -34,6 +34,10 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML de la liste des documents commerciaux.
+ * Liaisons FXML : {@code tableDocuments}, filtres, panneau détail et actions PDF.
+ */
 public class DocumentController implements Initializable {
 
     @FXML private TextField searchField;
@@ -57,6 +61,12 @@ public class DocumentController implements Initializable {
 
     private User utilisateurConnecte;
 
+    /**
+     * Configure colonnes, filtres, chargement initial et état des boutons d'action.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerColonnes();
@@ -77,6 +87,11 @@ public class DocumentController implements Initializable {
         btnSupprimer.setDisable(true);
     }
 
+    /**
+     * Définit l'utilisateur créateur pour les nouveaux documents.
+     *
+     * @param user utilisateur connecté
+     */
     public void setUtilisateurConnecte(User user) {
         this.utilisateurConnecte = user;
     }
@@ -282,6 +297,10 @@ public class DocumentController implements Initializable {
         comboTypeFiltre.setItems(FXCollections.observableArrayList(DocumentType.values()));
         comboTypeFiltre.getItems().add(0, null);
         comboTypeFiltre.setConverter(new StringConverter<>() {
+            /**
+             * @param t type de document ou {@code null} pour « Tous »
+             * @return libellé affiché dans le filtre
+             */
             @Override
             public String toString(DocumentType t) {
                 if (t == null) return "Tous les types";

@@ -8,6 +8,20 @@ import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+/**
+ * Gestionnaire centralisé du pool de connexions JDBC (HikariCP).
+ * <p>
+ * Le pool est initialisé au chargement de la classe à partir des variables d'environnement
+ * {@code DB_URL}, {@code DB_USER} et {@code DB_PASSWORD}. Les DAO obtiennent une connexion
+ * par appel à {@link #getConnection()} ; chaque opération SQL s'exécute en auto-commit
+ * sauf gestion explicite de transaction dans le DAO appelant.
+ * </p>
+ * <p>
+ * En cas d'échec d'initialisation, le pool reste {@code null} et {@link #getConnection()}
+ * lève une {@link SQLException}. Les méthodes de reconfiguration pour les tests ferment
+ * le pool existant avant d'en instancier un nouveau.
+ * </p>
+ */
 public class DatabaseConnection {
     private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
     private static HikariDataSource dataSource;
@@ -34,12 +48,30 @@ public class DatabaseConnection {
         }
     }
 
+    /**
+     * Fournit une connexion JDBC issue du pool HikariCP.
+     * <p>
+     * La connexion doit être fermée par l'appelant (try-with-resources recommandé).
+     * Aucune transaction n'est ouverte implicitement ; l'auto-commit est activé par défaut.
+     * </p>
+     *
+     * @return connexion JDBC active
+     * @throws SQLException si le pool est indisponible ou si l'obtention de connexion échoue
+     */
     public static Connection getConnection() throws SQLException {
         return dataSource.getConnection();
     }
 
     /**
      * Réinitialise le pool JDBC pour les tests d'intégration DAO (H2 en mémoire).
+     * <p>
+     * Ferme le pool courant puis crée un nouveau pool pointant vers la base H2 fournie.
+     * Opération synchronisée pour éviter les accès concurrents pendant la bascule.
+     * </p>
+     *
+     * @param jdbcUrl  URL JDBC de la base de test
+     * @param username identifiant de connexion
+     * @param password mot de passe de connexion
      */
     public static synchronized void reconfigureForTests(String jdbcUrl, String username, String password) {
         fermerPool();
@@ -53,7 +85,11 @@ public class DatabaseConnection {
     }
 
     /**
-     * Restaure le pool MySQL de production après les tests DAO (évite les effets de bord sur les tests UI).
+     * Restaure le pool MySQL de production après les tests DAO.
+     * <p>
+     * N'exécute aucune action si le mode test n'est pas actif ou si {@code DB_URL} est absent.
+     * Les erreurs de reconfiguration sont journalisées sur {@code System.err} sans relancer d'exception.
+     * </p>
      */
     public static synchronized void restoreProductionPool() {
         if (!TestRuntime.isEnabled()) {
@@ -81,6 +117,12 @@ public class DatabaseConnection {
         }
     }
 
+    /**
+     * Ferme le pool de connexions s'il est ouvert.
+     * <p>
+     * Idempotent : aucune action si le pool est déjà fermé ou {@code null}.
+     * </p>
+     */
     public static void fermerPool() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();

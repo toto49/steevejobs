@@ -15,12 +15,26 @@ import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Initialise une base H2 en mémoire (MODE MySQL) et nettoie les données insérées après chaque test.
+ * Extension JUnit pour les tests d'intégration DAO sur base H2 en mémoire (mode MySQL).
+ * <p>
+ * Cycle de vie :
+ * </p>
+ * <ul>
+ *   <li>{@link #beforeAll(ExtensionContext)} — reconfiguration du pool JDBC, exécution unique du script {@code /dao/schema-h2.sql}</li>
+ *   <li>{@link #afterEach(ExtensionContext)} — exécution des nettoyages enregistrés via {@link DaoTestCleanup}</li>
+ *   <li>{@link #afterAll(ExtensionContext)} — restauration du pool de production</li>
+ * </ul>
  */
 public class DaoIntegrationExtension implements BeforeAllCallback, AfterEachCallback, AfterAllCallback {
 
     private static final AtomicBoolean SCHEMA_READY = new AtomicBoolean(false);
 
+    /**
+     * Configure H2 et initialise le schéma au premier test de la JVM.
+     *
+     * @param context contexte JUnit (non utilisé)
+     * @throws Exception en cas d'échec de configuration ou d'exécution du script SQL
+     */
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         DatabaseConnection.reconfigureForTests(
@@ -33,11 +47,22 @@ public class DaoIntegrationExtension implements BeforeAllCallback, AfterEachCall
         }
     }
 
+    /**
+     * Exécute tous les nettoyages LIFO enregistrés pendant le test.
+     *
+     * @param context contexte JUnit (non utilisé)
+     * @throws Exception si un nettoyage SQL échoue
+     */
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
         DaoTestCleanup.runAll();
     }
 
+    /**
+     * Restaure la configuration JDBC de production après la classe de test.
+     *
+     * @param context contexte JUnit (non utilisé)
+     */
     @Override
     public void afterAll(ExtensionContext context) {
         DatabaseConnection.restoreProductionPool();

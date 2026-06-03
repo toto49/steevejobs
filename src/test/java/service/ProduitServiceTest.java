@@ -17,6 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.ProduitService}.
+ * <p>
+ * Couvre ajout, validation du nom, mise à jour de stock et contrôles d'identifiant.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class ProduitServiceTest {
 

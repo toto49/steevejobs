@@ -22,6 +22,11 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 
+/**
+ * Contrôleur FXML du menu latéral et du conteneur central ({@code menu-view.fxml}).
+ * Liaisons FXML : {@code mainPane}, boutons de navigation ({@code btnAccueil}, {@code btnPlanning}, etc.).
+ * Gère le chargement des vues, les badges de notification et les callbacks WebSocket.
+ */
 public class MenuController {
 
     private static MenuController instance;
@@ -49,10 +54,19 @@ public class MenuController {
     private Label badgeAccueil;
     private Label badgeTicket;
 
+    /**
+     * Retourne l'instance singleton du contrôleur menu.
+     *
+     * @return instance courante ou {@code null} avant initialisation FXML
+     */
     public static MenuController getInstance() {
         return instance;
     }
 
+    /**
+     * Enregistre l'instance, installe les badges et charge la page d'accueil.
+     * En mode test, n'ouvre pas la connexion WebSocket ni la page home.
+     */
     @FXML
     public void initialize() {
         instance = this;
@@ -70,6 +84,12 @@ public class MenuController {
 
     private void enregistrerCallbacksWebSocket() {
         WebSocketUiBridge.getInstance().setTicketCallbacks(new WebSocketUiBridge.TicketCallbacks() {
+            /**
+             * Rafraîchit le chat si le ticket concerné est ouvert.
+             *
+             * @param ticketId identifiant du ticket notifié
+             * @return {@code true} si le chat actif a été rafraîchi
+             */
             @Override
             public boolean tryRefreshChatIfActive(int ticketId) {
                 TicketController chatActif = TicketController.getActiveInstance();
@@ -80,6 +100,9 @@ public class MenuController {
                 return false;
             }
 
+            /**
+             * Demande le rafraîchissement de la liste tickets si elle est affichée.
+             */
             @Override
             public void onRefreshTicketList() {
                 TicketsListController listeActive = TicketsListController.getActiveInstance();
@@ -88,6 +111,12 @@ public class MenuController {
                 }
             }
 
+            /**
+             * Met à jour badges et notifications push selon le type de destinataire.
+             *
+             * @param targetType {@code TECH} ou {@code AUTEUR}
+             * @param pushEnabled {@code true} si les notifications système sont activées
+             */
             @Override
             public void onTicketNotification(String targetType, boolean pushEnabled) {
                 HomeController.ajouterNotification(targetType);
@@ -102,11 +131,22 @@ public class MenuController {
         });
     }
 
+    /**
+     * Lie le contrôleur menu à la fenêtre principale et au label de titre global.
+     *
+     * @param stage fenêtre principale
+     * @param labelTitre label de titre du header (peut être {@code null})
+     */
     public void setComposantsFenetre(Stage stage, Label labelTitre) {
         this.mainStage = stage;
         this.lblTitreHeader = labelTitre;
     }
 
+    /**
+     * Charge une vue FXML dans la zone centrale et ferme les sessions chat/visio actives.
+     *
+     * @param nomFichier nom de base du FXML (sans suffixe {@code -view.fxml})
+     */
     public void chargerPage(String nomFichier) {
         TicketController.fermerChat();
 
@@ -133,6 +173,12 @@ public class MenuController {
         }
     }
 
+    /**
+     * Met à jour le badge de notification sur le bouton menu correspondant.
+     *
+     * @param typeCible {@code TECH} (accueil) ou {@code AUTEUR} (tickets)
+     * @param nombreExact nombre à afficher ; masqué si inférieur ou égal à 0
+     */
     public void allumerBadge(String typeCible, int nombreExact) {
         Platform.runLater(() -> mettreAJourBadge(typeCible, nombreExact));
     }
@@ -216,6 +262,9 @@ public class MenuController {
         changerTitre("Accueil");
     }
 
+    /**
+     * Réinitialise le badge de notification de l'accueil.
+     */
     public void effacerBadgeAccueil() {
         if (badgeAccueil != null) {
             badgeAccueil.setVisible(false);
@@ -249,6 +298,9 @@ public class MenuController {
         }
     }
 
+    /**
+     * Réinitialise le badge de notification des tickets.
+     */
     public void effacerBadgeticket() {
         if (badgeTicket != null) {
             badgeTicket.setVisible(false);
@@ -322,10 +374,20 @@ public class MenuController {
         return null;
     }
 
+    /**
+     * Met à jour le titre global de la fenêtre via {@link HelloApplication}.
+     *
+     * @param nouveauTitre titre affiché
+     */
     public void changerTitre(String nouveauTitre) {
         HelloApplication.changerTitreGlobal(nouveauTitre);
     }
 
+    /**
+     * Remplace directement le contenu central du {@code BorderPane} principal.
+     *
+     * @param vue racine de la vue à afficher
+     */
     public void setCenterView(Parent vue) {
         if (mainPane != null) {
             mainPane.setCenter(vue);

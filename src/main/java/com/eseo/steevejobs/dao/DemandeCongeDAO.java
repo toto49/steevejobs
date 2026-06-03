@@ -8,8 +8,26 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Accès aux données de la table {@code DEMANDE_CONGE}.
+ * <p>
+ * Les lectures joignent {@code USER} pour hydrater l'employé demandeur.
+ * Chaque opération s'exécute en auto-commit ; les {@link SQLException} sont propagées.
+ * L'identifiant de planning est stocké en {@code NULL} lorsque {@code id_planning <= 0}.
+ * </p>
+ */
 public class DemandeCongeDAO {
 
+    /**
+     * Insère une nouvelle demande de congé et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO DEMANDE_CONGE} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
+     *
+     * @param demande demande à persister ; l'identifiant est mis à jour après insertion
+     * @return {@code true} si l'insertion a réussi
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean create(DemandeConge demande) throws SQLException {
         String sql = """
                 INSERT INTO DEMANDE_CONGE (jour_debut, jour_fin, statut, commentaire_employe, commentaire_rh, date_demande, id_user, id_planning)
@@ -42,6 +60,16 @@ public class DemandeCongeDAO {
         }
     }
 
+    /**
+     * Met à jour une demande de congé existante.
+     * <p>
+     * SQL : {@code UPDATE DEMANDE_CONGE} filtré par {@code id_demande_conge}.
+     * </p>
+     *
+     * @param demande demande avec identifiant et champs modifiés
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean update(DemandeConge demande) throws SQLException {
         String sql = """
                 UPDATE DEMANDE_CONGE
@@ -70,6 +98,13 @@ public class DemandeCongeDAO {
         }
     }
 
+    /**
+     * Recherche une demande par identifiant.
+     *
+     * @param id identifiant de la demande
+     * @return demande trouvée avec employé joint, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public DemandeConge findById(int id) throws SQLException {
         String sql = baseSelectSql() + " WHERE d.id_demande_conge = ?";
 
@@ -85,6 +120,13 @@ public class DemandeCongeDAO {
         return null;
     }
 
+    /**
+     * Liste les demandes filtrées par statut, triées par date de demande décroissante.
+     *
+     * @param statut statut recherché
+     * @return liste des demandes correspondantes (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<DemandeConge> findByStatut(StatutDemandeConge statut) throws SQLException {
         String sql = baseSelectSql() + " WHERE d.statut = ? ORDER BY d.date_demande DESC";
         List<DemandeConge> demandes = new ArrayList<>();
@@ -101,6 +143,13 @@ public class DemandeCongeDAO {
         return demandes;
     }
 
+    /**
+     * Liste les demandes d'un employé, triées par date de demande décroissante.
+     *
+     * @param userId identifiant de l'employé
+     * @return liste des demandes de l'employé (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<DemandeConge> findByUserId(int userId) throws SQLException {
         String sql = baseSelectSql() + " WHERE d.id_user = ? ORDER BY d.date_demande DESC";
         List<DemandeConge> demandes = new ArrayList<>();
@@ -117,6 +166,12 @@ public class DemandeCongeDAO {
         return demandes;
     }
 
+    /**
+     * Liste toutes les demandes de congé, triées par date de demande décroissante.
+     *
+     * @return liste complète des demandes (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<DemandeConge> findAll() throws SQLException {
         String sql = baseSelectSql() + " ORDER BY d.date_demande DESC";
         List<DemandeConge> demandes = new ArrayList<>();
@@ -131,6 +186,16 @@ public class DemandeCongeDAO {
         return demandes;
     }
 
+    /**
+     * Supprime une demande par identifiant.
+     * <p>
+     * SQL : {@code DELETE FROM DEMANDE_CONGE WHERE id_demande_conge = ?}.
+     * </p>
+     *
+     * @param id identifiant de la demande
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean delete(int id) throws SQLException {
         String sql = "DELETE FROM DEMANDE_CONGE WHERE id_demande_conge = ?";
 

@@ -5,8 +5,22 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Notifications système natives (bureau) selon l'OS hôte.
+ * <p>
+ * Effet de bord : lancement d'un processus externe (PowerShell Toast sur Windows,
+ * {@code osascript} sur macOS, {@code notify-send} sur Linux) dans un fil dédié.
+ * Aucune persistance ; échec silencieux côté appelant (journalisation stderr).
+ * </p>
+ */
 public class SystemNotificationService {
 
+    /**
+     * Affiche une notification locale avec titre et corps.
+     *
+     * @param title   titre affiché
+     * @param message corps du message
+     */
     public static void send(String title, String message) {
         String os = System.getProperty("os.name").toLowerCase();
 

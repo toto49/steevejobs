@@ -23,6 +23,10 @@ import java.sql.SQLException;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML du formulaire de création de document commercial.
+ * Liaisons FXML : combos, tableau des lignes, totaux et boutons créer/annuler.
+ */
 public class NouveauDocumentController implements Initializable {
 
     @FXML private ComboBox<DocumentType> comboType;
@@ -45,6 +49,12 @@ public class NouveauDocumentController implements Initializable {
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
     private User user;
 
+    /**
+     * Initialise combos, tableau et charge les données de référence.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerComboBox();
@@ -246,6 +256,11 @@ public class NouveauDocumentController implements Initializable {
 
     private User utilisateurConnecte;
 
+    /**
+     * Définit l'utilisateur créateur du document (prioritaire sur la session).
+     *
+     * @param user utilisateur connecté
+     */
     public void setUtilisateurConnecte(User user) {
         this.utilisateurConnecte = user;
     }

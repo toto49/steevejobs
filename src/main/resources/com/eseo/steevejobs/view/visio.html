@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  Vue WebView embarquée pour la visioconférence LiveKit.
+  Paramètres requis en query string : url (serveur LiveKit), token (JWT d'accès au salon).
+  Chargée par VisioController via WebView avec les identifiants fournis par le NAS.
+-->
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -30,7 +35,8 @@
             max-height: 80vh;
             background-color: #000;
             border-radius: 8px;
-            transform: scaleX(-1); /* Effet miroir pour la webcam */
+            /* Miroir horizontal : convention UX pour la prévisualisation locale de la webcam */
+            transform: scaleX(-1);
         }
     </style>
 </head>
@@ -38,6 +44,10 @@
 <div id="video-grid"></div>
 
 <script>
+    /**
+     * Initialise la session LiveKit à partir des paramètres injectés par l'application JavaFX.
+     * Active caméra et micro locaux ; abonne les pistes vidéo distantes à la grille DOM.
+     */
     window.addEventListener('DOMContentLoaded', async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const urlServeur = urlParams.get('url');

@@ -22,6 +22,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.FichePayeService}.
+ * <p>
+ * Vérifie génération PDF, doublon mensuel et règles de validation des paramètres de paie.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class FichePayeServiceTest {
 

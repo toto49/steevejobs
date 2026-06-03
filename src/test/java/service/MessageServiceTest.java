@@ -17,6 +17,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.MessageServiceImpl}.
+ * <p>
+ * Vérifie lecture, liste par auteur, suppression et encapsulation des erreurs SQL.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
 

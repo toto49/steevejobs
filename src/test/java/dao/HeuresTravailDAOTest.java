@@ -16,6 +16,12 @@ import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.HeuresTravailDAO}.
+ * <p>
+ * Scénarios : insertion, lecture absente, mise à jour sur même date.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class HeuresTravailDAOTest {
 

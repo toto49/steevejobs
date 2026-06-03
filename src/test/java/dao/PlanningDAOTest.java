@@ -15,6 +15,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.PlanningDAO}.
+ * <p>
+ * Couvre création, lecture par utilisateur et suppression.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class PlanningDAOTest {
 

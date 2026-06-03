@@ -1,3 +1,6 @@
+/* Feuille de styles principale JavaFX (AtlantaFX / thème clair SteeveJobs).
+   Couvre la coquille applicative, les modules RH, stock, documents, tickets et visio. */
+
 .root,
 .root-pane {
     -fx-background-color: #ECF4FF;

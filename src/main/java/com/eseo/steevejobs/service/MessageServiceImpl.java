@@ -6,14 +6,29 @@ import com.eseo.steevejobs.model.Message;
 import java.sql.SQLException;
 import java.util.List;
 
+/**
+ * Implémentation DAO du service de messages de tickets.
+ * <p>
+ * Aucun effet de bord réseau : accès base de données uniquement.
+ * Les erreurs SQL sont encapsulées en {@link RuntimeException} avec message métier.
+ * </p>
+ */
 public class MessageServiceImpl implements MessageService {
 
     private final MessageDAO messageDAO;
 
+    /**
+     * Constructeur par défaut instanciant un {@link MessageDAO}.
+     */
     public MessageServiceImpl() {
         this.messageDAO = new MessageDAO();
     }
 
+    /**
+     * Constructeur avec injection du DAO (tests ou composition).
+     *
+     * @param messageDAO accès persistance des messages
+     */
     public MessageServiceImpl(MessageDAO messageDAO) {
         this.messageDAO = messageDAO;
     }

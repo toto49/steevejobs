@@ -20,6 +20,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.DocumentDAO}.
+ * <p>
+ * Modèle de document issu de {@link service.support.TestDataFactory} ; persistance tiers et vendeur via fixtures DAO.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class DocumentDAOTest {
 

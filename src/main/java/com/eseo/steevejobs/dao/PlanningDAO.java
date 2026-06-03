@@ -8,8 +8,26 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Accès aux données de la table {@code PLANNING}.
+ * <p>
+ * Les lectures joignent {@code USER} pour hydrater l'employé concerné.
+ * Chaque opération s'exécute en auto-commit sauf {@link #createPlanning} qui intercepte
+ * les erreurs SQL et retourne {@code false} après journalisation sur {@code System.err}.
+ * Les autres méthodes propagent les {@link SQLException}.
+ * </p>
+ */
 public class PlanningDAO {
 
+    /**
+     * Insère un créneau de planning et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO PLANNING} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
+     *
+     * @param planning créneau à persister ; l'identifiant est mis à jour après insertion
+     * @return {@code true} si l'insertion a réussi, {@code false} si une erreur SQL est interceptée
+     */
     public boolean createPlanning(Planning planning) throws SQLException {
         String sql = "INSERT INTO PLANNING (jour_debut, jour_fin, type, description, couleur, id_user) VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -38,6 +56,16 @@ public class PlanningDAO {
         }
     }
 
+    /**
+     * Met à jour un créneau de planning existant.
+     * <p>
+     * SQL : {@code UPDATE PLANNING} filtré par {@code id_planning}.
+     * </p>
+     *
+     * @param planning créneau avec identifiant et champs modifiés
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean updatePlanning(Planning planning) throws SQLException {
         String sql = "UPDATE PLANNING SET jour_debut = ?, jour_fin = ?, type = ?, description = ?, couleur = ?, id_user = ? WHERE id_planning = ?";
 
@@ -59,6 +87,13 @@ public class PlanningDAO {
         return rowsAffected > 0;
     }
 
+    /**
+     * Supprime un créneau par identifiant.
+     *
+     * @param id identifiant du créneau
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean deletePlanning(int id) throws SQLException {
         String sql = "DELETE FROM PLANNING WHERE id_planning = ?";
 
@@ -71,6 +106,13 @@ public class PlanningDAO {
         }
     }
 
+    /**
+     * Recherche un créneau par identifiant avec employé joint.
+     *
+     * @param id identifiant du créneau
+     * @return créneau trouvé, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public Planning getById(int id) throws SQLException {
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
                 "FROM PLANNING p " +
@@ -99,6 +141,13 @@ public class PlanningDAO {
         }
     }
 
+    /**
+     * Liste les créneaux d'un employé, triés par date de début croissante.
+     *
+     * @param userId identifiant de l'employé
+     * @return liste des créneaux (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<Planning> findByUserId(int userId) throws SQLException {
         List<Planning> plannings = new ArrayList<>();
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
@@ -129,6 +178,12 @@ public class PlanningDAO {
         return plannings;
     }
 
+    /**
+     * Liste tous les créneaux de planning, triés par date de début croissante.
+     *
+     * @return liste complète (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<Planning> findAll() throws SQLException {
         List<Planning> plannings = new ArrayList<>();
         String sql = "SELECT p.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
@@ -156,6 +211,12 @@ public class PlanningDAO {
         return plannings;
     }
 
+    /**
+     * Compte le nombre total de créneaux enregistrés.
+     *
+     * @return nombre de créneaux ({@code 0} si la table est vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countPlannings() throws SQLException {
         String sql = "SELECT COUNT(*) FROM PLANNING";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -166,6 +227,13 @@ public class PlanningDAO {
         return 0;
     }
 
+    /**
+     * Compte le nombre de créneaux d'un employé.
+     *
+     * @param userId identifiant de l'employé
+     * @return nombre de créneaux ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countByUserId(int userId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM PLANNING WHERE id_user = ?";
         try (Connection conn = DatabaseConnection.getConnection();

@@ -13,6 +13,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Implémentation du service tickets : validation, persistance et règles de statut.
+ * <p>
+ * Règles métier : service limité à ADMIN ou RH ; longueurs max sujet/description/message ;
+ * pas de message sur ticket FERME ; premier message fait passer EN_ATTENTE → EN_COURS.
+ * Aucun WebSocket direct : la couche présentation notifie via {@link WebSocketService}.
+ * </p>
+ */
 public class TicketServiceImpl implements TicketService {
 
     private final TicketDAO     ticketDAO;
@@ -21,24 +29,28 @@ public class TicketServiceImpl implements TicketService {
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // Constantes métier
     private static final int SUJET_MAX_LENGTH       = 255;
     private static final int DESCRIPTION_MAX_LENGTH = 5000;
     private static final int CONTENU_MAX_LENGTH     = 5000;
 
+    /**
+     * Constructeur par défaut.
+     */
     public TicketServiceImpl() {
         this.ticketDAO = new TicketDAO();
         this.messageService = new MessageServiceImpl();
     }
 
+    /**
+     * Constructeur avec injection (tests).
+     *
+     * @param ticketDAO      accès tickets
+     * @param messageService service messages
+     */
     public TicketServiceImpl(TicketDAO ticketDAO, MessageService messageService) {
         this.ticketDAO = ticketDAO;
         this.messageService = messageService;
     }
-
-    // --------------------------------------------------------
-    // MÉTHODES PUBLIQUES
-    // --------------------------------------------------------
 
     @Override
     public Ticket creerTicket(Ticket ticket) {
@@ -210,6 +222,12 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * Retourne une description relative de l'ancienneté d'ouverture du ticket.
+     *
+     * @param ticket ticket source
+     * @return libellé du type « Ouvert il y a X jour(s) » ou chaîne vide si ticket invalide
+     */
     public String getDureeOuverture(Ticket ticket) {
         if (ticket == null || ticket.getDateOuverture() == null) return "";
         long jours = ChronoUnit.DAYS.between(ticket.getDateOuverture(), LocalDateTime.now());
@@ -217,10 +235,6 @@ public class TicketServiceImpl implements TicketService {
         long heures = ChronoUnit.HOURS.between(ticket.getDateOuverture(), LocalDateTime.now());
         return "Ouvert il y a " + heures + " heure(s)";
     }
-
-    // --------------------------------------------------------
-    // MÉTHODES PRIVÉES (Logique métier interne)
-    // --------------------------------------------------------
 
     private void validerTicket(Ticket ticket) throws IllegalArgumentException {
         if (ticket == null) {
@@ -272,7 +286,6 @@ public class TicketServiceImpl implements TicketService {
         if (service == null || service.trim().isEmpty()) {
             throw new IllegalArgumentException("Le service du ticket est obligatoire.");
         }
-        // Les services autorisés correspondent aux rôles existants dans l'application
         if (!service.equalsIgnoreCase("ADMIN") && !service.equalsIgnoreCase("RH")) {
             throw new IllegalArgumentException(
                     "Le service doit être ADMIN ou RH. Valeur reçue : " + service);

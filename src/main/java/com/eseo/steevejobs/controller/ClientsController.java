@@ -23,6 +23,10 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.ResourceBundle;
 
+/**
+ * Contrôleur FXML de gestion des clients et fournisseurs ({@code tiers}).
+ * Liaisons FXML : {@code tableClients}, {@code searchField}, {@code comboTypeFiltre}, panneau détail.
+ */
 public class ClientsController implements Initializable {
 
     @FXML private TextField searchField;
@@ -113,6 +117,12 @@ public class ClientsController implements Initializable {
     // Initialisation
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Configure les colonnes, charge les tiers et initialise filtres et sélection.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerColonnes();

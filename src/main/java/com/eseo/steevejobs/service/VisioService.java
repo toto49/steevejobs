@@ -15,20 +15,43 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Logique métier des salons de visioconférence (instantanés et planifiés).
+ * <p>
+ * Règles métier : réunions planifiées non passées ; accès réservé au créateur
+ * et aux invités sauf salons instantanés publics ; activation automatique des
+ * salons planifiés dont l'heure est échue. Retour JSON pour intégration WebSocket
+ * ({@code VISIO_TOKEN_RESPONSE}). Persistance BDD uniquement, pas d'envoi média direct.
+ * </p>
+ */
 public class VisioService {
 
     private static final ZoneId FUSEAU_HORAIRE = ZoneId.systemDefault();
 
     private final VisioDAO visioDAO;
 
+    /**
+     * Constructeur par défaut.
+     */
     public VisioService() {
         this.visioDAO = new VisioDAO();
     }
 
+    /**
+     * Constructeur avec injection du DAO.
+     *
+     * @param visioDAO accès persistance visio
+     */
     public VisioService(VisioDAO visioDAO) {
         this.visioDAO = visioDAO;
     }
 
+    /**
+     * Valide le nom de salon (non vide après trim).
+     *
+     * @param roomName nom de salle proposé
+     * @return message d'erreur si invalide, {@link Optional#empty()} si valide
+     */
     public Optional<String> validerNomSalon(String roomName) {
         if (roomName == null || roomName.trim().isEmpty()) {
             return Optional.of("Nom de salle obligatoire.");
@@ -37,7 +60,10 @@ public class VisioService {
     }
 
     /**
-     * @return message d'erreur si l'heure est invalide, vide si OK
+     * Valide une date-heure de planification (présente et non passée).
+     *
+     * @param heureProg date-heure programmée
+     * @return message d'erreur si invalide, {@link Optional#empty()} si valide
      */
     public Optional<String> validerHeureProgrammee(LocalDateTime heureProg) {
         if (heureProg == null) {
@@ -49,6 +75,13 @@ public class VisioService {
         return Optional.empty();
     }
 
+    /**
+     * Valide nom de salon et horaire de planification conjointement.
+     *
+     * @param roomName  nom de salle
+     * @param heureProg date-heure programmée
+     * @return première erreur rencontrée, ou vide si tout est valide
+     */
     public Optional<String> validerPlanification(String roomName, LocalDateTime heureProg) {
         Optional<String> err = validerNomSalon(roomName);
         if (err.isPresent()) {
@@ -79,6 +112,17 @@ public class VisioService {
         return userId == info.createurId() || info.invite();
     }
 
+    /**
+     * Traite une demande de connexion à un salon et produit la réponse JSON WebSocket.
+     * <p>
+     * Crée un salon instantané en base si absent. Ouvre le salon si l'accès est autorisé.
+     * </p>
+     *
+     * @param roomName nom de salle (trimé si valide)
+     * @param userId   identifiant de l'utilisateur demandeur
+     * @param userName libellé utilisateur pour journalisation
+     * @return objet JSON {@code VISIO_TOKEN_RESPONSE} avec statut SUCCESS ou ERROR
+     */
     public JSONObject traiterDemandeConnexion(String roomName, int userId, String userName) {
         JSONObject reponse = new JSONObject();
 
@@ -123,6 +167,15 @@ public class VisioService {
         return reponse;
     }
 
+    /**
+     * Planifie une réunion avec liste d'invités.
+     *
+     * @param roomName   nom de salle
+     * @param createurId identifiant du créateur
+     * @param heureProg  date-heure de début
+     * @param idInvites  identifiants des invités
+     * @return {@code false} si validation échoue ; sinon résultat de la persistance DAO
+     */
     public boolean planifierNouvelleReunion(String roomName, int createurId, LocalDateTime heureProg, List<Integer> idInvites) {
         if (validerPlanification(roomName, heureProg).isPresent()) {
             return false;
@@ -137,6 +190,12 @@ public class VisioService {
         return ok;
     }
 
+    /**
+     * Liste les réunions accessibles à un utilisateur (créateur ou invité).
+     *
+     * @param userId identifiant utilisateur ; valeur {@code <= 0} renvoie une liste vide
+     * @return réunions disponibles après activation des planifiées éligibles
+     */
     public List<Visio> obtenirReunionsAccessibles(int userId) {
         if (userId <= 0) {
             return new ArrayList<>();
@@ -145,6 +204,15 @@ public class VisioService {
         return visioDAO.listerReunionsDisponibles(userId);
     }
 
+    /**
+     * Clôture un salon : suppression si instantané, passage terminé si planifié.
+     * <p>
+     * Seul le créateur peut clôturer. Opération sans effet si nom invalide ou non créateur.
+     * </p>
+     *
+     * @param roomName nom de salle
+     * @param userId   identifiant de l'utilisateur demandeur (doit être créateur)
+     */
     public void couperSalonDefinitif(String roomName, int userId) {
         Optional<String> errNom = validerNomSalon(roomName);
         if (errNom.isPresent() || !visioDAO.isCreateur(roomName.trim(), userId)) {

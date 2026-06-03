@@ -14,6 +14,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.PermissionService}.
+ * <p>
+ * Couvre lecture des permissions utilisateur, affectation et révocation par rôle, garde-fous SuperAdmin.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class PermissionServiceTest {
 

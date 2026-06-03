@@ -19,6 +19,13 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.DocumentService}.
+ * <p>
+ * Mocks : {@code DocumentDAO}, {@code ComposerDAO}, {@code PdfGeneratorService}.
+ * Fixtures document via {@link service.support.TestDataFactory}.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceTest {
 

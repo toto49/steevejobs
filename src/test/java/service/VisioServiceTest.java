@@ -23,6 +23,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.VisioService}.
+ * <p>
+ * Scénarios connexion salon, planification, listes et coupure définitive (instantané / planifié).
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class VisioServiceTest {
 

@@ -14,6 +14,13 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests unitaires du contrôleur de menu et des badges de notification.
+ * <p>
+ * Cycle de vie : toolkit JavaFX démarré en {@code @BeforeAll}.
+ * Fixtures : boutons avec icône SVG injectés sur le contrôleur.
+ * </p>
+ */
 class MenuControllerTest {
 
     @BeforeAll

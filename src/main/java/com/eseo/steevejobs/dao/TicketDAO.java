@@ -9,7 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object dédié aux opérations sur la table des tickets.
+ * Accès aux données de la table {@code TICKETS}.
+ * <p>
+ * Les lectures joignent {@code USER} (auteur) et calculent la date de dernière activité
+ * via une sous-requête sur {@code MESSAGES}. Le tri par activité utilise
+ * {@code COALESCE(dernière activité, date_ouverture)}.
+ * Chaque opération s'exécute en auto-commit ; les {@link SQLException} sont propagées.
+ * </p>
  */
 public class TicketDAO {
 
@@ -19,7 +25,13 @@ public class TicketDAO {
             "ORDER BY COALESCE(" + SQL_DERNIERE_ACTIVITE + ", t.date_ouverture) DESC";
 
     /**
-     * Créer un nouveau ticket
+     * Insère un ticket et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO TICKETS} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
+     *
+     * @param ticket ticket à persister ; l'identifiant est mis à jour après insertion
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public void createTicket(Ticket ticket) throws SQLException {
         String sql = "INSERT INTO TICKETS (sujet, description, service, statut, date_ouverture, id_auteur) VALUES (?, ?, ?, ?, ?, ?)";
@@ -45,7 +57,10 @@ public class TicketDAO {
     }
 
     /**
-     * Mettre à jour un ticket existant
+     * Met à jour un ticket existant.
+     *
+     * @param ticket ticket avec identifiant et champs modifiés
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public void updateTicket(Ticket ticket) throws SQLException {
         String sql = "UPDATE TICKETS SET sujet = ?, description = ?, service = ?, statut = ?, date_ouverture = ?, id_auteur = ? WHERE id_tickets = ?";
@@ -66,7 +81,11 @@ public class TicketDAO {
     }
 
     /**
-     * Supprimer un ticket par son ID
+     * Supprime un ticket par identifiant.
+     *
+     * @param id identifiant du ticket
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean deleteTicket(int id) throws SQLException {
         String sql = "DELETE FROM TICKETS WHERE id_tickets = ?";
@@ -82,7 +101,11 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer un ticket par son ID (Avec la date de dernière activité)
+     * Recherche un ticket par identifiant avec auteur et date de dernière activité.
+     *
+     * @param id identifiant du ticket
+     * @return ticket trouvé, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public Ticket getById(int id) throws SQLException {
         String sql = "SELECT t.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, " +
@@ -105,7 +128,11 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer tous les tickets d'un auteur (Triés par activité)
+     * Liste les tickets d'un auteur, triés par dernière activité décroissante.
+     *
+     * @param auteurId identifiant de l'auteur
+     * @return liste des tickets (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public List<Ticket> findByAuteurId(int auteurId) throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
@@ -130,7 +157,11 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer les tickets par statut (Triés par activité)
+     * Liste les tickets filtrés par statut, triés par dernière activité décroissante.
+     *
+     * @param statut statut recherché
+     * @return liste des tickets (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public List<Ticket> findByStatut(StatutTicket statut) throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
@@ -155,7 +186,10 @@ public class TicketDAO {
     }
 
     /**
-     * Récupérer tous les tickets (Triés par activité)
+     * Liste tous les tickets, triés par dernière activité décroissante.
+     *
+     * @return liste complète (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public List<Ticket> findAll() throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
@@ -177,7 +211,12 @@ public class TicketDAO {
     }
 
     /**
-     * Mettre à jour le statut d'un ticket
+     * Met à jour uniquement le statut d'un ticket.
+     *
+     * @param id     identifiant du ticket
+     * @param statut nouveau statut
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean updateStatut(int id, StatutTicket statut) throws SQLException {
         String sql = "UPDATE TICKETS SET statut = ? WHERE id_tickets = ?";
@@ -194,7 +233,10 @@ public class TicketDAO {
     }
 
     /**
-     * Compter le nombre total de tickets
+     * Compte le nombre total de tickets enregistrés.
+     *
+     * @return nombre de tickets ({@code 0} si la table est vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public int countTickets() throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS";
@@ -211,7 +253,11 @@ public class TicketDAO {
     }
 
     /**
-     * Compter le nombre de tickets par statut
+     * Compte le nombre de tickets pour un statut donné.
+     *
+     * @param statut statut recherché
+     * @return nombre de tickets ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public int countByStatut(StatutTicket statut) throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS WHERE statut = ?";
@@ -231,7 +277,11 @@ public class TicketDAO {
     }
 
     /**
-     * Compter le nombre de tickets par auteur
+     * Compte le nombre de tickets créés par un auteur.
+     *
+     * @param auteurId identifiant de l'auteur
+     * @return nombre de tickets ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public int countByAuteurId(int auteurId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS WHERE id_auteur = ?";
@@ -250,6 +300,17 @@ public class TicketDAO {
         return 0;
     }
 
+    /**
+     * Compte les tickets non lus par l'administrateur d'un service, hors tickets de l'utilisateur courant.
+     * <p>
+     * SQL : {@code COUNT} sur {@code non_lu_admin = 1}, filtré par service et auteur différent.
+     * </p>
+     *
+     * @param service       service concerné
+     * @param idCurrentUser identifiant de l'utilisateur courant (exclu du décompte)
+     * @return nombre de tickets non lus ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countTicketsNonLusAdmin(String service, int idCurrentUser) throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_admin = 1 AND service = ? AND id_auteur != ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -267,6 +328,13 @@ public class TicketDAO {
         return 0;
     }
 
+    /**
+     * Compte les tickets non lus par leur auteur.
+     *
+     * @param idAuteur identifiant de l'auteur
+     * @return nombre de tickets non lus ({@code 0} si aucun)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countTicketsNonLusAuteur(int idAuteur) throws SQLException {
         String sql = "SELECT COUNT(*) FROM TICKETS WHERE non_lu_auteur = 1 AND id_auteur = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -282,6 +350,16 @@ public class TicketDAO {
         return 0;
     }
 
+    /**
+     * Marque un ticket comme lu pour l'administrateur ou l'auteur.
+     * <p>
+     * SQL : {@code UPDATE TICKETS SET non_lu_admin/non_lu_auteur = 0} selon le rôle cible.
+     * </p>
+     *
+     * @param idTicket identifiant du ticket
+     * @param estAdmin {@code true} pour réinitialiser {@code non_lu_admin}, {@code false} pour {@code non_lu_auteur}
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public void marquerTicketLu(int idTicket, boolean estAdmin) throws SQLException {
         String colonne = estAdmin ? "non_lu_admin" : "non_lu_auteur";
         String sql = "UPDATE TICKETS SET " + colonne + " = 0 WHERE id_tickets = ?";
@@ -295,6 +373,16 @@ public class TicketDAO {
     }
 
 
+    /**
+     * Marque un ticket comme non lu pour l'administrateur ou l'auteur.
+     * <p>
+     * SQL : {@code UPDATE TICKETS SET non_lu_admin/non_lu_auteur = 1} selon la cible.
+     * </p>
+     *
+     * @param idTicket   identifiant du ticket
+     * @param cibleAdmin {@code true} pour positionner {@code non_lu_admin}, {@code false} pour {@code non_lu_auteur}
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public void marquerTicketNonLu(int idTicket, boolean cibleAdmin) throws SQLException {
         String colonne = cibleAdmin ? "non_lu_admin" : "non_lu_auteur";
         String sql = "UPDATE TICKETS SET " + colonne + " = 1 WHERE id_tickets = ?";

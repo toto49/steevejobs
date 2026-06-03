@@ -13,6 +13,12 @@ import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.ProduitDAO}.
+ * <p>
+ * Vérifie création, mise à jour de stock et recherche par nom.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class ProduitDAOTest {
 

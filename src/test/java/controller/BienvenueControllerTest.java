@@ -14,6 +14,13 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests unitaires du contrôleur de connexion {@link BienvenueController}.
+ * <p>
+ * Cycle de vie : {@code @BeforeAll} initialise JavaFX via {@link JavaFxTestSupport}.
+ * Fixtures : champs FXML injectés par réflexion ({@link ControllerFieldInjector}).
+ * </p>
+ */
 class BienvenueControllerTest {
 
     @BeforeAll

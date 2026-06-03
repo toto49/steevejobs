@@ -9,8 +9,17 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Implémentation JDBC de {@link PermissionDAO}.
+ * <p>
+ * Chaque opération s'exécute en auto-commit via {@link DatabaseConnection}.
+ * Les {@link SQLException} sont interceptées : un message est écrit sur {@code System.err}
+ * et une valeur par défaut est retournée (liste vide ou {@code false}), sans relancer l'exception.
+ * </p>
+ */
 public class PermissionDAOImpl implements PermissionDAO {
 
+    /** {@inheritDoc} */
     @Override
     public List<String> getPermissionCodesByUserId(int idUser) {
         List<String> permissions = new ArrayList<>();
@@ -32,6 +41,7 @@ public class PermissionDAOImpl implements PermissionDAO {
         return permissions;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean insertRolePermission(String nomRole, int idPermission) {
         String sql = "INSERT INTO ROLE_PERMISSION (nom_role, id_permission) VALUES (?, ?)";
@@ -46,6 +56,7 @@ public class PermissionDAOImpl implements PermissionDAO {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean deleteRolePermission(String nomRole, int idPermission) {
         String sql = "DELETE FROM ROLE_PERMISSION WHERE nom_role = ? AND id_permission = ?";
@@ -60,6 +71,7 @@ public class PermissionDAOImpl implements PermissionDAO {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean createPermission(String codeAction, String description) {
         String sql = "INSERT INTO PERMISSION (code_action, description) VALUES (?, ?)";
@@ -74,6 +86,7 @@ public class PermissionDAOImpl implements PermissionDAO {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public List<Permission> getAllPermissions() {
         List<Permission> list = new ArrayList<>();
@@ -93,6 +106,7 @@ public class PermissionDAOImpl implements PermissionDAO {
         return list;
     }
 
+    /** {@inheritDoc} */
     @Override
     public List<Integer> getPermissionIdsByRole(String nomRole) {
         List<Integer> list = new ArrayList<>();

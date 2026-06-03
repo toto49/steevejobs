@@ -10,6 +10,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests unitaires du pont UI WebSocket {@link com.eseo.steevejobs.service.WebSocketUiBridge}.
+ * <p>
+ * Cycle de vie : {@code @BeforeEach} récupère le singleton et purge les callbacks ticket et visio.
+ * </p>
+ */
 class WebSocketUiBridgeTest {
 
     private WebSocketUiBridge bridge;

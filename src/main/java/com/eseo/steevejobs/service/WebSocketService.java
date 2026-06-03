@@ -21,6 +21,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Client WebSocket singleton pour le client JavaFX (tickets, visio, notifications).
+ * <p>
+ * Effets de bord : connexion réseau persistante vers {@code WS_SERVER_IP}:{@code WS_SERVER_PORT}
+ * (fichier .env) ; enregistrement JWT via {@link SessionService} ; envoi de messages
+ * {@code NOTIFY} ; rafraîchissement UI via {@link WebSocketUiBridge} (debounce 300 ms) ;
+ * notifications bureau optionnelles si préférence activée. Désactivé en mode test
+ * ({@link com.eseo.steevejobs.util.TestRuntime}).
+ * </p>
+ */
 public class WebSocketService {
 
     private static volatile WebSocketService instance;
@@ -52,6 +62,11 @@ public class WebSocketService {
         }
     }
 
+    /**
+     * Retourne l'instance singleton du client WebSocket.
+     *
+     * @return instance partagée
+     */
     public static WebSocketService getInstance() {
         if (instance == null) {
             synchronized (WebSocketService.class) {
@@ -75,6 +90,11 @@ public class WebSocketService {
         return dotenvInstance;
     }
 
+    /**
+     * Envoie une charge JSON brute sur le socket si la connexion est ouverte.
+     *
+     * @param message payload texte (JSON attendu par le serveur)
+     */
     public void envoyerMessageBrut(String message) {
         if (TestRuntime.isEnabled()) {
             return;
@@ -90,6 +110,12 @@ public class WebSocketService {
         }
     }
 
+    /**
+     * Établit la connexion WebSocket et envoie le message {@code REGISTER} avec le JWT de session.
+     * <p>
+     * Planifie une reconnexion périodique tant que le service reste actif.
+     * </p>
+     */
     public void connecter() {
         if (TestRuntime.isEnabled()) {
             return;
@@ -275,6 +301,11 @@ public class WebSocketService {
         ).getBoolean("push_enabled", false);
     }
 
+    /**
+     * Ferme la connexion WebSocket et désactive les tentatives de reconnexion.
+     *
+     * @param onClosed callback exécuté après fermeture (peut être {@code null})
+     */
     public void deconnecter(Runnable onClosed) {
         try {
             serviceActive.set(false);
@@ -284,6 +315,13 @@ public class WebSocketService {
         if (onClosed != null) onClosed.run();
     }
 
+    /**
+     * Notifie plusieurs utilisateurs d'une mise à jour ticket via message {@code NOTIFY}.
+     *
+     * @param idsCibles  identifiants des destinataires
+     * @param idTicket   identifiant du ticket concerné
+     * @param typeCible  cible métier (ex. {@code AUTEUR}, {@code ADMIN})
+     */
     public void envoyerNotificationGroupée(List<Integer> idsCibles, int idTicket, String typeCible) {
         try {
             if (isConnected.get() && wsClient != null && wsClient.isOpen() && idsCibles != null && !idsCibles.isEmpty()) {
@@ -310,18 +348,41 @@ public class WebSocketService {
         }
     }
 
+    /**
+     * Notifie un seul utilisateur (wrapper sur {@link #envoyerNotificationGroupée}).
+     *
+     * @param idAuteurCible identifiant du destinataire
+     * @param idTicket      identifiant du ticket
+     * @param typeCible     type de cible pour l'UI
+     */
     public void envoyerNotification(int idAuteurCible, int idTicket, String typeCible) {
         envoyerNotificationGroupée(List.of(idAuteurCible), idTicket, typeCible);
     }
 
+    /**
+     * Marque un ticket comme non lu en mémoire locale (badge UI).
+     *
+     * @param idTicket identifiant du ticket
+     */
     public void ajouterTicketNonLu(int idTicket) {
         ticketsNonLus.add(idTicket);
     }
 
+    /**
+     * Retire un ticket de l'ensemble des non lus locaux.
+     *
+     * @param idTicket identifiant du ticket
+     */
     public void marquerCommeLu(int idTicket) {
         ticketsNonLus.remove(idTicket);
     }
 
+    /**
+     * Indique si un ticket est marqué non lu côté client.
+     *
+     * @param idTicket identifiant du ticket
+     * @return {@code true} si le ticket est dans l'ensemble des non lus
+     */
     public boolean isTicketNonLu(int idTicket) {
         return ticketsNonLus.contains(idTicket);
     }

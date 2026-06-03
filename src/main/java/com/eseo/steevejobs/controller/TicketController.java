@@ -24,6 +24,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Contrôleur FXML du détail d'un ticket (fil de messages).
+ * Liaisons FXML : {@code chatMessagesContainer}, {@code messageInput}, en-tête et statut.
+ */
 public class TicketController {
 
     private final TicketService ticketService = new TicketServiceImpl();
@@ -58,14 +62,27 @@ public class TicketController {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
 
+    /**
+     * Retourne l'instance active du chat ticket.
+     *
+     * @return contrôleur ouvert ou {@code null}
+     */
     public static TicketController getActiveInstance() {
         return activeInstance;
     }
 
+    /**
+     * Identifiant du ticket actuellement affiché.
+     *
+     * @return identifiant ticket ou {@code -1} si aucun chat actif
+     */
     public int getCurrentTicketId() {
         return viewingTicketId;
     }
 
+    /**
+     * Initialise l'utilisateur courant et le défilement automatique du fil de messages.
+     */
     @FXML
     public void initialize() {
         this.currentUser = SessionService.getUtilisateurConnecte();
@@ -77,6 +94,9 @@ public class TicketController {
         });
     }
 
+    /**
+     * Libère la session chat active (appelé lors d'un changement de page menu).
+     */
     public static void fermerChat() {
         if (activeInstance != null) {
             activeInstance.viewingTicketId = -1;
@@ -91,6 +111,9 @@ public class TicketController {
         activeInstance = null;
     }
 
+    /**
+     * Recharge le fil de messages sans indicateur de chargement (callback WebSocket).
+     */
     public void refreshChatSilently() {
         if (TestRuntime.isEnabled() || viewingTicketId <= 0) return;
         int ticketId = viewingTicketId;
@@ -155,6 +178,10 @@ public class TicketController {
         }
     }
 
+    /**
+     * Envoie le message saisi et notifie les destinataires via WebSocket.
+     * Liaison FXML : bouton d'envoi ou action Entrée sur {@code messageInput}.
+     */
     @FXML
     public void handleSendMessage() {
         String texte = messageInput.getText().trim();
@@ -227,6 +254,12 @@ public class TicketController {
         return messageWrapper;
     }
 
+    /**
+     * Bascule le statut du ticket entre ouvert et fermé.
+     * Liaison FXML : {@code actionButton}.
+     *
+     * @param actionEvent événement du bouton (non utilisé)
+     */
     @FXML
     public void handleToggleTicketStatus(ActionEvent actionEvent) {
         if (currentTicket == null) return;
@@ -277,6 +310,12 @@ public class TicketController {
         }
     }
 
+    /**
+     * Retourne à la liste des tickets (mes tickets ou filtre service selon le rôle).
+     * Liaison FXML : bouton retour.
+     *
+     * @param actionEvent événement du bouton (non utilisé)
+     */
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
         libererSessionChat();
@@ -322,6 +361,12 @@ public class TicketController {
         if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
     }
 
+    /**
+     * Charge un ticket par identifiant et affiche le fil de messages.
+     * Implémentation de {@link ParametrizedController#initData(String)} avec conversion entière.
+     *
+     * @param ticketId identifiant du ticket à ouvrir
+     */
     public void initData(int ticketId) {
         activeInstance = this;
         viewingTicketId = ticketId;

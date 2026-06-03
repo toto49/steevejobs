@@ -14,6 +14,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.PermissionDAOImpl}.
+ * <p>
+ * Vérifie association rôle-permission, lecture et suppression.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class PermissionDAOTest {
 

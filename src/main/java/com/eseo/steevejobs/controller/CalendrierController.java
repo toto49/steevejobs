@@ -40,11 +40,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Contrôleur FXML du calendrier hebdomadaire (employé ou RH selon la vue chargée).
+ * Liaisons FXML : labels de jours, boutons heures, {@code gridPlanning}, {@code comboEmploye} (vue RH).
+ * Gère le planning, les heures de travail et les demandes de congés.
+ */
 public class CalendrierController {
 
-    // --- STYLES ---
-    private static final String STYLE_ACTIF = "-fx-background-color: #e1f5fe; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20; -fx-background-radius: 20; -fx-font-size: 12; -fx-cursor: hand;";
-    private static final String STYLE_INACTIF = "-fx-background-color: #e0e0e0; -fx-text-fill: #a0a0a0; -fx-background-radius: 20; -fx-font-size: 12;";
+    private static final String STYLE_CLASSE_HEURES = "btn-mes-heures";
+    private static final String STYLE_CLASSE_HEURES_ACTIF = "btn-mes-heures-actif";
+    private static final String STYLE_CLASSE_HEURES_INACTIF = "btn-mes-heures-inactif";
     private static final int RECHERCHE_EMPLOYE_MIN_CHARS = 2;
     private static final int RECHERCHE_EMPLOYE_MAX_SUGGESTIONS = 8;
 
@@ -78,6 +83,12 @@ public class CalendrierController {
     // INITIALISATION
     // ==========================================
 
+    /**
+     * Initialise les services, la semaine courante et le sélecteur employé (vue RH).
+     * En mode test, sort sans charger les données.
+     *
+     * @throws SQLException si le chargement initial du planning échoue
+     */
     @FXML
     public void initialize() throws SQLException {
         planningService = new PlanningService();
@@ -119,6 +130,12 @@ public class CalendrierController {
         });
     }
 
+    /**
+     * Charge les événements de planning pour l'employé actuellement affiché.
+     *
+     * @return liste des plannings ; liste vide si aucun employé sélectionné
+     * @throws SQLException en cas d'erreur d'accès base de données
+     */
     public List<Planning> initEvent() throws SQLException {
         if (utilisateurAffiche == null) {
             return new ArrayList<>();
@@ -148,11 +165,19 @@ public class CalendrierController {
         comboEmploye.setItems(FXCollections.observableArrayList());
         comboEmploye.setPromptText("Nom, prénom ou email…");
         comboEmploye.setConverter(new StringConverter<>() {
+            /**
+             * @param user employé à afficher
+             * @return nom complet formaté
+             */
             @Override
             public String toString(User user) {
                 return formaterNomEmploye(user);
             }
 
+            /**
+             * @param string saisie utilisateur
+             * @return employé correspondant ou {@code null}
+             */
             @Override
             public User fromString(String string) {
                 if (string == null || string.isBlank()) {
@@ -330,13 +355,31 @@ public class CalendrierController {
         alert.showAndWait();
     }
 
+    /**
+     * Affiche la semaine suivante.
+     *
+     * @param e événement du bouton (non utilisé)
+     * @throws SQLException si le rafraîchissement du calendrier échoue
+     */
     public void nextWeek(ActionEvent e) throws SQLException {
         dateDebutSemaineAffichee = dateDebutSemaineAffichee.plusWeeks(1); rafraichirCalendrier();
     }
+
+    /**
+     * Affiche la semaine précédente.
+     *
+     * @param e événement du bouton (non utilisé)
+     * @throws SQLException si le rafraîchissement du calendrier échoue
+     */
     public void lastWeek(ActionEvent e) throws SQLException {
         dateDebutSemaineAffichee = dateDebutSemaineAffichee.minusWeeks(1); rafraichirCalendrier();
     }
 
+    /**
+     * Met à jour les en-têtes de jours, le libellé de semaine et les blocs d'événements.
+     *
+     * @throws SQLException si le rechargement des données est nécessaire et échoue
+     */
     @FXML
     public void rafraichirCalendrier() throws SQLException {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("EEEE dd MMMM", Locale.FRENCH);
@@ -349,14 +392,7 @@ public class CalendrierController {
             LocalDate dateJour = dateDebutSemaineAffichee.plusDays(i);
             labels[i].setText(dateJour.format(dtf).toUpperCase());
 
-            // Vérification : Futur
-            if (dateJour.isAfter(aujourdhui)) {
-                boutonsHeures[i].setDisable(true);
-                boutonsHeures[i].setStyle(STYLE_INACTIF);
-            } else {
-                boutonsHeures[i].setDisable(false);
-                boutonsHeures[i].setStyle(STYLE_ACTIF);
-            }
+            appliquerStyleBoutonHeures(boutonsHeures[i], dateJour.isAfter(aujourdhui));
         }
 
         DateTimeFormatter sf = DateTimeFormatter.ofPattern("dd MMMM", Locale.FRENCH);
@@ -365,10 +401,25 @@ public class CalendrierController {
         showEvent();
     }
 
+    private void appliquerStyleBoutonHeures(Button bouton, boolean desactive) {
+        bouton.getStyleClass().removeAll(STYLE_CLASSE_HEURES_ACTIF, STYLE_CLASSE_HEURES_INACTIF);
+        if (!bouton.getStyleClass().contains(STYLE_CLASSE_HEURES)) {
+            bouton.getStyleClass().add(STYLE_CLASSE_HEURES);
+        }
+        bouton.setDisable(desactive);
+        bouton.getStyleClass().add(desactive ? STYLE_CLASSE_HEURES_INACTIF : STYLE_CLASSE_HEURES_ACTIF);
+    }
+
     // ==========================================
     // GESTION DES HEURES DE TRAVAIL
     // ==========================================
 
+    /**
+     * Ouvre la popup de traitement des demandes de congés (vue RH uniquement).
+     * Liaison FXML : bouton « Demandes de congés ».
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void ouvrirPopupDemandesConge(ActionEvent event) {
         if (comboEmploye == null) {
@@ -416,6 +467,13 @@ public class CalendrierController {
         }
     }
 
+    /**
+     * Ouvre la popup de saisie ou consultation des heures pour le jour lié au bouton.
+     * Vérifie qu'un employé est sélectionné en vue RH. Mode lecture seule au-delà de 7 jours.
+     * Liaison FXML : boutons heures ({@code userData} = index du jour).
+     *
+     * @param event événement du bouton source
+     */
     @FXML
     public void ouvrirPopupHeures(ActionEvent event) {
         if (!employeRhSelectionne()) {
@@ -598,6 +656,9 @@ public class CalendrierController {
     // GESTION DE L'AFFICHAGE DES BLOCS PLANNING
     // ==========================================
 
+    /**
+     * Affiche les événements et demandes en attente dans la grille hebdomadaire.
+     */
     public void showEvent() {
         gridPlanning.getChildren().removeIf(node -> node.getStyleClass().contains("event-block"));
         LocalDate dateFinSemaine = dateDebutSemaineAffichee.plusDays(6);
@@ -742,6 +803,12 @@ public class CalendrierController {
     // ACTIONS ET FORMULAIRE (AJOUT / MODIF PLANNING)
     // ==========================================
 
+    /**
+     * Ouvre le formulaire d'ajout d'événement après vérification de la sélection employé (vue RH).
+     * Liaison FXML : bouton d'ajout.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void ouvrirPopupAjout(ActionEvent event) {
         if (!employeRhSelectionne()) {
@@ -750,6 +817,12 @@ public class CalendrierController {
         afficherFormulaire(null);
     }
 
+    /**
+     * Ouvre le formulaire de demande de congés pour l'employé connecté (vue employé uniquement).
+     * Liaison FXML : bouton « Demander des congés ».
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void ouvrirPopupDemandeConge(ActionEvent event) {
         if (!estCalendrierEmploye() || utilisateurConnecte == null) {

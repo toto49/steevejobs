@@ -26,6 +26,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.DemandeCongeService} avec DAO et planning mockés.
+ * <p>
+ * Cycle de vie : {@code @BeforeEach} instancie le service ; fixtures {@link service.support.TestDataFactory}.
+ * Couvre création, validation, refus, solde et suppression de congés validés.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class DemandeCongeServiceTest {
 

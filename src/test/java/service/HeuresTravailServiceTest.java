@@ -18,6 +18,12 @@ import java.time.LocalTime;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.HeuresTravailService} (délégation au DAO).
+ * <p>
+ * Mockito sur {@code HeuresTravailDAO} ; pas d'accès base réelle.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class HeuresTravailServiceTest {
 

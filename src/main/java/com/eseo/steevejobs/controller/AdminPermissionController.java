@@ -21,6 +21,11 @@ import javafx.util.Duration;
 
 import java.util.List;
 
+/**
+ * Contrôleur FXML de l'écran d'administration des permissions par rôle.
+ * Liaisons FXML : {@code roleComboBox}, {@code permissionsContainer}.
+ * Synchronise les permissions applicatives et affiche des interrupteurs par action.
+ */
 public class AdminPermissionController {
 
     @FXML
@@ -33,6 +38,10 @@ public class AdminPermissionController {
 
     private List<Permission> toutesLesPermissionsCache;
 
+    /**
+     * Initialise la liste des rôles, synchronise les permissions et charge le rôle ADMIN par défaut.
+     * Ne charge pas les données en mode test ({@link com.eseo.steevejobs.util.TestRuntime}).
+     */
     @FXML
     public void initialize() {
         this.permissionService = new PermissionService();
@@ -54,6 +63,11 @@ public class AdminPermissionController {
         chargerPermissionsPourRole("ADMIN");
     }
 
+    /**
+     * Charge et affiche les permissions associées au rôle sélectionné.
+     *
+     * @param nomRole identifiant du rôle ({@code ADMIN}, {@code RH}, {@code EMPLOYE})
+     */
     public void chargerPermissionsPourRole(String nomRole) {
         permissionsContainer.getChildren().clear();
         Label loadingLabel = new Label("Chargement des permissions...");

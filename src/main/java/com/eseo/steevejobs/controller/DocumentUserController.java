@@ -26,6 +26,10 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML de consultation des fiches de paie de l'employé connecté.
+ * Liaisons FXML : {@code tableFiches}, {@code btnOuvrirPdf}, {@code lblMessage}.
+ */
 public class DocumentUserController implements Initializable {
 
     private final FichePayeService fichePayeService = new FichePayeService();
@@ -41,6 +45,12 @@ public class DocumentUserController implements Initializable {
     private User utilisateurConnecte;
     private FichePaye ficheSelectionnee = null;
 
+    /**
+     * Charge les fiches de l'utilisateur en session et configure le tableau.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         utilisateurConnecte = SessionService.getUtilisateurConnecte();
@@ -56,6 +66,12 @@ public class DocumentUserController implements Initializable {
         colPeriode.setCellValueFactory(data -> new SimpleObjectProperty<>(data.getValue().getDate()));
 
         colPeriode.setCellFactory(col -> new TableCell<FichePaye, LocalDateTime>() {
+            /**
+             * Formate la période au format « Mois année » en français.
+             *
+             * @param item date de la fiche
+             * @param empty {@code true} si la cellule est vide
+             */
             @Override
             protected void updateItem(LocalDateTime item, boolean empty) {
                 super.updateItem(item, empty);

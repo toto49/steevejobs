@@ -24,6 +24,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.ComposerDAO} (lignes de document commercial).
+ * <p>
+ * Fixtures : document, produits et tiers insérés avec enregistrement {@link dao.support.DaoTestCleanup}.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class ComposerDAOTest {
 

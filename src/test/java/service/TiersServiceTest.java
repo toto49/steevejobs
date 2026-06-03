@@ -17,6 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.TiersService}.
+ * <p>
+ * Valide création, contrôles e-mail/SIRET et suppression avec identifiant invalide.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class TiersServiceTest {
 

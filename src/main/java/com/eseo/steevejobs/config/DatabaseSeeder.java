@@ -7,8 +7,17 @@ import com.eseo.steevejobs.service.UserService;
 
 import java.util.List;
 
+/**
+ * Script de peuplement initial de la base de données.
+ * Crée le compte administrateur par défaut et la permission {@code APP_ADMINPANEL_VIEW}.
+ */
 public class DatabaseSeeder {
 
+    /**
+     * Exécute le peuplement : utilisateur admin et permission d'administration.
+     *
+     * @param args arguments de la ligne de commande (non utilisés)
+     */
     public static void main(String[] args) {
         UserService userService = new UserService();
         PermissionService permissionService = new PermissionService();

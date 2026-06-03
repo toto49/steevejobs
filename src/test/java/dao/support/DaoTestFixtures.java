@@ -33,6 +33,12 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Fixtures d'insertion DAO avec e-mail unique et enregistrement automatique du nettoyage via {@link DaoTestCleanup}.
+ * <p>
+ * Chaque méthode {@code insert*} persiste une entité minimale et enregistre la suppression inverse pour {@link DaoIntegrationExtension}.
+ * </p>
+ */
 public final class DaoTestFixtures {
 
     private static final String EMAIL_PREFIX = "dao-test-";
@@ -40,10 +46,22 @@ public final class DaoTestFixtures {
     private DaoTestFixtures() {
     }
 
+    /**
+     * Génère une adresse e-mail unique préfixée pour éviter les collisions entre tests.
+     *
+     * @return adresse au format {@code dao-test-<uuid>@test.local}
+     */
     public static String uniqueEmail() {
         return EMAIL_PREFIX + UUID.randomUUID() + "@test.local";
     }
 
+    /**
+     * Insère un utilisateur employé de test et enregistre sa suppression.
+     *
+     * @param userDAO accès persistance utilisateur
+     * @return utilisateur créé avec identifiant renseigné
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static User insertUser(UserDAO userDAO) throws SQLException {
         User user = new User(
                 0,
@@ -63,6 +81,13 @@ public final class DaoTestFixtures {
         return user;
     }
 
+    /**
+     * Insère un produit catalogue de test et enregistre sa suppression.
+     *
+     * @param produitDAO accès persistance produit
+     * @return produit créé
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static Produit insertProduit(ProduitDAO produitDAO) throws SQLException {
         Produit produit = new Produit(
                 0,
@@ -80,6 +105,13 @@ public final class DaoTestFixtures {
         return produit;
     }
 
+    /**
+     * Insère un tiers client de test et enregistre sa suppression.
+     *
+     * @param tiersDAO accès persistance tiers
+     * @return tiers créé
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static Tiers insertTiers(TiersDAO tiersDAO) throws SQLException {
         Tiers tiers = new Tiers();
         tiers.setNom("Société DAO");
@@ -97,6 +129,14 @@ public final class DaoTestFixtures {
         return tiers;
     }
 
+    /**
+     * Insère un ticket en attente lié à un auteur et enregistre sa suppression.
+     *
+     * @param ticketDAO accès persistance ticket
+     * @param auteur    utilisateur auteur du ticket
+     * @return ticket créé
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static Ticket insertTicket(TicketDAO ticketDAO, User auteur) throws SQLException {
         Ticket ticket = new Ticket();
         ticket.setSujet("Sujet DAO");
@@ -111,6 +151,15 @@ public final class DaoTestFixtures {
         return ticket;
     }
 
+    /**
+     * Insère un message sur un ticket et enregistre sa suppression.
+     *
+     * @param messageDAO accès persistance message
+     * @param auteur     expéditeur
+     * @param ticket     ticket parent
+     * @return message créé
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static Message insertMessage(MessageDAO messageDAO, User auteur, Ticket ticket) throws SQLException {
         Message message = new Message();
         message.setContenu("Message DAO de test");
@@ -123,6 +172,14 @@ public final class DaoTestFixtures {
         return message;
     }
 
+    /**
+     * Insère un créneau de type congé pour un utilisateur et enregistre sa suppression.
+     *
+     * @param planningDAO accès persistance planning
+     * @param user        utilisateur associé
+     * @return planning créé
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static Planning insertPlanning(PlanningDAO planningDAO, User user) throws SQLException {
         Planning planning = new Planning();
         planning.setJourDebut(LocalDateTime.now().plusDays(1));
@@ -137,6 +194,14 @@ public final class DaoTestFixtures {
         return planning;
     }
 
+    /**
+     * Insère une demande de congé en attente et enregistre sa suppression.
+     *
+     * @param dao     accès persistance demande de congé
+     * @param employe demandeur
+     * @return demande créée
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static DemandeConge insertDemandeConge(com.eseo.steevejobs.dao.DemandeCongeDAO dao, User employe) throws SQLException {
         DemandeConge demande = new DemandeConge();
         demande.setJourDebut(LocalDateTime.now().plusDays(10));
@@ -151,6 +216,14 @@ public final class DaoTestFixtures {
         return demande;
     }
 
+    /**
+     * Insère une fiche de paie de test et enregistre sa suppression.
+     *
+     * @param dao     accès persistance fiche de paie
+     * @param employe salarié concerné
+     * @return fiche créée
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static FichePaye insertFichePaye(com.eseo.steevejobs.dao.FichePayeDAO dao, User employe) throws SQLException {
         FichePaye fiche = new FichePaye(0, LocalDateTime.now(), "https://dao.test/paie.pdf", employe);
         dao.createFichePaye(fiche);
@@ -159,6 +232,13 @@ public final class DaoTestFixtures {
         return fiche;
     }
 
+    /**
+     * Enregistre un salon de visioconférence instantané et planifie sa suppression.
+     *
+     * @param dao      accès persistance visio
+     * @param createur utilisateur créateur
+     * @return visio persistée
+     */
     public static Visio insertVisioInstant(com.eseo.steevejobs.dao.VisioDAO dao, User createur) {
         Visio visio = new Visio();
         visio.setRoom_name("dao-room-" + UUID.randomUUID());
@@ -171,6 +251,14 @@ public final class DaoTestFixtures {
         return visio;
     }
 
+    /**
+     * Planifie une réunion avec invités et enregistre la suppression SQL du salon.
+     *
+     * @param dao        accès persistance visio
+     * @param createur   organisateur
+     * @param inviteIds  identifiants des invités
+     * @return visio planifiée
+     */
     public static Visio insertVisioPlanifie(com.eseo.steevejobs.dao.VisioDAO dao, User createur, List<Integer> inviteIds) {
         Visio visio = new Visio("dao-planif-" + UUID.randomUUID(), createur.getId(), LocalDateTime.now().plusDays(3));
         dao.planifierReunion(visio, inviteIds);
@@ -185,6 +273,14 @@ public final class DaoTestFixtures {
         return visio;
     }
 
+    /**
+     * Sauvegarde une journée type de pointage et enregistre la suppression par utilisateur et date.
+     *
+     * @param dao  accès persistance heures de travail
+     * @param user salarié
+     * @param date jour concerné
+     * @throws SQLException en cas d'échec d'insertion
+     */
     public static void insertHeuresTravail(com.eseo.steevejobs.dao.HeuresTravailDAO dao, User user, LocalDate date) throws SQLException {
         dao.sauvegarder(user.getId(), date, LocalTime.of(9, 0), LocalTime.of(12, 0),
                 LocalTime.of(14, 0), LocalTime.of(17, 0), LocalTime.of(6, 0));
@@ -200,6 +296,13 @@ public final class DaoTestFixtures {
         });
     }
 
+    /**
+     * Crée une permission éphémère, l'associe au rôle et enregistre le retrait complet.
+     *
+     * @param dao  implémentation DAO des permissions
+     * @param role nom du rôle cible
+     * @return identifiant de la permission créée
+     */
     public static int insertPermission(com.eseo.steevejobs.dao.PermissionDAOImpl dao, String role) {
         String code = "DAO_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         dao.createPermission(code, "Permission test DAO");

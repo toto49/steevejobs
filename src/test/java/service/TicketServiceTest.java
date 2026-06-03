@@ -22,6 +22,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.TicketServiceImpl}.
+ * <p>
+ * Mocks ticket et message ; vérifie cycle de vie ticket, messages et formatage de date.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
 

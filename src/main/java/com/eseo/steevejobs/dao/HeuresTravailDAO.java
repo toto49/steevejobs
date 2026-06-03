@@ -7,8 +7,32 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+/**
+ * Accès aux données de la table {@code HEURES_TRAVAIL}.
+ * <p>
+ * Les lectures joignent {@code USER} pour hydrater l'employé.
+ * L'enregistrement utilise {@code INSERT ... ON DUPLICATE KEY UPDATE} (clé unique employé/date).
+ * Chaque opération s'exécute en auto-commit ; les {@link SQLException} sont propagées.
+ * </p>
+ */
 public class HeuresTravailDAO {
 
+    /**
+     * Enregistre ou met à jour les heures de travail d'un employé pour une date donnée.
+     * <p>
+     * SQL : upsert sur {@code (id_user, date_jour)} ; les horaires {@code null} sont stockés en SQL NULL.
+     * </p>
+     *
+     * @param idUser  identifiant de l'employé
+     * @param dateJour date du relevé
+     * @param debutM   heure de début matin (nullable)
+     * @param finM     heure de fin matin (nullable)
+     * @param debutA   heure de début après-midi (nullable)
+     * @param finA     heure de fin après-midi (nullable)
+     * @param total    total d'heures calculé (nullable)
+     * @return {@code true} si l'upsert a affecté au moins une ligne
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean sauvegarder(int idUser, LocalDate dateJour, LocalTime debutM, LocalTime finM,
                                LocalTime debutA, LocalTime finA, LocalTime total) throws SQLException {
         String sql = "INSERT INTO HEURES_TRAVAIL (id_user, date_jour, heure_debut_matin, heure_fin_matin, " +
@@ -36,6 +60,18 @@ public class HeuresTravailDAO {
         }
     }
 
+    /**
+     * Récupère les heures enregistrées pour un employé et une date.
+     * <p>
+     * SQL : {@code SELECT} sur {@code HEURES_TRAVAIL} avec jointure {@code USER},
+     * filtré par {@code id_user} et {@code date_jour}.
+     * </p>
+     *
+     * @param idUser   identifiant de l'employé
+     * @param dateJour date recherchée
+     * @return relevé trouvé, ou {@code null} si aucune saisie pour cette date
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public HeuresTravail getHeuresParDate(int idUser, LocalDate dateJour) throws SQLException {
         String sql = "SELECT h.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif " +
                 "FROM HEURES_TRAVAIL h " +

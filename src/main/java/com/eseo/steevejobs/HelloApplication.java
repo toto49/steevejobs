@@ -24,7 +24,11 @@ import javafx.stage.StageStyle;
 import java.io.IOException;
 import java.util.Objects;
 
-
+/**
+ * Application JavaFX principale SteeveJobs.
+ * Gère la fenêtre sans bordure (header personnalisé), la navigation globale
+ * via {@link #changerPageGlobale} et le redimensionnement par les bords.
+ */
 public class HelloApplication extends Application {
 
     private static Label lblTitreHeader;
@@ -36,10 +40,20 @@ public class HelloApplication extends Application {
     private boolean isMaximized = false;
     private double savedX, savedY, savedWidth, savedHeight;
 
+    /**
+     * Point d'entrée JavaFX de l'application.
+     *
+     * @param args arguments de la ligne de commande
+     */
     public static void main(String[] args) {
         launch(args);
     }
 
+    /**
+     * Met à jour le titre affiché dans le header et la barre système.
+     *
+     * @param nouveauTitre suffixe du titre (préfixé par « SteeveJobs - »)
+     */
     public static void changerTitreGlobal(String nouveauTitre) {
         String titreComplet = "SteeveJobs - " + nouveauTitre;
         if (lblTitreHeader != null) {
@@ -50,6 +64,13 @@ public class HelloApplication extends Application {
         }
     }
 
+    /**
+     * Remplace la vue centrale et met à jour le titre global.
+     * Utilisé par la navigation post-connexion et la déconnexion.
+     *
+     * @param nouvelleVue contenu à afficher sous le header
+     * @param nouveauTitre titre associé à la page
+     */
     public static void changerPageGlobale(Parent nouvelleVue, String nouveauTitre) {
         VBox.setVgrow(nouvelleVue, Priority.ALWAYS);
         if (rootGlobal != null && rootGlobal.getChildren().size() > 1) {
@@ -58,6 +79,12 @@ public class HelloApplication extends Application {
         changerTitreGlobal(nouveauTitre);
     }
 
+    /**
+     * Initialise la scène principale : thème, header, vue de bienvenue, icône et affichage.
+     *
+     * @param stage fenêtre principale
+     * @throws IOException si le chargement FXML {@code bienvenue-view.fxml} échoue
+     */
     @Override
     public void start(Stage stage) throws IOException {
         mainStage = stage;
@@ -209,6 +236,7 @@ public class HelloApplication extends Application {
 
             double mouseX = event.getScreenX();
             double mouseY = event.getScreenY();
+            // Snap vers le haut : maximisation plein écran de l'écran courant
             if (mouseY <= bounds.getMinY() + 5) {
                 if (!isMaximized) {
                     saveWindowBounds(stage);
@@ -219,6 +247,7 @@ public class HelloApplication extends Application {
                     isMaximized = true;
                     appliquerArrondis(false);
                 }
+            // Snap vers la gauche : moitié gauche de l'écran
             } else if (mouseX <= bounds.getMinX() + 5) {
                 saveWindowBounds(stage);
                 stage.setX(bounds.getMinX());
@@ -227,6 +256,7 @@ public class HelloApplication extends Application {
                 stage.setHeight(bounds.getHeight());
                 isMaximized = false;
                 appliquerArrondis(false);
+            // Snap vers la droite : moitié droite de l'écran
             } else if (mouseX >= bounds.getMaxX() - 5) {
                 saveWindowBounds(stage);
                 stage.setX(bounds.getMinX() + (bounds.getWidth() / 2));
@@ -273,7 +303,16 @@ public class HelloApplication extends Application {
     }
 
 
+    /**
+     * Utilitaire de redimensionnement par les bords de la fenêtre sans bordure.
+     */
     public static class ResizeHelper {
+
+        /**
+         * Attache les gestionnaires de souris permettant le redimensionnement sur les bords de la scène.
+         *
+         * @param stage fenêtre à redimensionner
+         */
         public static void addResizeListener(Stage stage) {
             ResizeListener resizeListener = new ResizeListener(stage);
             stage.getScene().addEventHandler(javafx.scene.input.MouseEvent.MOUSE_MOVED, resizeListener);
@@ -281,16 +320,29 @@ public class HelloApplication extends Application {
             stage.getScene().addEventHandler(javafx.scene.input.MouseEvent.MOUSE_DRAGGED, resizeListener);
         }
 
+        /**
+         * Écouteur de redimensionnement par les bords de la scène.
+         */
         private static class ResizeListener implements javafx.event.EventHandler<javafx.scene.input.MouseEvent> {
             private final Stage stage;
             private final int border = 5;
             private javafx.scene.Cursor cursorEvent = javafx.scene.Cursor.DEFAULT;
             private double startX = 0, startY = 0;
 
+            /**
+             * Crée l'écouteur de redimensionnement pour la fenêtre donnée.
+             *
+             * @param stage fenêtre cible
+             */
             public ResizeListener(Stage stage) {
                 this.stage = stage;
             }
 
+            /**
+             * Gère le curseur, la capture et le redimensionnement selon la position du pointeur.
+             *
+             * @param mouseEvent événement souris (MOUSE_MOVED, MOUSE_PRESSED ou MOUSE_DRAGGED)
+             */
             @Override
             public void handle(javafx.scene.input.MouseEvent mouseEvent) {
                 javafx.event.EventType<? extends javafx.scene.input.MouseEvent> mouseEventType = mouseEvent.getEventType();

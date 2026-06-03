@@ -36,6 +36,10 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML de gestion RH des fiches de paie (génération, filtres, PDF, NAS).
+ * Liaisons FXML : {@code tableFiches}, filtres employé/année, actions par ligne.
+ */
 public class FichePayeController implements Initializable {
 
     @FXML private ComboBox<User> comboEmployeFiltre;
@@ -54,6 +58,12 @@ public class FichePayeController implements Initializable {
 
     private static final DateTimeFormatter FMT_MOIS = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH);
 
+    /**
+     * Configure les colonnes, les filtres et charge l'ensemble des fiches.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerColonnes();
@@ -102,6 +112,12 @@ public class FichePayeController implements Initializable {
                 colActions.prefWidthProperty().bind(tableFiches.widthProperty().multiply(0.10));
             }
 
+            /**
+             * Affiche les boutons ouvrir/supprimer sur chaque ligne.
+             *
+             * @param item non utilisé
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);

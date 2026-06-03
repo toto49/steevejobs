@@ -17,6 +17,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.MessageDAO} liés aux tickets.
+ * <p>
+ * Chaîne de fixtures : utilisateur, ticket, message avec nettoyage automatique.
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class MessageDAOTest {
 

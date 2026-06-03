@@ -8,33 +8,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object (DAO) dédié à la gestion des produits.
- *
- * Rôle :
- * - Centraliser TOUT l'accès à la base de données pour les produits
- * - Isoler le SQL du reste de l'application
- *
- * Contient toutes les opérations CRUD :
- * - CREATE  : insertion d'un produit
- * - READ    : lecture d'un ou plusieurs produits
- * - UPDATE  : mise à jour des informations ou du stock
- * - DELETE  : suppression d'un produit
- *
- * Cette classe NE CONTIENT PAS de logique métier.
- * Toute règle métier (stock >= 0, validations, etc.) est gérée par le Service.
+ * Accès aux données de la table {@code PRODUITS}.
+ * <p>
+ * Centralise les opérations CRUD et les requêtes de stock. Aucune règle métier
+ * n'est appliquée ici (validations déléguées à la couche service).
+ * Chaque opération s'exécute en auto-commit ; les {@link SQLException} sont propagées.
+ * </p>
  */
 public class ProduitDAO {
 
     /**
-     * Crée un nouveau produit dans la base de données.
+     * Crée un produit et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO PRODUITS} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
      *
-     * - Insère le produit
-     * - Récupère la clé générée (ID)
-     * - Met à jour l'objet Produit passé en paramètre
-     *
-     * @param produit le produit à créer
-     * @return true si l'insertion a réussi
-     * @throws SQLException en cas d'erreur SQL
+     * @param produit produit à persister ; l'identifiant est mis à jour après insertion
+     * @return {@code true} si l'insertion a réussi
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean createProduit(Produit produit) throws SQLException {
         String sql = "INSERT INTO PRODUITS (nom, prix_unitaire, taux_tva, quantite, poids, actif, seuil_alerte) " +
@@ -175,6 +166,15 @@ public class ProduitDAO {
         }
         return produits;
     }
+    /**
+     * Récupère les produits actifs triés par nom.
+     * <p>
+     * SQL : {@code SELECT * FROM PRODUITS WHERE actif = 1 ORDER BY nom}.
+     * </p>
+     *
+     * @return liste des produits actifs (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<Produit> findAllActive() throws SQLException {
         List<Produit> produits = new ArrayList<>();
         String sql = "SELECT * FROM PRODUITS WHERE actif = 1 ORDER BY nom";
@@ -275,15 +275,16 @@ public class ProduitDAO {
     }
 
     /**
-     *
-     * - Applique une variation (+/-)
-     * - Empêche le stock négatif directement en SQL
-     * - Évite les problèmes de concurrence
+     * Applique une variation de stock en empêchant le stock négatif côté SQL.
+     * <p>
+     * SQL : {@code UPDATE PRODUITS SET quantite = quantite + ?}
+     * avec condition {@code (quantite + ?) >= 0} pour garantir l'atomicité.
+     * </p>
      *
      * @param idProduit identifiant du produit
-     * @param variation variation de stock
-     * @return true si la mise à jour a réussi
-     * @throws SQLException en cas d'erreur SQL
+     * @param variation variation à appliquer (positive ou négative)
+     * @return {@code true} si la mise à jour a réussi
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean updateStockByVariation(int idProduit, int variation) throws SQLException {
         String sql =
@@ -301,6 +302,14 @@ public class ProduitDAO {
         }
     }
 
+    /**
+     * Met à jour le poids d'un produit.
+     *
+     * @param id    identifiant du produit
+     * @param poids nouveau poids
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean updatePoids(int id, BigDecimal poids) throws SQLException {
         String sql = "UPDATE PRODUITS SET poids = ? WHERE id_produits = ?";
         try (Connection conn = DatabaseConnection.getConnection();

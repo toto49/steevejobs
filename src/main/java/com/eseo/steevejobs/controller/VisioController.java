@@ -39,6 +39,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.IntConsumer;
 
+/**
+ * Contrôleur FXML de la visioconférence (connexion, planification, listes de réunions).
+ * Liaisons FXML : champs salon, planification, tableaux actifs/archives, recherche d'invités.
+ * Communique avec le NAS via {@link WebSocketService} (tokens LiveKit, planification, suppression).
+ */
 public class VisioController {
 
     private static final DateTimeFormatter DATE_HEURE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -107,6 +112,11 @@ public class VisioController {
     @FXML
     private FlowPane flowPaneInvitesBadges;
 
+    /**
+     * Retourne l'instance active du contrôleur visio.
+     *
+     * @return contrôleur courant ou {@code null}
+     */
     public static VisioController getActiveInstance() {
         return activeInstance;
     }
@@ -118,6 +128,10 @@ public class VisioController {
         return dotenv;
     }
 
+    /**
+     * Initialise composants, callbacks WebSocket et charge la liste des réunions.
+     * Ne charge pas les données en mode test.
+     */
     @FXML
     public void initialize() {
         activeInstance = this;
@@ -138,6 +152,9 @@ public class VisioController {
         rafraichirListeReunions();
     }
 
+    /**
+     * Libère les callbacks WebSocket et l'état de connexion lors d'un changement de page.
+     */
     public void couperController() {
         attenteTokenVisio = false;
         roomNameEnAttente = "";
@@ -148,16 +165,26 @@ public class VisioController {
 
     private void enregistrerCallbacksWebSocket() {
         WebSocketUiBridge.getInstance().setVisioCallbacks(new WebSocketUiBridge.VisioCallbacks() {
+            /**
+             * @param token jeton LiveKit
+             * @param roomName nom de la salle
+             */
             @Override
             public void onTokenSuccess(String token, String roomName) {
                 recevoirTokenEtLancer(token, roomName);
             }
 
+            /**
+             * @param message message serveur (succès ou erreur)
+             */
             @Override
             public void onVisioMessage(String message) {
                 recevoirErreurVisio(message);
             }
 
+            /**
+             * @param reunions liste JSON des réunions
+             */
             @Override
             public void onReunionsList(JSONArray reunions) {
                 if (reunions != null) {
@@ -165,11 +192,15 @@ public class VisioController {
                 }
             }
 
+            /**
+             * @param message retour de suppression de salon
+             */
             @Override
             public void onSalonDeleted(String message) {
                 recevoirSuppressionSalon(message);
             }
 
+            /** Demande un rechargement de la liste des réunions. */
             @Override
             public void onRefreshReunionsRequested() {
                 rafraichirListeReunions();
@@ -314,6 +345,12 @@ public class VisioController {
                 });
             }
 
+            /**
+             * Affiche le bouton de suppression si l'utilisateur est créateur du salon.
+             *
+             * @param item non utilisé
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -390,6 +427,11 @@ public class VisioController {
         afficherStatut("Suppression du salon en cours...", false);
     }
 
+    /**
+     * Affiche le retour serveur après une demande de suppression de salon.
+     *
+     * @param message message de succès ou d'erreur renvoyé par le serveur
+     */
     public void recevoirSuppressionSalon(String message) {
         Platform.runLater(() -> {
             boolean succes = message != null && message.startsWith("✅");
@@ -813,12 +855,21 @@ public class VisioController {
         menuSuggestions.hide();
     }
 
+    /**
+     * Demande au serveur la liste des réunions de l'utilisateur connecté.
+     */
     public void rafraichirListeReunions() {
         JSONObject msg = new JSONObject();
         msg.put("type", TYPE_GET_MY_VISIOS);
         WebSocketService.getInstance().envoyerMessageBrut(msg.toString());
     }
 
+    /**
+     * Reçoit un token JWT LiveKit et ouvre l'URL de visio dans le navigateur système.
+     *
+     * @param tokenJWT jeton d'accès à la salle
+     * @param roomNameServeur nom de salle renvoyé par le serveur (secours si attente locale vide)
+     */
     public void recevoirTokenEtLancer(String tokenJWT, String roomNameServeur) {
         if (!attenteTokenVisio) {
             return;
@@ -879,6 +930,11 @@ public class VisioController {
         pb.start();
     }
 
+    /**
+     * Traite les messages de retour visio (succès planification ou erreur connexion).
+     *
+     * @param messageErreur message serveur ; préfixe {@code ✅} pour succès
+     */
     public void recevoirErreurVisio(String messageErreur) {
         attenteTokenVisio = false;
 
@@ -894,6 +950,11 @@ public class VisioController {
         });
     }
 
+    /**
+     * Met à jour les tableaux actifs et archives à partir de la réponse WebSocket.
+     *
+     * @param reunionsJson tableau JSON des réunions
+     */
     public void recevoirListeReunions(JSONArray reunionsJson) {
         Platform.runLater(() -> {
             listeToutesReunions.clear();
@@ -993,11 +1054,19 @@ public class VisioController {
         spinner.setEditable(true);
 
         spinner.getValueFactory().setConverter(new StringConverter<>() {
+            /**
+             * @param value valeur du spinner
+             * @return représentation sur deux chiffres
+             */
             @Override
             public String toString(Integer value) {
                 return value == null ? "" : String.format("%02d", value);
             }
 
+            /**
+             * @param string saisie utilisateur
+             * @return entier extrait ou {@code null}
+             */
             @Override
             public Integer fromString(String string) {
                 if (string == null || string.isBlank()) {

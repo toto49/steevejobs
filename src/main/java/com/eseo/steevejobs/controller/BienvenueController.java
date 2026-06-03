@@ -19,6 +19,11 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 
+/**
+ * Contrôleur FXML de la page de connexion ({@code bienvenue-view.fxml}).
+ * Liaisons FXML : {@code mail_connexion}, {@code mdp_connexion}, {@code save_connexion}, {@code errror_connexion}.
+ * Navigation post-authentification vers {@code menu-view.fxml} via {@link HelloApplication#changerPageGlobale}.
+ */
 public class BienvenueController {
 
     @FXML
@@ -36,6 +41,9 @@ public class BienvenueController {
     @FXML
     private CheckBox save_connexion;
 
+    /**
+     * Préremplit l'email sauvegardé et lie la touche Entrée du mot de passe à la connexion.
+     */
     @FXML
     public void initialize() {
         if (prefService.hasEmailSauvegarde()) {
@@ -45,6 +53,12 @@ public class BienvenueController {
         mdp_connexion.setOnAction(event -> onLoginClick(null));
     }
 
+    /**
+     * Ouvre une popup de réinitialisation de mot de passe par email.
+     * Liaison FXML : action du lien « mot de passe oublié ».
+     *
+     * @param actionEvent événement du bouton ou lien (non utilisé)
+     */
     @FXML
     public void mdpOublieClicked(ActionEvent actionEvent) {
         Label message = new Label("Entrez votre adresse mail de récupération :");
@@ -118,6 +132,13 @@ public class BienvenueController {
         });
     }
 
+    /**
+     * Authentifie l'utilisateur, ouvre la session JWT/WebSocket et navigue vers le menu principal.
+     * Liaison FXML : bouton de connexion et action Entrée sur le champ mot de passe.
+     *
+     * @param actionEvent événement du bouton (peut être {@code null} lors d'un déclenchement clavier)
+     * @throws SecurityException propagée si le compte est verrouillé ou inactif
+     */
     @FXML
     protected void onLoginClick(ActionEvent actionEvent) {
         String mail = mail_connexion.getText();

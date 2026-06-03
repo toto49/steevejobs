@@ -7,6 +7,12 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests unitaires des utilitaires de calcul de congés {@link com.eseo.steevejobs.service.CongeUtil}.
+ * <p>
+ * Aucune dépendance externe ; validation des types de congé et du décompte de jours ouvrés sur période.
+ * </p>
+ */
 class CongeUtilTest {
 
     @Test

@@ -16,6 +16,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Contrôleur FXML de la popup de gestion des demandes de congés (vue RH).
+ * Liaisons FXML : {@code tableDemandes}, filtres, panneau de détail et boutons d'action.
+ */
 public class DemandesCongeController {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -65,6 +69,9 @@ public class DemandesCongeController {
     @FXML
     private Button btnRefuser;
 
+    /**
+     * Initialise filtres, colonnes du tableau et charge les demandes.
+     */
     @FXML
     public void initialize() {
         comboFiltreStatut.setItems(FXCollections.observableArrayList(
@@ -84,6 +91,11 @@ public class DemandesCongeController {
         chargerDemandes();
     }
 
+    /**
+     * Enregistre un callback appelé après validation, refus, modification ou suppression.
+     *
+     * @param onDemandeTraitee action à exécuter (ex. rafraîchir le calendrier parent)
+     */
     public void setOnDemandeTraitee(Runnable onDemandeTraitee) {
         this.onDemandeTraitee = onDemandeTraitee;
     }
@@ -107,6 +119,10 @@ public class DemandesCongeController {
         colStatut.setCellValueFactory(data -> new SimpleStringProperty(formatStatut(data.getValue().getStatut())));
     }
 
+    /**
+     * Applique le filtre de statut sélectionné sur le tableau.
+     * Liaison FXML : {@code comboFiltreStatut}.
+     */
     @FXML
     public void filtrerDemandes() {
         if (toutesLesDemandes == null) {
@@ -124,6 +140,10 @@ public class DemandesCongeController {
         }
     }
 
+    /**
+     * Valide la demande sélectionnée (statut en attente) et met à jour le planning.
+     * Liaison FXML : {@code btnValider}.
+     */
     @FXML
     public void validerDemande() {
         if (!verifierSelectionEnAttente()) {
@@ -146,6 +166,10 @@ public class DemandesCongeController {
         }
     }
 
+    /**
+     * Refuse la demande sélectionnée (statut en attente).
+     * Liaison FXML : {@code btnRefuser}.
+     */
     @FXML
     public void refuserDemande() {
         if (!verifierSelectionEnAttente()) {
@@ -163,6 +187,10 @@ public class DemandesCongeController {
         }
     }
 
+    /**
+     * Enregistre les dates modifiées d'une demande déjà validée.
+     * Liaison FXML : {@code btnModifier}.
+     */
     @FXML
     public void enregistrerModifications() {
         if (demandeSelectionnee == null) {
@@ -191,6 +219,10 @@ public class DemandesCongeController {
         }
     }
 
+    /**
+     * Supprime des congés validés et les retire du planning après confirmation.
+     * Liaison FXML : {@code btnSupprimer}.
+     */
     @FXML
     public void supprimerConge() {
         if (demandeSelectionnee == null) {

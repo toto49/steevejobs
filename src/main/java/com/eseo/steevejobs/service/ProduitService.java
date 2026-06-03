@@ -7,20 +7,42 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
+/**
+ * Gestion du catalogue produits et des stocks (quantité ou poids selon le produit).
+ * <p>
+ * Règles métier : prix et nom obligatoires ; stock non négatif ;
+ * produits « vrac » gérés par poids ({@code poid} non null), les autres par quantité entière.
+ * Aucun effet de bord réseau.
+ * </p>
+ */
 public class ProduitService {
 
     private final ProduitDAO produitDAO;
 
-    // Constructeur par défaut (utilisé par les controllers)
+    /**
+     * Constructeur par défaut.
+     */
     public ProduitService() {
         this.produitDAO = new ProduitDAO();
     }
 
-    // Constructeur avec injection (utilisé pour les tests)
+    /**
+     * Constructeur avec injection du DAO (tests).
+     *
+     * @param produitDAO accès persistance produits
+     */
     public ProduitService(ProduitDAO produitDAO) {
         this.produitDAO = produitDAO;
     }
 
+    /**
+     * Ajoute un produit au catalogue après validation.
+     *
+     * @param produit entité produit
+     * @throws IllegalArgumentException si les données sont invalides
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si l'insertion échoue
+     */
     public void ajouterProduit(Produit produit) throws IllegalArgumentException, SQLException {
         validerProduit(produit);
 
@@ -30,6 +52,14 @@ public class ProduitService {
         }
     }
 
+    /**
+     * Met à jour un produit existant.
+     *
+     * @param produit produit avec identifiant valide
+     * @throws IllegalArgumentException si données invalides
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour échoue
+     */
     public void modifierProduit(Produit produit) throws IllegalArgumentException, SQLException {
         if (produit == null) {
             throw new IllegalArgumentException("Les données du produit sont vides.");
@@ -46,6 +76,14 @@ public class ProduitService {
         }
     }
 
+    /**
+     * Supprime un produit du catalogue.
+     *
+     * @param idProduit identifiant produit
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si suppression impossible (liaisons documents)
+     */
     public void supprimerProduit(int idProduit) throws SQLException {
         if (idProduit <= 0) {
             throw new IllegalArgumentException("L'ID du produit est invalide.");
@@ -57,6 +95,15 @@ public class ProduitService {
         }
     }
 
+    /**
+     * Applique une variation absolue sur le stock en quantité.
+     *
+     * @param idProduit identifiant produit
+     * @param variation delta (positif ou négatif)
+     * @throws IllegalArgumentException si produit introuvable ou stock négatif résultant
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour échoue
+     */
     public void mettreAJourStock(int idProduit, int variation) throws IllegalArgumentException, SQLException {
         if (idProduit <= 0) {
             throw new IllegalArgumentException("L'ID du produit est invalide.");
@@ -79,6 +126,16 @@ public class ProduitService {
         }
     }
 
+    /**
+     * Met à jour le stock selon le mode du produit (poids ou quantité).
+     *
+     * @param idProduit          identifiant produit
+     * @param variationQuantite  delta quantité (produits unitaires)
+     * @param variationPoids     delta poids (produits vrac)
+     * @throws IllegalArgumentException si le type de variation ne correspond pas au produit
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour échoue
+     */
     public void mettreAJourStockAuto(
             int idProduit,
             Integer variationQuantite,
@@ -138,21 +195,46 @@ public class ProduitService {
         }
     }
 
+    /**
+     * Liste tous les produits (actifs et inactifs selon le DAO).
+     *
+     * @return catalogue complet
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<Produit> obtenirTousLesProduits() throws SQLException {
         return produitDAO.findAll();
     }
 
+    /**
+     * Liste les produits actifs uniquement.
+     *
+     * @return produits actifs
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<Produit> findAllActive() throws SQLException {
         return produitDAO.findAllActive();
     }
 
-    /** Recherche par nom (barre de recherche de la page Stock) */
+    /**
+     * Recherche par nom (barre de recherche page Stock).
+     *
+     * @param term fragment de nom ; {@code null} traité comme chaîne vide
+     * @return produits correspondants
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<Produit> rechercherProduitsParNom(String term) throws SQLException {
         if (term == null) term = "";
         return produitDAO.searchByNom(term.trim());
     }
 
-    /** Liste des produits dont le stock ≤ seuil */
+    /**
+     * Liste les produits dont le stock est inférieur ou égal au seuil.
+     *
+     * @param seuil seuil d'alerte (≥ 0)
+     * @return produits en stock bas
+     * @throws IllegalArgumentException si le seuil est négatif
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public List<Produit> obtenirProduitsStockBas(int seuil) throws SQLException {
         if (seuil < 0) {
             throw new IllegalArgumentException("Le seuil ne peut pas être négatif.");
@@ -160,7 +242,14 @@ public class ProduitService {
         return produitDAO.findProduitsWithLowStock(seuil);
     }
 
-    /** Optionnel : utile pour écran détail ou rechargement */
+    /**
+     * Charge un produit par identifiant.
+     *
+     * @param idProduit identifiant produit
+     * @return produit ou {@code null} selon le DAO
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public Produit obtenirProduitParId(int idProduit) throws SQLException {
         if (idProduit <= 0) {
             throw new IllegalArgumentException("L'ID du produit est invalide.");

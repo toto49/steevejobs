@@ -12,6 +12,13 @@ import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'intégration du {@link com.eseo.steevejobs.dao.UserDAO} sur H2.
+ * <p>
+ * Extension : {@link dao.support.DaoIntegrationExtension} ; fixtures : {@link dao.support.DaoTestFixtures}.
+ * Cycle de vie : nouvelle instance DAO par test ({@code @BeforeEach}).
+ * </p>
+ */
 @ExtendWith(DaoIntegrationExtension.class)
 class UserDAOTest {
 

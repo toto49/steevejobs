@@ -18,6 +18,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.UserService}.
+ * <p>
+ * Couvre création, authentification BCrypt, blocage après échecs et désactivation.
+ * Mockito sur {@code UserDAO} uniquement.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 

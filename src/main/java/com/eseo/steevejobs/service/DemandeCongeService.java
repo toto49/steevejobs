@@ -14,18 +14,37 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
+/**
+ * Cycle de vie des demandes de congé et calcul du solde annuel.
+ * <p>
+ * Règles métier : quota {@link CongeUtil#JOURS_CONGE_ANNUELS} jours par an ;
+ * vérification du solde à la création et à la validation RH ; une demande validée
+ * crée un événement planning de type congé ; modification d'une demande validée
+ * synchronise le planning associé. Aucun e-mail ni WebSocket : persistance BDD uniquement.
+ * </p>
+ */
 public class DemandeCongeService {
 
     private final DemandeCongeDAO demandeCongeDAO;
     private final PlanningDAO planningDAO;
     private final PlanningService planningService;
 
+    /**
+     * Constructeur avec injection des dépendances.
+     *
+     * @param demandeCongeDAO   accès aux demandes
+     * @param planningDAO       accès au planning
+     * @param planningService   service de gestion du planning
+     */
     public DemandeCongeService(DemandeCongeDAO demandeCongeDAO, PlanningDAO planningDAO, PlanningService planningService) {
         this.demandeCongeDAO = demandeCongeDAO;
         this.planningDAO = planningDAO;
         this.planningService = planningService;
     }
 
+    /**
+     * Constructeur par défaut instanciant les DAO et {@link PlanningService}.
+     */
     public DemandeCongeService() {
         PlanningDAO planningDao = new PlanningDAO();
         this.demandeCongeDAO = new DemandeCongeDAO();
@@ -33,6 +52,18 @@ public class DemandeCongeService {
         this.planningService = new PlanningService(planningDao);
     }
 
+    /**
+     * Crée une demande en statut {@link StatutDemandeConge#EN_ATTENTE} après contrôle du solde.
+     *
+     * @param employe     employé demandeur
+     * @param debut       date-heure de début (non passée)
+     * @param fin         date-heure de fin (postérieure au début)
+     * @param commentaire commentaire employé (peut être null, sera trimé)
+     * @return demande persistée avec identifiant renseigné
+     * @throws IllegalArgumentException si période ou solde invalides
+     * @throws SQLException             en cas d'échec de persistance
+     * @throws RuntimeException         si l'insertion en base échoue
+     */
     public DemandeConge creerDemande(User employe, LocalDateTime debut, LocalDateTime fin, String commentaire)
             throws SQLException {
         validerPeriode(debut, fin);
@@ -61,6 +92,15 @@ public class DemandeCongeService {
         return demande;
     }
 
+    /**
+     * Valide une demande en attente : crée l'événement planning congé et met à jour le statut.
+     *
+     * @param demandeId     identifiant de la demande
+     * @param commentaireRh commentaire RH optionnel
+     * @throws IllegalArgumentException si demande introuvable, déjà traitée ou solde insuffisant
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour échoue
+     */
     public void validerDemande(int demandeId, String commentaireRh) throws SQLException {
         DemandeConge demande = demandeCongeDAO.findById(demandeId);
         if (demande == null) {
@@ -104,6 +144,17 @@ public class DemandeCongeService {
         }
     }
 
+    /**
+     * Modifie les dates d'une demande ; si validée, met à jour le planning lié.
+     *
+     * @param demandeId identifiant de la demande
+     * @param dateDebut nouvelle date de début (jour civil)
+     * @param dateFin   nouvelle date de fin (jour civil)
+     * @throws IllegalArgumentException si demande refusée, dates invalides ou solde insuffisant
+     * @throws IllegalStateException    si congé validé sans planning associé
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour échoue
+     */
     public void modifierDemandeConge(int demandeId, LocalDate dateDebut, LocalDate dateFin) throws SQLException {
         DemandeConge demande = demandeCongeDAO.findById(demandeId);
         if (demande == null) {
@@ -157,6 +208,14 @@ public class DemandeCongeService {
         }
     }
 
+    /**
+     * Supprime une demande validée et l'événement planning associé le cas échéant.
+     *
+     * @param demandeId identifiant de la demande
+     * @throws IllegalArgumentException si demande introuvable ou non validée
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la suppression échoue
+     */
     public void supprimerCongeValide(int demandeId) throws SQLException {
         DemandeConge demande = demandeCongeDAO.findById(demandeId);
         if (demande == null) {
@@ -210,6 +269,14 @@ public class DemandeCongeService {
         return debut1.isBefore(fin2) && fin1.isAfter(debut2);
     }
 
+    /**
+     * Refuse une demande encore en attente.
+     *
+     * @param demandeId identifiant de la demande
+     * @throws IllegalArgumentException si demande introuvable ou déjà traitée
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour échoue
+     */
     public void refuserDemande(int demandeId) throws SQLException {
         DemandeConge demande = demandeCongeDAO.findById(demandeId);
         if (demande == null) {
@@ -226,24 +293,60 @@ public class DemandeCongeService {
         }
     }
 
+    /**
+     * Liste toutes les demandes en attente de validation RH.
+     *
+     * @return liste des demandes {@link StatutDemandeConge#EN_ATTENTE}
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<DemandeConge> listerEnAttente() throws SQLException {
         return demandeCongeDAO.findByStatut(StatutDemandeConge.EN_ATTENTE);
     }
 
+    /**
+     * Liste l'ensemble des demandes, tous statuts confondus.
+     *
+     * @return liste complète
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<DemandeConge> listerToutes() throws SQLException {
         return demandeCongeDAO.findAll();
     }
 
+    /**
+     * Liste les demandes en attente pour un employé donné.
+     *
+     * @param userId identifiant de l'employé
+     * @return sous-ensemble en attente
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<DemandeConge> listerEnAttenteParEmploye(int userId) throws SQLException {
         return demandeCongeDAO.findByUserId(userId).stream()
                 .filter(d -> d.getStatut() == StatutDemandeConge.EN_ATTENTE)
                 .toList();
     }
 
+    /**
+     * Calcule le solde de congés pour un employé et une année (toutes demandes prises en compte).
+     *
+     * @param userId identifiant de l'employé
+     * @param annee  année civile
+     * @return solde (jours alloués, pris, en attente, restants)
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public SoldeConge calculerSoldeConge(int userId, int annee) throws SQLException {
         return calculerSoldeConge(userId, annee, -1);
     }
 
+    /**
+     * Calcule le solde en excluant éventuellement une demande du décompte « en attente ».
+     *
+     * @param userId          identifiant de l'employé
+     * @param annee           année civile
+     * @param demandeExclueId identifiant de demande à exclure du calcul en attente ; {@code <= 0} pour aucune exclusion
+     * @return solde de congés
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public SoldeConge calculerSoldeConge(int userId, int annee, int demandeExclueId) throws SQLException {
         long joursPris = planningDAO.findByUserId(userId).stream()
                 .filter(p -> CongeUtil.estTypeConge(p.getType()))
@@ -271,10 +374,22 @@ public class DemandeCongeService {
         }
     }
 
+    /**
+     * Convertit une date civile en début de journée ouvrée (08:00).
+     *
+     * @param date date civile
+     * @return date-heure de début standard
+     */
     public static LocalDateTime debutJournee(LocalDate date) {
         return LocalDateTime.of(date, LocalTime.of(8, 0));
     }
 
+    /**
+     * Convertit une date civile en fin de journée ouvrée (18:00).
+     *
+     * @param date date civile
+     * @return date-heure de fin standard
+     */
     public static LocalDateTime finJournee(LocalDate date) {
         return LocalDateTime.of(date, LocalTime.of(18, 0));
     }

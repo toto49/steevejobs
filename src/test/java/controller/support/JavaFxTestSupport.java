@@ -7,6 +7,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Initialisation du toolkit JavaFX et exécution synchrone d'actions sur le thread FX pour les tests unitaires.
+ * <p>
+ * Cycle de vie : {@link #ensureInitialized()} démarre le toolkit une seule fois (idempotent) ;
+ * les appels suivants s'exécutent via {@link Platform#runLater(Runnable)} avec attente limitée à 15 secondes.
+ * </p>
+ */
 public final class JavaFxTestSupport {
 
     private static final AtomicBoolean STARTED = new AtomicBoolean(false);
@@ -14,17 +21,26 @@ public final class JavaFxTestSupport {
     private JavaFxTestSupport() {
     }
 
+    /**
+     * Démarre le toolkit JavaFX si ce n'est pas déjà fait (ignore {@link IllegalStateException} si déjà actif).
+     */
     public static void ensureInitialized() {
         if (STARTED.compareAndSet(false, true)) {
             try {
                 Platform.startup(() -> {
                 });
             } catch (IllegalStateException ignored) {
-                // JavaFX toolkit déjà démarré
             }
         }
     }
 
+    /**
+     * Exécute une action sur le thread d'application JavaFX et propage toute exception levée.
+     *
+     * @param action code à exécuter sur le thread FX
+     * @throws Exception           exception métier remontée depuis l'action
+     * @throws IllegalStateException en cas de dépassement du délai d'attente (15 s)
+     */
     public static void runOnFxThread(Runnable action) throws Exception {
         ensureInitialized();
         if (Platform.isFxApplicationThread()) {
@@ -56,6 +72,12 @@ public final class JavaFxTestSupport {
         }
     }
 
+    /**
+     * Vide la file d'événements JavaFX en planifiant puis en attendant un runnable vide.
+     *
+     * @throws Exception           exception remontée depuis le thread FX
+     * @throws IllegalStateException en cas de timeout
+     */
     public static void drainFxEvents() throws Exception {
         ensureInitialized();
         CountDownLatch latch = new CountDownLatch(1);

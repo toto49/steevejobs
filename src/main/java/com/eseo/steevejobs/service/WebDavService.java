@@ -16,6 +16,15 @@ import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Transfert de fichiers vers le NAS Synology via WebDAV (HTTP/WebDAV).
+ * <p>
+ * Configuration lue depuis le fichier .env : {@code WEBDAV_BASE_URL},
+ * {@code WEBDAV_USERNAME}, {@code WEBDAV_PASSWORD}. Effets de bord réseau :
+ * création de dossier (MKCOL), envoi (PUT), téléchargement (GET), suppression (DELETE).
+ * Contexte SSL permissif (certificats non vérifiés) pour compatibilité NAS local.
+ * </p>
+ */
 public class WebDavService {
 
     private static final Logger LOGGER = Logger.getLogger(WebDavService.class.getName());
@@ -38,11 +47,13 @@ public class WebDavService {
     }
 
     /**
-     * Envoie un fichier sur le NAS Synology dans le dossier spécifié.
-     * * @param nomDossier Le nom du dossier (ex: "jean_dupont")
+     * Envoie un fichier binaire sur le NAS (crée le dossier cible si nécessaire).
      *
-     * @param nomFichier     Le nom du fichier avec son extension (ex: "devis_123.pdf")
-     * @param contenuFichier Les données brutes du fichier (byte[])
+     * @param nomDossier     segment de chemin sur le NAS (ex. {@code documents_commerciaux})
+     * @param nomFichier     nom de fichier avec extension
+     * @param contenuFichier contenu brut du fichier
+     * @throws IllegalStateException si la configuration WebDAV est absente
+     * @throws RuntimeException      si le serveur NAS refuse l'upload ou en cas d'erreur réseau
      */
     public static void envoyerFichierSurNAS(String nomDossier, String nomFichier, byte[] contenuFichier) {
         String baseUrl = getDotenv().get("WEBDAV_BASE_URL");
@@ -109,6 +120,12 @@ public class WebDavService {
         }
     }
 
+    /**
+     * Supprime un fichier sur le NAS (opération idempotente si déjà absent).
+     *
+     * @param nomDossier segment de dossier sur le NAS
+     * @param nomFichier nom du fichier à supprimer
+     */
     public static void supprimerFichierDuNAS(String nomDossier, String nomFichier) {
         String baseUrl = getDotenv().get("WEBDAV_BASE_URL");
         String username = getDotenv().get("WEBDAV_USERNAME");
@@ -169,6 +186,16 @@ public class WebDavService {
         return sslContext;
     }
 
+    /**
+     * Télécharge un fichier NAS vers le système de fichiers local.
+     *
+     * @param nomDossier   dossier distant
+     * @param nomFichier   nom du fichier distant
+     * @param cheminLocal  chemin de destination locale
+     * @throws IllegalStateException si configuration absente
+     * @throws RuntimeException      si le code HTTP n'est pas 200
+     * @throws Exception             erreurs réseau ou SSL
+     */
     public static void telechargerFichierDuNAS(String nomDossier, String nomFichier, String cheminLocal) throws Exception {
         String baseUrl = getDotenv().get("WEBDAV_BASE_URL");
         String username = getDotenv().get("WEBDAV_USERNAME");
@@ -199,6 +226,16 @@ public class WebDavService {
         }
     }
 
+    /**
+     * Envoie un fichier local existant vers le NAS (PUT depuis disque).
+     *
+     * @param nomDossier  dossier distant cible
+     * @param nomFichier  nom du fichier sur le NAS
+     * @param cheminLocal chemin du fichier source sur la machine locale
+     * @throws IllegalStateException si configuration absente
+     * @throws RuntimeException      si le NAS renvoie un code HTTP ≥ 400
+     * @throws Exception             erreurs réseau, SSL ou lecture disque
+     */
     public static void envoyerFichierLocalSurNAS(String nomDossier, String nomFichier, String cheminLocal) throws Exception {
         String baseUrl = getDotenv().get("WEBDAV_BASE_URL");
         String username = getDotenv().get("WEBDAV_USERNAME");

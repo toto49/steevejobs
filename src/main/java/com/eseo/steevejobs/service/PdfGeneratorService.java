@@ -24,9 +24,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Génération locale de PDF (documents commerciaux et bulletins de paie) via OpenPDF.
+ * <p>
+ * Effet de bord fichier : écriture dans le répertoire {@code Downloads} de l'utilisateur
+ * système ({@code user.home}). Aucun envoi réseau ; le chemin absolu retourné sert
+ * d'URL stockée en base. Les méthodes privées construisent la mise en page.
+ * </p>
+ */
 public class PdfGeneratorService {
 
-    // CORRECTION : On pointe directement vers le dossier "Downloads" du PC
     private static final String OUTPUT_DIR = System.getProperty("user.home") + File.separator + "Downloads" + File.separator;
 
     private static final Color COULEUR_PRINCIPALE = new Color(75, 120, 204);
@@ -35,6 +42,14 @@ public class PdfGeneratorService {
     private static final Color COULEUR_BORDURE    = new Color(209, 213, 219);
     private static final Color COULEUR_TEXTE      = new Color(50, 50, 50);
 
+    /**
+     * Génère le PDF d'un document commercial (devis, facture ou bon de commande).
+     *
+     * @param document entête document (type, tiers, montants)
+     * @param lignes   lignes de détail produit
+     * @return chemin absolu du fichier PDF créé sous {@code Downloads}
+     * @throws RuntimeException si la génération ou l'écriture disque échoue
+     */
     public String genererDocument(com.eseo.steevejobs.model.Document document, List<Composer> lignes) {
         creerDossier();
         String nomFichier = String.format("%s_%d.pdf",
@@ -54,6 +69,18 @@ public class PdfGeneratorService {
         return chemin;
     }
 
+    /**
+     * Génère le bulletin de paie PDF avec déduction congés et cotisations.
+     *
+     * @param fiche                       fiche persistée (employé, période)
+     * @param salaireBrut                 salaire brut de référence
+     * @param tauxCotisationsPatronales   taux patronal (0–1)
+     * @param joursConge                  jours de congé sur le mois (planning)
+     * @param heuresTravaillees           heures travaillées affichées
+     * @param tauxHoraire                 taux horaire affiché
+     * @return chemin absolu du PDF sous {@code Downloads}
+     * @throws RuntimeException si la génération ou l'écriture disque échoue
+     */
     public String genererFichePaye(FichePaye fiche, double salaireBrut,
                                    double tauxCotisationsPatronales, long joursConge,
                                    double heuresTravaillees, double tauxHoraire) {

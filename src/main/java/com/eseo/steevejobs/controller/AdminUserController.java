@@ -26,6 +26,10 @@ import javafx.stage.Stage;
 import java.sql.SQLException;
 import java.util.List;
 
+/**
+ * Contrôleur FXML de gestion des utilisateurs (liste paginée, recherche, détail, création et édition).
+ * Liaisons FXML : {@code userTable}, {@code searchField}, {@code addUserBtn}, panneau de détail.
+ */
 public class AdminUserController {
 
     private final int ROWS_PER_PAGE = 10;
@@ -81,11 +85,18 @@ public class AdminUserController {
     private final ObservableList<User> masterUserList;
     private FilteredList<User> filteredList;
 
+    /**
+     * Initialise les services et la liste observable des utilisateurs.
+     */
     public AdminUserController() {
         this.userService = new UserService();
         this.masterUserList = FXCollections.observableArrayList();
     }
 
+    /**
+     * Configure les colonnes du tableau, charge les utilisateurs et branche la recherche.
+     * En mode test, initialise uniquement la pagination sans accès base de données.
+     */
     @FXML
     public void initialize() {
         setupTableColumns();
@@ -260,6 +271,12 @@ public class AdminUserController {
                 menuButton.getItems().addAll(editItem, new SeparatorMenuItem(), deactivateItem);
             }
 
+            /**
+             * Affiche le menu d'actions ou une cellule vide.
+             *
+             * @param item non utilisé (colonne sans valeur)
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);

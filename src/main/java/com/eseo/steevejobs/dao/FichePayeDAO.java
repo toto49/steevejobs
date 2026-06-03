@@ -9,10 +9,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object dédié aux opérations sur la table des fiches de paie.
+ * Accès aux données de la table {@code FICHE_PAYE}.
+ * <p>
+ * Les lectures joignent {@code USER} pour hydrater l'employé.
+ * Chaque opération s'exécute en auto-commit ; les {@link SQLException} sont propagées.
+ * </p>
  */
 public class FichePayeDAO {
 
+    /**
+     * Insère une fiche de paie et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO FICHE_PAYE} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
+     *
+     * @param fichePaye fiche à persister ; l'identifiant est mis à jour après insertion
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public void createFichePaye(FichePaye fichePaye) throws SQLException {
         String sql = "INSERT INTO FICHE_PAYE (date, url, id_user) VALUES (?, ?, ?)";
 
@@ -33,6 +46,15 @@ public class FichePayeDAO {
         }
     }
 
+    /**
+     * Met à jour une fiche de paie existante.
+     * <p>
+     * SQL : {@code UPDATE FICHE_PAYE} filtré par {@code id_paye}.
+     * </p>
+     *
+     * @param fichePaye fiche avec identifiant et champs modifiés
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public void updateFichePaye(FichePaye fichePaye) throws SQLException {
         String sql = "UPDATE FICHE_PAYE SET date = ?, url = ?, id_user = ? WHERE id_paye = ?";
 
@@ -48,6 +70,13 @@ public class FichePayeDAO {
         }
     }
 
+    /**
+     * Supprime une fiche de paie par identifiant.
+     *
+     * @param id identifiant de la fiche
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean deleteFichePaye(int id) throws SQLException {
         String sql = "DELETE FROM FICHE_PAYE WHERE id_paye = ?";
 
@@ -59,6 +88,13 @@ public class FichePayeDAO {
         }
     }
 
+    /**
+     * Recherche une fiche de paie par identifiant avec employé joint.
+     *
+     * @param id identifiant de la fiche
+     * @return fiche trouvée, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public FichePaye getById(int id) throws SQLException {
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
                 "FROM FICHE_PAYE f " +
@@ -78,6 +114,13 @@ public class FichePayeDAO {
         }
     }
 
+    /**
+     * Liste les fiches de paie d'un employé, triées par date décroissante.
+     *
+     * @param employeId identifiant de l'employé
+     * @return liste des fiches (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<FichePaye> findByEmployeId(int employeId) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -100,7 +143,15 @@ public class FichePayeDAO {
     }
 
     /**
-     * Récupérer la fiche de paie d'un employé pour un mois spécifique.
+     * Recherche la fiche de paie d'un employé pour un mois donné.
+     * <p>
+     * SQL : filtre par {@code id_user}, {@code YEAR(date)} et {@code MONTH(date)}.
+     * </p>
+     *
+     * @param employeId identifiant de l'employé
+     * @param date      date de référence (seuls le mois et l'année sont utilisés)
+     * @return fiche du mois si elle existe, ou {@code null}
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public FichePaye findByEmployeIdAndDate(int employeId, LocalDateTime date) throws SQLException {
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -123,6 +174,12 @@ public class FichePayeDAO {
         }
     }
 
+    /**
+     * Liste toutes les fiches de paie, triées par date décroissante.
+     *
+     * @return liste complète (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<FichePaye> findAll() throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -141,6 +198,13 @@ public class FichePayeDAO {
         return fichesPaye;
     }
 
+    /**
+     * Liste les fiches de paie d'une année calendaire.
+     *
+     * @param annee année recherchée
+     * @return liste des fiches de l'année (éventuellement vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public List<FichePaye> findByAnnee(int annee) throws SQLException {
         List<FichePaye> fichesPaye = new ArrayList<>();
         String sql = "SELECT f.*, u.id_user, u.nom, u.prenom, u.email, u.mdp, u.adresse, u.tel, u.role, u.poste, u.actif, u.taux, u.taux_patronal " +
@@ -162,6 +226,14 @@ public class FichePayeDAO {
         return fichesPaye;
     }
 
+    /**
+     * Met à jour uniquement l'URL du fichier PDF d'une fiche de paie.
+     *
+     * @param id  identifiant de la fiche
+     * @param url nouvelle URL
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public boolean updateUrl(int id, String url) throws SQLException {
         String sql = "UPDATE FICHE_PAYE SET url = ? WHERE id_paye = ?";
 
@@ -174,6 +246,12 @@ public class FichePayeDAO {
         }
     }
 
+    /**
+     * Compte le nombre total de fiches de paie enregistrées.
+     *
+     * @return nombre de fiches ({@code 0} si la table est vide)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countFichesPaye() throws SQLException {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE";
 
@@ -188,6 +266,13 @@ public class FichePayeDAO {
         return 0;
     }
 
+    /**
+     * Compte le nombre de fiches de paie d'un employé.
+     *
+     * @param employeId identifiant de l'employé
+     * @return nombre de fiches ({@code 0} si aucune)
+     * @throws SQLException en cas d'erreur d'accès à la base
+     */
     public int countByEmployeId(int employeId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM FICHE_PAYE WHERE id_user = ?";
 

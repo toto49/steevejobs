@@ -20,6 +20,11 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.prefs.Preferences;
 
+/**
+ * Contrôleur FXML de la page paramètres utilisateur.
+ * Liaisons FXML : champs profil, mots de passe, cases notifications et connexion mémorisée.
+ * Navigation déconnexion vers {@code bienvenue-view.fxml}.
+ */
 public class ParametresController {
 
     @FXML
@@ -47,6 +52,9 @@ public class ParametresController {
     private SessionService sessionService;
     private User currentUser;
 
+    /**
+     * Charge l'utilisateur en session, préremplit les champs et restaure les préférences locales.
+     */
     @FXML
     public void initialize() {
         this.userService = new UserService();
@@ -198,6 +206,12 @@ public class ParametresController {
         alert.showAndWait();
     }
 
+    /**
+     * Réinitialise la session et navigue vers l'écran de connexion.
+     * Liaison FXML : bouton de déconnexion.
+     *
+     * @param actionEvent événement du bouton (non utilisé)
+     */
     @FXML
     public void resetsession(ActionEvent actionEvent) {
         try {

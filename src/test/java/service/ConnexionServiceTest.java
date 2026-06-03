@@ -6,6 +6,12 @@ import service.support.MockitoJava25Support;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.ConnexionService} (génération de mot de passe aléatoire).
+ * <p>
+ * Bloc statique : activation Mockito JDK 25 via {@link service.support.MockitoJava25Support}.
+ * </p>
+ */
 class ConnexionServiceTest {
 
     static {

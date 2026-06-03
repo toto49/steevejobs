@@ -29,6 +29,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Contrôleur FXML du tableau de bord (accueil) affichant les modules applicatifs.
+ * Liaison FXML : {@code appsGrid}.
+ * Filtre les cartes selon les permissions utilisateur ({@link AppModule#getCodeAction()}).
+ */
 public class HomeController {
 
     private static final Map<String, Image> IMAGE_CACHE = new HashMap<>();
@@ -52,13 +57,26 @@ public class HomeController {
     private List<String> currentUserPermissions;
     private ScheduledExecutorService permissionScheduler;
 
+    /**
+     * Retourne l'instance active du contrôleur d'accueil.
+     *
+     * @return instance courante ou {@code null} si non initialisée
+     */
     public static HomeController getActiveInstance() {
         return activeInstance;
     }
 
+    /**
+     * Constructeur par défaut requis par le chargeur FXML.
+     */
     public HomeController() {
     }
 
+    /**
+     * Met à jour les compteurs de notifications tickets et synchronise les badges menu/accueil.
+     *
+     * @param typeCible {@code TECH} (staff) ou {@code AUTEUR} (demandeur)
+     */
     public static void ajouterNotification(String typeCible) {
         if (TestRuntime.isEnabled()) {
             return;
@@ -98,6 +116,9 @@ public class HomeController {
         });
     }
 
+    /**
+     * Invalide le cache des permissions et relance le rendu du centre applicatif.
+     */
     public static void invaliderCachePermissions() {
         cachedPermissions = null;
         cachedUserId = -1;
@@ -112,6 +133,11 @@ public class HomeController {
         }
     }
 
+    /**
+     * Charge permissions et compteurs de tickets après connexion, puis affiche les modules autorisés.
+     *
+     * @param idUserConnecte identifiant de l'utilisateur connecté
+     */
     public void onUserLogin(int idUserConnecte) {
         if (TestRuntime.isEnabled()) {
             this.currentUserPermissions = List.of();
@@ -174,6 +200,11 @@ public class HomeController {
         }
     }
 
+    /**
+     * Point d'entrée FXML : enregistre l'instance, charge l'accueil ou redirige vers la connexion.
+     *
+     * @throws IOException si le chargement de {@code bienvenue-view.fxml} échoue
+     */
     @FXML
     public void initialize() throws IOException {
         activeInstance = this;

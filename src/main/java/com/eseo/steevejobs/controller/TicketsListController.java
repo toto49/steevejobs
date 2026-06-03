@@ -24,6 +24,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Contrôleur FXML de la liste des tickets (mes tickets ou filtre par service RH/ADMIN).
+ * Liaisons FXML : {@code ticketsContainer}, filtres en cours/archives, bouton création.
+ * Implémente {@link ParametrizedController} pour le paramètre de service.
+ */
 public class TicketsListController implements ParametrizedController {
 
     private final TicketService ticketService = new TicketServiceImpl();
@@ -47,10 +52,18 @@ public class TicketsListController implements ParametrizedController {
     private boolean modeArchivesActif = false;
     private boolean isFetching = false;
 
+    /**
+     * Retourne l'instance active de la liste tickets.
+     *
+     * @return contrôleur courant ou {@code null}
+     */
     public static TicketsListController getActiveInstance() {
         return activeInstance;
     }
 
+    /**
+     * Initialise les services et charge les tickets de manière asynchrone.
+     */
     @FXML
     public void initialize() {
         activeInstance = this;
@@ -60,6 +73,11 @@ public class TicketsListController implements ParametrizedController {
         chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
 
+    /**
+     * Applique le filtre par service (ex. {@code ADMIN}, {@code RH}) pour la vue staff.
+     *
+     * @param parametreService code du service cible
+     */
     @Override
     public void initData(String parametreService) {
         this.filtreActuel = parametreService;
@@ -74,6 +92,9 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Affiche les tickets créés par l'utilisateur connecté (navigation menu « Tickets »).
+     */
     public void afficherMesTickets() {
         this.filtreActuel = null;
         if (titlepageticket != null) {
@@ -135,6 +156,9 @@ public class TicketsListController implements ParametrizedController {
         remplirLeContainer(listeAFicher);
     }
 
+    /**
+     * Recharge les tickets depuis la base et rafraîchit l'affichage (callback WebSocket).
+     */
     public void rafraichirAffichage() {
         chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
@@ -207,6 +231,12 @@ public class TicketsListController implements ParametrizedController {
         return card;
     }
 
+    /**
+     * Ouvre la popup de création d'un nouveau ticket.
+     * Liaison FXML : bouton « Créer un ticket ».
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void handleCreateTicket(ActionEvent event) {
         Dialog<Void> dialog = new Dialog<>();
@@ -390,6 +420,12 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Active le filtre « en cours » (tickets non fermés).
+     * Liaison FXML : {@code btnFiltreEnCours}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void handleFiltreEnCours(ActionEvent event) {
         modeArchivesActif = false;
@@ -397,6 +433,12 @@ public class TicketsListController implements ParametrizedController {
         rafraichirAffichageLocal();
     }
 
+    /**
+     * Active le filtre « archives » (tickets fermés ou résolus).
+     * Liaison FXML : {@code btnFiltreArchives}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void handleFiltreArchives(ActionEvent event) {
         modeArchivesActif = true;

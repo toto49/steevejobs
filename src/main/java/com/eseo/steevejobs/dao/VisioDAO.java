@@ -14,6 +14,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Accès aux données des tables {@code VISIO} et {@code VISIO_INVITATIONS}.
+ * <p>
+ * La planification de réunion utilise une transaction manuelle ({@code setAutoCommit(false)})
+ * avec commit/rollback explicite. Les autres opérations s'exécutent en auto-commit.
+ * Les erreurs SQL sont généralement interceptées : journalisation sur {@code System.err}
+ * et retour de valeurs par défaut ({@code false}, {@code 0}, {@link Optional#empty()}, liste vide).
+ * </p>
+ */
 public class VisioDAO {
 
     private static final ZoneId FUSEAU_HORAIRE = ZoneId.systemDefault();
@@ -40,6 +49,15 @@ public class VisioDAO {
         return timestampVersLocal(rs.getTimestamp("heure_programmee"));
     }
 
+    /**
+     * Enregistre un salon de visioconférence instantané.
+     * <p>
+     * SQL : {@code INSERT INTO VISIO} avec {@code heure_debut = CURRENT_TIMESTAMP}.
+     * </p>
+     *
+     * @param visio salon à persister (room, créateur, type, statut)
+     * @return {@code true} si l'insertion a réussi, {@code false} en cas d'erreur interceptée
+     */
     public boolean enregistrerSalonInstantane(Visio visio) {
         String sql = "INSERT INTO VISIO (room_name, createur_id, type_reunion, statut, heure_debut) "
                 + "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)";
@@ -58,6 +76,17 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Planifie une réunion et insère les invitations associées en transaction.
+     * <p>
+     * SQL : {@code INSERT INTO VISIO} puis batch {@code INSERT INTO VISIO_INVITATIONS}.
+     * Rollback en cas d'échec ; commit si toutes les insertions réussissent.
+     * </p>
+     *
+     * @param visio           réunion à planifier
+     * @param listeIdInvites  identifiants des employés invités (nullable ou vide)
+     * @return {@code true} si la transaction a été validée, {@code false} en cas d'erreur
+     */
     public boolean planifierReunion(Visio visio, List<Integer> listeIdInvites) {
         String sqlVisio = "INSERT INTO VISIO (room_name, createur_id, statut, type_reunion, heure_programmee) "
                 + "VALUES (?, ?, ?, ?, ?)";
@@ -109,6 +138,16 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Active automatiquement les salons planifiés dont l'heure programmée est atteinte.
+     * <p>
+     * SQL : {@code UPDATE VISIO SET statut = EN_COURS, heure_debut = CURRENT_TIMESTAMP}
+     * pour les lignes {@code PROGRAMMEE} avec {@code heure_programmee <= aPartirDe}.
+     * </p>
+     *
+     * @param aPartirDe date/heure limite d'éligibilité
+     * @return nombre de salons activés ({@code 0} en cas d'erreur interceptée)
+     */
     public int activerSalonsPlanifiesEligibles(LocalDateTime aPartirDe) {
         String sql = "UPDATE VISIO SET statut = ?, heure_debut = CURRENT_TIMESTAMP "
                 + "WHERE statut = 'PROGRAMMEE' AND heure_programmee IS NOT NULL "
@@ -125,6 +164,16 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Charge les informations d'accès à un salon non terminé pour un utilisateur.
+     * <p>
+     * SQL : lecture de {@code VISIO} avec sous-requête de comptage d'invitation.
+     * </p>
+     *
+     * @param roomName nom du salon
+     * @param userId   identifiant de l'utilisateur demandeur
+     * @return informations d'accès, ou {@link Optional#empty()} si salon introuvable ou erreur
+     */
     public Optional<SalonAccesInfo> chargerInfosAccesSalon(String roomName, int userId) {
         String query = "SELECT v.statut, v.type_reunion, v.heure_programmee, v.createur_id, "
                 + "(SELECT COUNT(*) FROM VISIO_INVITATIONS vi WHERE vi.visio_id = v.id AND vi.employe_id = ?) AS est_invite "
@@ -159,6 +208,12 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Vérifie l'existence d'un salon actif (non terminé) en base.
+     *
+     * @param roomName nom du salon
+     * @return {@code true} si au moins un enregistrement actif existe, {@code false} sinon ou en cas d'erreur silencieuse
+     */
     public boolean existeEnBdd(String roomName) {
         String sql = "SELECT COUNT(*) FROM VISIO WHERE room_name = ? AND statut != 'TERMINE'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -174,6 +229,13 @@ public class VisioDAO {
         return false;
     }
 
+    /**
+     * Vérifie si un utilisateur est le créateur d'un salon actif.
+     *
+     * @param roomName nom du salon
+     * @param userId   identifiant de l'utilisateur
+     * @return {@code true} si l'utilisateur est créateur du salon non terminé, {@code false} sinon
+     */
     public boolean isCreateur(String roomName, int userId) {
         String sql = "SELECT COUNT(*) FROM VISIO WHERE room_name = ? AND createur_id = ? AND statut != 'TERMINE'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -190,6 +252,15 @@ public class VisioDAO {
         return false;
     }
 
+    /**
+     * Ouvre un salon planifié en passant son statut à {@code EN_COURS}.
+     * <p>
+     * SQL : {@code UPDATE VISIO} filtré par {@code room_name} et statut {@code PROGRAMMEE}.
+     * Les erreurs sont ignorées silencieusement.
+     * </p>
+     *
+     * @param roomName nom du salon
+     */
     public void ouvrirSalon(String roomName) {
         String sql = "UPDATE VISIO SET statut = ?, heure_debut = CURRENT_TIMESTAMP "
                 + "WHERE room_name = ? AND statut = 'PROGRAMMEE'";
@@ -202,6 +273,15 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Termine un salon planifié en cours et enregistre l'heure de fin.
+     * <p>
+     * SQL : {@code UPDATE VISIO SET statut = TERMINE, heure_fin = CURRENT_TIMESTAMP}
+     * pour les salons {@code EN_COURS} de type {@code PLANIFIEE}.
+     * </p>
+     *
+     * @param roomName nom du salon
+     */
     public void terminerSalonPlanifie(String roomName) {
         String sql = "UPDATE VISIO SET statut = ?, heure_fin = CURRENT_TIMESTAMP "
                 + "WHERE room_name = ? AND statut = 'EN_COURS' AND type_reunion = 'PLANIFIEE'";
@@ -214,6 +294,12 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Charge les métadonnées d'un salon actuellement en cours.
+     *
+     * @param roomName nom du salon
+     * @return informations du salon en cours, ou {@link Optional#empty()} si aucun ou erreur
+     */
     public Optional<SalonEnCoursInfo> chargerSalonEnCours(String roomName) {
         String sql = "SELECT type_reunion, heure_programmee FROM VISIO "
                 + "WHERE room_name = ? AND statut = 'EN_COURS' ORDER BY id DESC LIMIT 1";
@@ -236,6 +322,16 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Supprime un salon instantané et ses invitations associées.
+     * <p>
+     * SQL : sélection par {@code room_name} et type instantané, puis
+     * {@code DELETE FROM VISIO_INVITATIONS} et {@code DELETE FROM VISIO}.
+     * </p>
+     *
+     * @param roomName nom du salon
+     * @return {@code true} si la suppression a réussi, {@code false} si salon introuvable ou erreur
+     */
     public boolean supprimerSalonInstantane(String roomName) {
         String selectSql = "SELECT id FROM VISIO WHERE room_name = ? "
                 + "AND (type_reunion = 'INSTANTANEE' OR (type_reunion IS NULL AND heure_programmee IS NULL))";
@@ -277,6 +373,16 @@ public class VisioDAO {
         }
     }
 
+    /**
+     * Liste les réunions disponibles pour un utilisateur (créateur, invité ou salons instantanés en cours).
+     * <p>
+     * SQL : {@code SELECT DISTINCT} sur {@code VISIO} avec jointure {@code VISIO_INVITATIONS},
+     * excluant les salons terminés, triés par heure programmée.
+     * </p>
+     *
+     * @param userId identifiant de l'utilisateur
+     * @return liste des réunions accessibles (éventuellement vide en cas d'erreur)
+     */
     public List<Visio> listerReunionsDisponibles(int userId) {
         List<Visio> liste = new ArrayList<>();
         String sql = "SELECT DISTINCT v.* FROM VISIO v "

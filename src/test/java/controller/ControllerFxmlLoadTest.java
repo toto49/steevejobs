@@ -11,6 +11,13 @@ import service.support.TestDataFactory;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * Tests paramétrés de chargement FXML des vues principales de l'application.
+ * <p>
+ * Cycle de vie : JavaFX initialisé une fois ; {@code @BeforeEach} pose un utilisateur connecté
+ * via {@link com.eseo.steevejobs.service.SessionService} et {@link service.support.TestDataFactory}.
+ * </p>
+ */
 class ControllerFxmlLoadTest {
 
     @BeforeAll
