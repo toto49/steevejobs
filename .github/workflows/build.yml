@@ -54,7 +54,18 @@ jobs:
       - name: Compilation
         run: mvn -B clean compile "-Djfx.os=${{ matrix.jfx_classifier }}"
 
-      - name: Tests Unitaires
+      - name: Dépendances système JavaFX (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libgl1
+
+      - name: Tests Unitaires (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a mvn -B test "-Djfx.os=${{ matrix.jfx_classifier }}"
+
+      - name: Tests Unitaires (Windows / macOS)
+        if: runner.os != 'Linux'
         run: mvn -B test "-Djfx.os=${{ matrix.jfx_classifier }}"
 
       - name: Création de l'exécutable (Packaging)
