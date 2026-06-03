@@ -22,9 +22,27 @@
         <javafx.version>25.0.1</javafx.version>
         <!-- Surcharge possible : mvn test -Djfx.os=linux -->
         <jfx.os>win</jfx.os>
+
+        <app.name>SteeveJobs</app.name>
+        <app.icon>${project.basedir}/src/main/resources/images/logo.png</app.icon>
+        <jpackage.input>${project.build.directory}/jpackage-input</jpackage.input>
+        <jpackage.dest>${project.build.directory}/dist</jpackage.dest>
+        <jpackage.skip>false</jpackage.skip>
+        <jpackage.executable>${java.home}/bin/jpackage</jpackage.executable>
     </properties>
 
     <profiles>
+        <profile>
+            <id>jpackage-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.executable>${java.home}/bin/jpackage.exe</jpackage.executable>
+            </properties>
+        </profile>
         <profile>
             <id>jfx-win</id>
             <activation>
@@ -250,8 +268,91 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.eseo.steevejobs/com.eseo.steevejobs.HelloApplication</mainClass>
+                    <mainClass>com.eseo.steevejobs.Launcher</mainClass>
+                    <options>
+                        <option>--enable-native-access=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <outputDirectory>${jpackage.input}</outputDirectory>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.eseo.steevejobs.Launcher</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>libs/</classpathPrefix>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>jpackage-copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${jpackage.input}/libs</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeScope>test</excludeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>jpackage-app-image</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jpackage.skip}</skip>
+                            <executable>${jpackage.executable}</executable>
+                            <arguments>
+                                <argument>--input</argument>
+                                <argument>${jpackage.input}</argument>
+                                <argument>--dest</argument>
+                                <argument>${jpackage.dest}</argument>
+                                <argument>--name</argument>
+                                <argument>${app.name}</argument>
+                                <argument>--app-version</argument>
+                                <argument>${project.version}</argument>
+                                <argument>--vendor</argument>
+                                <argument>ESEO</argument>
+                                <argument>--main-jar</argument>
+                                <argument>${project.build.finalName}.jar</argument>
+                                <argument>--main-class</argument>
+                                <argument>com.eseo.steevejobs.Launcher</argument>
+                                <argument>--type</argument>
+                                <argument>app-image</argument>
+                                <argument>--icon</argument>
+                                <argument>${app.icon}</argument>
+                                <argument>--module-path</argument>
+                                <argument>${jpackage.input}/libs</argument>
+                                <argument>--add-modules</argument>
+                                <argument>javafx.controls,javafx.fxml,javafx.graphics,javafx.base</argument>
+                                <argument>--java-options</argument>
+                                <argument>-Dfile.encoding=UTF-8</argument>
+                                <argument>--java-options</argument>
+                                <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
