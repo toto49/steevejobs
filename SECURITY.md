@@ -27,6 +27,8 @@ Nous prenons la sécurité très au sérieux. Ce document décrit les mesures mi
 3. Utiliser MySQL avec un compte dédié à l'application (droits minimaux).
 4. En production : reverse proxy HTTPS, certificats Let's Encrypt, WebDAV et SMTP configurés côté NAS (voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 5. Exécuter `mvn test` avant chaque livraison — les scénarios de sécurité auth sont couverts par `UserServiceTest`.
+6. Le front visio (`docs/livekit/js/config.js`) ne doit pas contenir de domaines ou clés de production dans le dépôt
+   public.
 
 ## Versions prises en charge
 

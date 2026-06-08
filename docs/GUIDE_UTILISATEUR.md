@@ -75,8 +75,14 @@ Seules les tuiles et entrées de menu **autorisées pour votre rôle** sont visi
 
 ### Calendrier RH
 
-- Vue **planning équipe** pour les responsables RH.
-- **Demandes de congé** : l'employé dépose une demande depuis son calendrier ; le RH valide ou refuse depuis cette vue (jauge de congés restants).
+- Vue **planning équipe** hebdomadaire pour les responsables RH (tuile App Center).
+- **Recherche employé** : saisissez au moins 2 caractères dans le combo pour afficher un employé et consulter son
+  planning.
+- **Ajouter un créneau** : bouton d'ajout pour planifier un événement sur le calendrier d'un employé.
+- **Demandes de congé** : bouton dédié ouvrant un tableau filtrable (statut, employé, dates) avec validation, refus ou
+  modification.
+- **Jauge de solde** : affichée lors du traitement d'une demande (congés restants sur la période).
+- **Heures travaillées** : consultation des heures saisies par l'employé (lecture seule pour le RH).
 
 ### Support
 
@@ -93,7 +99,21 @@ Tableau de bord : raccourci vers les modules autorisés.
 
 ### Planning
 
-Calendrier **personnel** : visualisez vos créneaux et déposez une **demande de congé** (dates, motif). Le statut apparaît après validation RH.
+Calendrier **hebdomadaire personnel** (menu latéral → Planning) :
+
+| Fonction                | Description                                                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------------------------------|
+| Navigation              | Sélecteur de date pour afficher n'importe quelle semaine                                                    |
+| Créneaux                | Blocs colorés sur la grille (réunions, absences planifiées)                                                 |
+| **Mes heures**          | Bouton par jour pour saisir les heures travaillées (matin/après-midi)                                       |
+| **Demander des congés** | Formulaire avec dates, commentaire et jauge de solde restant                                                |
+| Statut congé            | Les demandes en attente apparaissent sur le calendrier ; non modifiables tant qu'elles ne sont pas traitées |
+
+**Saisie des heures :** cliquez sur le bouton du jour concerné. Les jours futurs sont grisés. La modification n'est
+possible que sur les **7 derniers jours** ; au-delà, consultation seule.
+
+**Demande de congé :** choisissez les dates de début et fin, ajoutez un commentaire optionnel, puis envoyez. La RH
+valide ou refuse depuis le Calendrier RH.
 
 ### Tickets
 
@@ -111,7 +131,12 @@ Voir [section dédiée](#5-visioconférence).
 
 ### Paramètres
 
-Préférences du compte connecté (profil, options d'affichage selon version).
+Préférences du compte connecté :
+
+- Modification du **profil** (nom, prénom, e-mail, téléphone, adresse).
+- Changement de **mot de passe** (ancien + nouveau).
+- **Notifications push** dans l'application (badges tickets).
+- **Mémorisation de l'e-mail** à la connexion.
 
 ---
 
@@ -177,7 +202,14 @@ Si une tuile ou un menu manque, contactez un administrateur pour ajuster votre *
 Vérifiez e-mail / mot de passe. Si le compte est neuf, l'admin doit l'avoir activé.
 
 **La visio ne s'ouvre pas.**  
-Vérifiez que le nom de salon est valide (pas d'espaces). Autorisez caméra/micro dans le navigateur.
+Vérifiez que le nom de salon est valide (pas d'espaces). Autorisez caméra/micro dans le navigateur. L'admin doit avoir
+configuré `URL_FRONT_VISIO` et le front web LiveKit.
+
+**Mes heures ne se sauvegardent pas.**  
+Seuls les 7 derniers jours sont modifiables. Les jours futurs sont désactivés.
+
+**Ma demande de congé n'apparaît pas.**  
+Elle est « en attente » jusqu'à validation RH ; elle s'affiche alors sur votre calendrier.
 
 **Je ne reçois pas les notifications de tickets.**  
 L'application doit rester ouverte ; le serveur de notifications (WebSocket) doit être accessible (configuré par l'admin).

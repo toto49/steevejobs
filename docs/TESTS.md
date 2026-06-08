@@ -176,7 +176,8 @@ Les tests activent automatiquement le mode silencieux (`-Dsteevejobs.test=true`)
 ./mvnw test
 ```
 
-La CI GitHub Actions exécute `mvn -B test` sur chaque push/PR (Linux via `xvfb-run` pour le thread JavaFX).
+La CI GitHub Actions exécute `mvn -B test` sur **Windows, Linux et macOS** (Linux utilise `xvfb-run` pour le thread
+JavaFX). Chaque job produit aussi une image jpackage dans `target/dist/` (artefacts téléchargeables).
 
 ### Compatibilité JDK 25+
 

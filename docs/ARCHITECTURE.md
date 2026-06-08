@@ -44,13 +44,13 @@ Infrastructure hybride autour d'un **NAS Synology**, avec séparation des flux p
 
 ## Résolution DNS et routage
 
-| Service | Endpoint (exemple) | Destination |
-|---------|---------------------|-------------|
-| LiveKit / WebRTC | `https://livekit.votre-domaine.fr` | Serveur visio |
-| Temps réel | `wss://notif.votre-domaine.fr` | Docker WebSocket → MySQL |
-| Front visio | `https://visio.votre-domaine.fr` | Page LiveKit (`URL_FRONT_VISIO`) |
-| Fichiers / GED | `https://stockage.votre-domaine.fr` | Synology WebDAV |
-| Mailing | `mail.votre-domaine.fr` | Synology MailPlus |
+| Service          | Endpoint (exemple)                  | Destination                                                                 |
+|------------------|-------------------------------------|-----------------------------------------------------------------------------|
+| LiveKit / WebRTC | `https://livekit.votre-domaine.fr`  | Serveur visio                                                               |
+| Temps réel       | `wss://notif.votre-domaine.fr`      | Docker WebSocket → MySQL                                                    |
+| Front visio      | `https://visio.votre-domaine.fr`    | Page LiveKit (`URL_FRONT_VISIO`) — sources dans [`docs/livekit/`](livekit/) |
+| Fichiers / GED   | `https://stockage.votre-domaine.fr` | Synology WebDAV                                                             |
+| Mailing          | `mail.votre-domaine.fr`             | Synology MailPlus                                                           |
 
 ---
 
@@ -78,6 +78,19 @@ Envoi transactionnel (factures, notifications) avec enregistrements DNS **SPF** 
 - **Branche Git :** [`websocket`](https://github.com/toto49/steevejobs/tree/websocket)
 - **Stack :** `compose.yaml` — services `ws-server` (port **8887**) + `livekit-server` (WebRTC, mode host)
 - **Documentation :** [DOCKER.md](DOCKER.md) · fichiers dans [`docs/docker/`](docker/)
+
+### Front visio (page web statique)
+
+Le client JavaFX ouvre le navigateur avec un token JWT ; la page web se connecte ensuite à LiveKit.
+
+| Fichier                                             | Rôle                                                                     |
+|-----------------------------------------------------|--------------------------------------------------------------------------|
+| [`docs/livekit/index.html`](livekit/index.html)     | Interface utilisateur (caméra, micro, chat, partage d'écran)             |
+| [`docs/livekit/js/config.js`](livekit/js/config.js) | URL LiveKit (`livekitUrl`), APIs serveur (`kickApiUrl`, `endRoomApiUrl`) |
+| [`docs/livekit/js/app.js`](livekit/js/app.js)       | Logique client LiveKit                                                   |
+
+Déployer le dossier `docs/livekit/` derrière le reverse proxy `visio.*`. Adapter `config.js` avec vos domaines — **ne
+pas publier de secrets ou d'URL de production** dans le dépôt public.
 
 ---
 

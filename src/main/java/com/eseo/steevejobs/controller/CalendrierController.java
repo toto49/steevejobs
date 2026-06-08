@@ -1,18 +1,9 @@
 package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.config.ColorContrastUtil;
-import com.eseo.steevejobs.model.DemandeConge;
-import com.eseo.steevejobs.model.HeuresTravail;
-import com.eseo.steevejobs.model.Planning;
-import com.eseo.steevejobs.model.SoldeConge;
-import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.CongeUtil;
-import com.eseo.steevejobs.service.DemandeCongeService;
-import com.eseo.steevejobs.service.HeuresTravailService;
-import com.eseo.steevejobs.service.PlanningService;
-import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.model.*;
+import com.eseo.steevejobs.service.*;
 import com.eseo.steevejobs.util.TestRuntime;
-import com.eseo.steevejobs.service.UserService;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -20,21 +11,17 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.HPos;
-import javafx.scene.layout.*;
-import javafx.stage.Modality;
-import javafx.util.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.stage.Modality;
+import javafx.util.StringConverter;
 
 import java.sql.SQLException;
-import java.time.DayOfWeek;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -186,6 +173,18 @@ public class CalendrierController {
      */
     private boolean estCalendrierEmploye() {
         return comboEmploye == null;
+    }
+
+    /**
+     * Vue RH : consultation uniquement des heures d'un autre employé (pas de saisie RH).
+     *
+     * @return {@code true} si l'employé affiché n'est pas l'utilisateur connecté
+     */
+    private boolean estConsultationHeuresAutreEmploye() {
+        return !estCalendrierEmploye()
+                && utilisateurConnecte != null
+                && utilisateurAffiche != null
+                && utilisateurAffiche.getId() != utilisateurConnecte.getId();
     }
 
     /**
@@ -549,7 +548,8 @@ public class CalendrierController {
 
     /**
      * Ouvre la popup de saisie ou consultation des heures pour le jour lié au bouton.
-     * Vérifie qu'un employé est sélectionné en vue RH. Mode lecture seule au-delà de 7 jours.
+     * Vérifie qu'un employé est sélectionné en vue RH. Mode lecture seule au-delà de 7 jours
+     * ou lors de la consultation des heures d'un autre employé en vue RH.
      * Liaison FXML : boutons heures ({@code userData} = index du jour).
      *
      * @param event événement du bouton source
@@ -564,7 +564,8 @@ public class CalendrierController {
         LocalDate dateCible = dateDebutSemaineAffichee.plusDays(dayIndex);
 
         // --- DÉTECTION DU MODE LECTURE SEULE ---
-        final boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
+        final boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7))
+                || estConsultationHeuresAutreEmploye();
 
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(isReadOnly ? "Consultation des heures" : "Saisie des heures");

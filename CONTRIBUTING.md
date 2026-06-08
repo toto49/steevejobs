@@ -9,8 +9,9 @@ faciliter la collaboration, nous vous demandons de suivre les directives ci-dess
 1. [Code de Conduite](#code-de-conduite)
 2. [Architecture du Projet](#architecture-du-projet)
 3. [Configuration de l'environnement](#configuration-de-lenvironnement)
-4. [Processus de développement (Git Flow)](#processus-de-développement-git-flow)
-5. [Conventions de nommage et de commit](#conventions-de-nommage-et-de-commit)
+4. [Tests et qualité](#tests-et-qualité)
+5. [Processus de développement (Git Flow)](#processus-de-développement-git-flow)
+6. [Conventions de nommage et de commit](#conventions-de-nommage-et-de-commit)
 
 ## Code de Conduite
 
@@ -25,18 +26,41 @@ Ce projet respecte strictement un motif architectural en couches :
 - **DAO (`com.eseo.steevejobs.dao`)** : Gère l'accès aux données (requêtes SQL).
 - **Service (`com.eseo.steevejobs.service`)** : Contient toute la logique métier. **Les contrôleurs ne doivent jamais
   appeler les DAO directement.** Ils doivent passer par les services.
-- **Controller (`com.eseo.steevejobs.controller`)** : Gère l'interface graphique JavaFX. La logique métier y est
+- **Controller (`com.eseo.steevejobs.controller`)** : Gère l'interface graphique JavaFX (19 contrôleurs FXML). La
+  logique métier y est
   strictement interdite.
 
 ## Configuration de l'environnement
 
 Pour compiler et exécuter le projet localement :
 
-1. Assurez-vous d'avoir installé **Java JDK 25+** (Liberica JDK recommandé pour JavaFX).
+1. Assurez-vous d'avoir installé **Java JDK 25+** (Liberica JDK Full recommandé pour JavaFX).
 2. Clonez le dépôt : `git clone https://github.com/toto49/steevejobs.git`
 3. Installez un serveur **MySQL** (version 8.x) et créez une base de données nommée `steevejobs`.
 4. Importez le fichier SQL de structure fourni dans le dossier `/sql`.
-5. Ouvrez le projet dans IntelliJ IDEA en tant que projet **Maven** (`pom.xml` ou `mvnw`).
+5. Copiez `.env.example` vers `.env` et adaptez les variables.
+6. Ouvrez le projet dans IntelliJ IDEA en tant que projet **Maven** (`pom.xml` ou `mvnw`).
+
+Guide détaillé : [docs/SETUP.md](docs/SETUP.md).
+
+## Tests et qualité
+
+Avant toute Pull Request :
+
+```bash
+# Windows
+.\mvnw.cmd test
+
+# Linux / macOS
+./mvnw test
+```
+
+- **~150 scénarios** JUnit 5 (services mockés, DAO H2, controllers JavaFX) — voir [docs/TESTS.md](docs/TESTS.md).
+- Les tests activent automatiquement le mode silencieux (`TestRuntime` / `-Dsteevejobs.test=true`) : pas de WebSocket ni
+  de connexion BDD réelle dans les controllers.
+- La CI valide le build sur **Windows, Linux et macOS**.
+
+Pour empaqueter l'application : `mvn package -DskipTests` → `target/dist/SteeveJobs/`.
 
 ## Processus de développement (Git Flow)
 

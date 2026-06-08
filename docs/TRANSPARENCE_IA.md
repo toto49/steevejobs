@@ -4,7 +4,9 @@ Conformément aux exigences du projet ESEO, ce document indique **où et comment
 
 L'IA est un **outil d'aide** : les choix fonctionnels, l'architecture, la relecture, les tests manuels et la soutenance restent la responsabilité du groupe.
 
-En fin de projet, l'équipe a aussi sollicité des **audits assistés par IA** (architecture, documentation, tests, build) pour repérer les derniers écarts et **les corriger au fur et à mesure**, après relecture et validation humaines.
+En fin de projet, l'équipe a aussi sollicité des **audits assistés par IA** (architecture, documentation, tests, build,
+packaging jpackage) pour repérer les derniers écarts et **les corriger au fur et à mesure**, après relecture et
+validation humaines.
 
 ---
 
@@ -29,7 +31,9 @@ En fin de projet, l'équipe a aussi sollicité des **audits assistés par IA** (
 
 ## 2. Aide à la rédaction
 
-- **README**, guides (`SETUP`, `GUIDE_UTILISATEUR`, `ARCHITECTURE`, `DOCKER`, `TESTS`) : rédaction ou reformulation assistée, puis **relue et corrigée** par l'équipe (liens, chemins, stack réelle).
+- **README**, guides (`SETUP`, `GUIDE_UTILISATEUR`, `ARCHITECTURE`, `DOCKER`, `TESTS`, `CONTRIBUTING`) : rédaction ou
+  reformulation assistée, puis **relue et corrigée** par l'équipe (liens, chemins, stack réelle, front visio
+  `docs/livekit/`).
 - **Commentaires** et **JavaDoc** dans le code : rédaction ou reformulation assistée, puis relecture par l'équipe.
 
 ---
@@ -39,7 +43,7 @@ En fin de projet, l'équipe a aussi sollicité des **audits assistés par IA** (
 Zones où l'IA a le plus souvent **proposé ou accéléré** du code (toujours revu avant merge) :
 
 - Services métier : `VisioService`, refactorings DAO.
-- Contrôleurs JavaFX : corrections de flux (visio).
+- Contrôleurs JavaFX : calendrier (`CalendrierController`), flux visio, corrections UI.
 
 Le groupe **ne commit pas** de code généré sans le comprendre, le tester et l'adapter aux conventions du dépôt.
 

@@ -103,6 +103,31 @@ Le plugin JavaFX et Surefire configurent déjà `-Dnet.bytebuddy.experimental=tr
 
 ---
 
+## 5 bis. Créer l'exécutable (jpackage)
+
+Le build Maven produit une **image applicative** prête à distribuer (sans installeur MSI/DMG) :
+
+```bash
+# Windows
+.\mvnw.cmd package -DskipTests
+
+# Linux / macOS
+./mvnw package -DskipTests
+```
+
+Résultat : `target/dist/SteeveJobs/` (Windows/Linux) ou `target/dist/SteeveJobs.app/` (macOS).
+
+| Élément             | Détail                                                        |
+|---------------------|---------------------------------------------------------------|
+| Point d'entrée      | `com.eseo.steevejobs.Launcher`                                |
+| Icône               | `logo.ico` (Windows), `logo.png` (Linux), `logo.icns` (macOS) |
+| `.env`              | Placer à côté de l'exécutable ou du dossier `SteeveJobs.app`  |
+| Désactiver jpackage | `mvn package -Djpackage.skip=true`                            |
+
+La CI GitHub Actions exécute ce packaging sur **Windows, Linux et macOS** (artefacts téléchargeables).
+
+---
+
 ## 6. Serveur WebSocket & LiveKit (Docker)
 
 Notifications temps réel, visio et synchronisation tickets : déployés via **Docker Compose** sur la branche **[`websocket`](https://github.com/toto49/steevejobs/tree/websocket)**.
@@ -121,6 +146,23 @@ docker compose up -d --build
 
 Fichiers de référence (sans secrets) : [`docs/docker/`](docker/)
 
+### Front visio (page web LiveKit)
+
+Le client JavaFX ouvre le navigateur sur `URL_FRONT_VISIO`. Les sources statiques se trouvent dans [
+`docs/livekit/`](livekit/) :
+
+```text
+docs/livekit/
+├── index.html
+├── css/style.css
+└── js/
+    ├── config.js          # livekitUrl, APIs kick/end-room — à adapter
+    └── app.js
+```
+
+Déployez ce dossier sur le reverse proxy (`https://visio.votre-domaine.fr/`) et configurez `js/config.js` avec vos
+domaines LiveKit et WebSocket. Ne commitez pas de secrets ni de domaines de production dans ce fichier.
+
 En production : reverse proxy `wss://notif.votre-domaine.fr` → port **8887**. Voir [Architecture production](ARCHITECTURE.md).
 
 ---
@@ -138,13 +180,15 @@ IntelliJ : **Maven → Plugins → javadoc → javadoc:javadoc**.
 
 ## Dépannage rapide
 
-| Symptôme | Piste |
-|----------|-------|
-| Erreur connexion BDD | Vérifiez `DB_*` dans `.env` et que MySQL écoute |
-| WebSocket déconnecté | `WS_SERVER_IP` / `WS_SERVER_PORT`, serveur Docker actif |
-| Visio : token refusé | `JWT_SECRET` identique client + serveur ; voir logs NAS |
-| E-mail non envoyé | `SMTP_URL` et pare-feu port 587 |
-| PDF / pièces jointes | Droits WebDAV et `WEBDAV_*` |
+| Symptôme             | Piste                                                                                |
+|----------------------|--------------------------------------------------------------------------------------|
+| Erreur connexion BDD | Vérifiez `DB_*` dans `.env` et que MySQL écoute                                      |
+| WebSocket déconnecté | `WS_SERVER_IP` / `WS_SERVER_PORT`, serveur Docker actif                              |
+| Visio : token refusé | `JWT_SECRET` identique client + serveur ; voir logs NAS                              |
+| Visio : page blanche | `URL_FRONT_VISIO` correct ; `docs/livekit/js/config.js` adapté                       |
+| E-mail non envoyé    | `SMTP_URL` et pare-feu port 587                                                      |
+| PDF / pièces jointes | Droits WebDAV et `WEBDAV_*`                                                          |
+| jpackage échoue      | JDK 25 **Full** (jpackage inclus) ; icône présente dans `src/main/resources/images/` |
 
 ---
 

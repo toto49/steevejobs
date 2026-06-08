@@ -92,12 +92,13 @@ mysql -u root -p steevejobs < sql/steevejobs.sql
 ./mvnw clean install && ./mvnw javafx:run   # Launcher → HelloApplication
 ```
 
-| Étape | Détail |
-|-------|--------|
-| JDK | 25+ — [Liberica Full](https://bell-sw.com/pages/downloads/) recommandé |
-| BDD | MySQL 8 — script `sql/steevejobs.sql` |
-| Config | [`.env.example`](.env.example) → `.env` (ne pas committer) |
-| Admin initial | Exécuter `DatabaseSeeder` une fois, puis changer le mot de passe admin |
+| Étape         | Détail                                                                      |
+|---------------|-----------------------------------------------------------------------------|
+| JDK           | 25+ — [Liberica Full](https://bell-sw.com/pages/downloads/) recommandé      |
+| BDD           | MySQL 8 — script `sql/steevejobs.sql`                                       |
+| Config        | [`.env.example`](.env.example) → `.env` (ne pas committer)                  |
+| Admin initial | Exécuter `DatabaseSeeder` une fois, puis changer le mot de passe admin      |
+| Exécutable    | `mvn package` → image applicative dans `target/dist/SteeveJobs/` (jpackage) |
 
 Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 
@@ -105,15 +106,16 @@ Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 
 ## Documentation
 
-| Document | Pour qui ? |
-|----------|------------|
-| 📘 [**Guide utilisateur**](docs/GUIDE_UTILISATEUR.md) | Employés, RH, commerciaux — utilisation quotidienne |
-| 🛠 [**Installation & config**](docs/SETUP.md) | Développeurs — BDD, `.env`, client JavaFX |
-| 🐳 [**Déploiement Docker**](docs/DOCKER.md) | DevOps — Compose, LiveKit, branche [`websocket`](https://github.com/toto49/steevejobs/tree/websocket) |
-| 🏗 [**Architecture production**](docs/ARCHITECTURE.md) | DevOps — NAS, reverse proxy, LiveKit, WebDAV |
-| 🧪 [**Tests unitaires**](docs/TESTS.md) | Développeurs — JUnit 5, Mockito |
-| 🤖 [**Transparence IA**](docs/TRANSPARENCE_IA.md) | Dossier projet — usage de l'IA (obligatoire) |
-| 📚 [**Index docs**](docs/README.md) | Vue d'ensemble de la documentation |
+| Document                                               | Pour qui ?                                                                                            |
+|--------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| 📘 [**Guide utilisateur**](docs/GUIDE_UTILISATEUR.md)  | Employés, RH, commerciaux — utilisation quotidienne                                                   |
+| 🛠 [**Installation & config**](docs/SETUP.md)          | Développeurs — BDD, `.env`, client JavaFX                                                             |
+| 🐳 [**Déploiement Docker**](docs/DOCKER.md)            | DevOps — Compose, LiveKit, branche [`websocket`](https://github.com/toto49/steevejobs/tree/websocket) |
+| 🎥 [**Front visio LiveKit**](docs/livekit/README.md)   | DevOps — page web statique (`index.html`, `config.js`)                                                |
+| 🏗 [**Architecture production**](docs/ARCHITECTURE.md) | DevOps — NAS, reverse proxy, LiveKit, WebDAV                                                          |
+| 🧪 [**Tests unitaires**](docs/TESTS.md)                | Développeurs — JUnit 5, Mockito                                                                       |
+| 🤖 [**Transparence IA**](docs/TRANSPARENCE_IA.md)      | Dossier projet — usage de l'IA (obligatoire)                                                          |
+| 📚 [**Index docs**](docs/README.md)                    | Vue d'ensemble de la documentation                                                                    |
 
 ---
 
@@ -134,9 +136,11 @@ Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 
 <br>
 
-**Client :** HikariCP · AtlantaFX · OpenPDF · Jakarta Mail · Java-WebSocket · WebDAV (HttpURLConnection) · Auth0 JWT · jBCrypt · dotenv-java
+**Client :** HikariCP · AtlantaFX · OpenPDF · Jakarta Mail · Java-WebSocket · WebDAV (HttpURLConnection) · Auth0 JWT ·
+jBCrypt · dotenv-java · jpackage
 
-**Production :** Synology NAS · Web Station (reverse proxy) · Let's Encrypt · MailPlus · WebDAV · branche Git `websocket`
+**Production :** Synology NAS · Web Station (reverse proxy) · Let's Encrypt · MailPlus · WebDAV · branche Git
+`websocket` · front visio statique (`docs/livekit/`)
 
 → Détails : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -149,19 +153,21 @@ Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
 ```text
 steevejobs/
 ├── src/main/java/com/eseo/steevejobs/
-│   ├── model/       # Entités métier
-│   ├── dao/         # Accès MySQL
-│   ├── service/     # Logique métier
-│   ├── controller/  # Vues JavaFX (FXML)
-│   ├── config/      # DatabaseSeeder, utilitaires
+│   ├── model/       # Entités métier + enums (AppModule, statuts…)
+│   ├── dao/         # Accès MySQL (HikariCP)
+│   ├── service/     # Logique métier (~20 services)
+│   ├── controller/  # 19 contrôleurs JavaFX (FXML)
+│   ├── config/      # DatabaseSeeder, ColorContrastUtil
+│   ├── util/        # TestRuntime (mode test silencieux)
 │   ├── Launcher.java
 │   └── HelloApplication.java
-├── src/main/resources/   # FXML, CSS, images
-├── src/test/java/        # Tests unitaires (JUnit + Mockito)
+├── src/main/resources/   # FXML (19 vues), CSS, images
+├── src/test/java/        # Tests JUnit 5 + Mockito + H2 (~150 scénarios)
 ├── sql/                  # Schéma BDD
-├── docs/                 # Documentation
-├── .env.example          # Modèle de configuration
-└── pom.xml
+├── docs/                 # Documentation + front visio (docs/livekit/)
+├── .github/workflows/    # CI Maven (Windows, Linux, macOS)
+├── .env.example          # Modèle de configuration client
+└── pom.xml               # JavaFX 25, jpackage, Surefire
 ```
 
 ---

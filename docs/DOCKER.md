@@ -48,12 +48,13 @@ Le `compose.yaml` lance **deux services** :
 
 ## 2. Fichiers de configuration
 
-| Fichier | Emplacement branche `websocket` | Copie doc (référence) |
-|---------|----------------------------------|------------------------|
-| [`compose.yaml`](docker/compose.yaml) | Racine | [`docs/docker/compose.yaml`](docker/compose.yaml) |
-| [`Dockerfile`](docker/Dockerfile) | Racine | [`docs/docker/Dockerfile`](docker/Dockerfile) |
-| `livekit.yaml` | Racine (local, **gitignoré**) | [`docs/docker/livekit.yaml.example`](docker/livekit.yaml.example) |
-| `.env` | Racine (local, **gitignoré**) | [`docs/docker/.env.example`](docker/.env.example) |
+| Fichier                               | Emplacement branche `websocket` | Copie doc (référence)                                             |
+|---------------------------------------|---------------------------------|-------------------------------------------------------------------|
+| [`compose.yaml`](docker/compose.yaml) | Racine                          | [`docs/docker/compose.yaml`](docker/compose.yaml)                 |
+| [`Dockerfile`](docker/Dockerfile)     | Racine                          | [`docs/docker/Dockerfile`](docker/Dockerfile)                     |
+| `livekit.yaml`                        | Racine (local, **gitignoré**)   | [`docs/docker/livekit.yaml.example`](docker/livekit.yaml.example) |
+| `.env`                                | Racine (local, **gitignoré**)   | [`docs/docker/.env.example`](docker/.env.example)                 |
+| Front visio                           | —                               | [`docs/livekit/`](../livekit/) (page statique, hors Docker)       |
 
 ### `Dockerfile`
 
@@ -185,11 +186,11 @@ Ouvrez ces ports sur le pare-feu si LiveKit est exposé directement. En producti
 
 Exemple de routage (domaines anonymisés) :
 
-| URL publique | Cible interne |
-|--------------|---------------|
-| `wss://notif.votre-domaine.fr` | `http://127.0.0.1:8887` (ws-server) |
-| `wss://livekit.votre-domaine.fr` | LiveKit `:7880` (+ UDP RTC) |
-| `https://visio.votre-domaine.fr` | Front statique (site visio) |
+| URL publique                     | Cible interne                                   |
+|----------------------------------|-------------------------------------------------|
+| `wss://notif.votre-domaine.fr`   | `http://127.0.0.1:8887` (ws-server)             |
+| `wss://livekit.votre-domaine.fr` | LiveKit `:7880` (+ UDP RTC)                     |
+| `https://visio.votre-domaine.fr` | Dossier statique [`docs/livekit/`](../livekit/) |
 
 Headers WebSocket requis sur le proxy :
 
@@ -197,6 +198,25 @@ Headers WebSocket requis sur le proxy :
 Upgrade: websocket
 Connection: Upgrade
 ```
+
+### Déployer le front visio
+
+1. Copiez `docs/livekit/` sur le NAS (Web Station ou partage servi en HTTPS).
+2. Éditez `js/config.js` :
+
+```javascript
+window.VISIO_CONFIG = {
+  brandName: "SteeveJobs",
+  livekitUrl: "wss://livekit.votre-domaine.fr",
+  kickApiUrl: "https://visio.votre-domaine.fr/api/visio/kick",
+  endRoomApiUrl: "https://visio.votre-domaine.fr/api/visio/end-room",
+  connectTimeoutMs: 25000,
+  loadingMessage: "Connexion à la salle...",
+  backLink: "/",
+};
+```
+
+3. Vérifiez que `URL_FRONT_VISIO` côté client pointe vers `https://visio.votre-domaine.fr/index.html`.
 
 Voir aussi [Architecture production](ARCHITECTURE.md).
 
