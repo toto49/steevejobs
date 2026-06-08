@@ -207,7 +207,10 @@ public class HelloApplication extends Application {
         Button btnFermer = creerBoutonHeader(svgFermer, "#e81123", "#ffffff", true);
         btnFermer.setOnAction(e -> {
             WebSocketService.getInstance().deconnecter(() -> {
-                Platform.exit();
+                Platform.runLater(() -> {
+                    Platform.exit();
+                    System.exit(0);
+                });
             });
         });
 
