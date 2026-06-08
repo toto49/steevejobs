@@ -1,122 +1,116 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
+<?import javafx.scene.text.Font?>
 <BorderPane xmlns:fx="http://javafx.com/fxml/1"
             prefHeight="768.0" prefWidth="1200.0"
-            styleClass="root-pane"
+            style="-fx-background-color: #f4f5f7;"
             stylesheets="@../../../../style/style.css"
             xmlns="http://javafx.com/javafx/17.0.12"
             fx:controller="com.eseo.steevejobs.controller.StockController">
 
+    <!-- HEADER -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="60.0" style="-fx-background-color: #4B78CC;">
+            <padding><Insets left="20.0" right="20.0"/></padding>
+            <Label text="STOCKS" textFill="WHITE">
+                <font>
+                    <Font name="System Bold" size="24.0"/>
+                </font>
+            </Label>
+        </HBox>
+    </top>
+
+    <!-- CORPS -->
     <center>
-        <VBox style="-fx-background-color: #DDE8FF;" BorderPane.alignment="CENTER">
+        <HBox spacing="15.0">
+            <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/></padding>
 
-            <!-- HEADER -->
-            <HBox alignment="CENTER_LEFT" prefHeight="80.0"
-                  style="-fx-background-color: #82A9F1;">
-                <padding><Insets left="20.0" right="20.0"/></padding>
-                <Label style="-fx-font-size: 24px; -fx-font-weight: bold;
-                  -fx-font-family: 'Comic Sans MS';"
-                       text="&lt; STOCKS" textFill="WHITE"/>
-            </HBox>
+            <!-- PANNEAU GAUCHE — Tableau -->
+            <VBox HBox.hgrow="ALWAYS"
+                  style="-fx-background-color: white; -fx-background-radius: 10;
+                         -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
+                <padding><Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/></padding>
 
-            <!-- CORPS -->
-            <HBox VBox.vgrow="ALWAYS" spacing="0">
+                <!-- Barre de recherche -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="searchField"
+                               promptText="Recherche de produit..."
+                               prefHeight="38"
+                               HBox.hgrow="ALWAYS"
+                               onKeyReleased="#onSearchRealTime"
+                               style="-fx-background-radius: 8; -fx-border-radius: 8;
+                                      -fx-border-color: #CCCCCC; -fx-background-color: white;
+                                      -fx-padding: 6 10;"/>
+                    <Button text="Rafraîchir" onAction="#onRefresh"
+                            style="-fx-background-color: white; -fx-text-fill: #5584D5;
+                                   -fx-border-color: #5584D5; -fx-border-width: 1;
+                                   -fx-background-radius: 8; -fx-border-radius: 8;
+                                   -fx-padding: 8 14; -fx-cursor: hand;"/>
+                    <Button text="+ Nouveau Produit" onAction="#onNouveauProduit"
+                            style="-fx-background-color: #5584D5; -fx-text-fill: white;
+                                   -fx-font-weight: bold; -fx-background-radius: 8;
+                                   -fx-border-radius: 8; -fx-padding: 8 14; -fx-cursor: hand;"/>
+                </HBox>
 
-                <!-- PANNEAU GAUCHE -->
-                <VBox HBox.hgrow="ALWAYS" spacing="12"
-                      style="-fx-background-color: #DDE8FF;">
-                    <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+                <!-- Espace -->
+                <VBox prefHeight="15.0" minHeight="15.0"/>
 
-                    <!-- Barre de recherche -->
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <TextField fx:id="searchField"
-                                   promptText="Recherche de produit..."
-                                   prefHeight="38"
-                                   HBox.hgrow="ALWAYS"
-                                   onKeyReleased="#onSearchRealTime"
-                                   style="-fx-background-radius: 8; -fx-border-radius: 8;
-                                          -fx-border-color: #CCCCCC; -fx-background-color: white;
-                                          -fx-padding: 6 10;"/>
-                        <Button text="Rafraîchir" onAction="#onRefresh"
-                                style="-fx-background-color: white; -fx-text-fill: #5584D5;
-                                       -fx-border-color: #5584D5; -fx-border-width: 1;
-                                       -fx-background-radius: 8; -fx-border-radius: 8;
-                                       -fx-padding: 8 14; -fx-cursor: hand;"/>
-                        <Button text="+ Nouveau Produit" onAction="#onNouveauProduit"
-                                style="-fx-background-color: #5584D5; -fx-text-fill: white;
-                                       -fx-font-weight: bold; -fx-background-radius: 8;
-                                       -fx-border-radius: 8; -fx-padding: 8 14; -fx-cursor: hand;"/>
-                    </HBox>
+                <!-- Tableau -->
+                <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS"
+                           style="-fx-background-color: transparent;
+                                  -fx-background-radius: 10;
+                                  -fx-border-color: transparent;">
+                    <columns>
+                        <TableColumn fx:id="colId"       text="ID"          prefWidth="55"/>
+                        <TableColumn fx:id="colNom"      text="Nom Produit" prefWidth="190"/>
+                        <TableColumn fx:id="colQuantite" text="Quantité"    prefWidth="110"/>
+                        <TableColumn fx:id="colStatut"   text="Status"      prefWidth="140"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="Aucun produit trouvé"
+                               style="-fx-text-fill: #9ca3af; -fx-font-size: 14px;"/>
+                    </placeholder>
+                </TableView>
 
-                    <!-- Tableau dans carte blanche -->
-                    <VBox VBox.vgrow="ALWAYS"
-                          style="-fx-background-color: white; -fx-background-radius: 10;
-                                 -fx-border-color: #CCCCCC; -fx-border-radius: 10;
-                                 -fx-effect: dropshadow(three-pass-box,rgba(0,0,0,0.08),8,0,0,3);">
+                <!-- Compteur -->
+                <HBox alignment="CENTER_LEFT" prefHeight="36.0">
+                    <Label fx:id="labelNbProduits" text="0 produit(s)"
+                           style="-fx-font-size: 12px; -fx-text-fill: #7a849e;"/>
+                </HBox>
 
-                        <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS"
-                                   style="-fx-background-color: transparent;
-                                          -fx-background-radius: 10;
-                                          -fx-border-color: transparent;">
-                            <columns>
-                                <TableColumn fx:id="colId"        text="ID"          prefWidth="55"/>
-                                <TableColumn fx:id="colNom"       text="Nom Produit" prefWidth="190"/>
-                                <TableColumn fx:id="colCategorie" text="Catégorie"   prefWidth="110"/>
-                                <TableColumn fx:id="colReference" text="Référence"   prefWidth="110"/>
-                                <TableColumn fx:id="colQuantite"  text="Quantité"    prefWidth="110"/>
-                                <TableColumn fx:id="colStatut"    text="Status"      prefWidth="140"/>
-                            </columns>
-                        </TableView>
+            </VBox>
 
-                        <!-- Compteur -->
-                        <HBox alignment="CENTER_LEFT" spacing="8"
-                              style="-fx-padding: 8 16; -fx-background-color: white;
-                                     -fx-background-radius: 0 0 10 10;
-                                     -fx-border-color: #EEEEEE transparent transparent transparent;
-                                     -fx-border-width: 1;">
-                            <Label fx:id="labelNbProduits" text="0 produit(s)"
-                                   style="-fx-font-size: 12px; -fx-text-fill: #7a849e;"/>
-                        </HBox>
-                    </VBox>
+            <!-- PANNEAU DROIT — Fiche Produit -->
+            <VBox fx:id="fichePanel" spacing="0" minWidth="280" maxWidth="300"
+                  style="-fx-background-color: white; -fx-background-radius: 10;
+                         -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
 
+                <!-- En-tête de la fiche -->
+                <VBox alignment="CENTER_LEFT" minHeight="55.0"
+                      style="-fx-background-color: #5584D5; -fx-background-radius: 10 10 0 0;">
+                    <padding><Insets left="20.0" top="14.0" bottom="14.0"/></padding>
+                    <Label text="Fiche Produit"
+                           style="-fx-font-size: 18px; -fx-font-weight: bold;
+                                  -fx-font-family: 'Comic Sans MS'; -fx-text-fill: white;"/>
                 </VBox>
 
-                <!-- FICHE PRODUIT -->
-                <VBox fx:id="fichePanel" spacing="0" minWidth="280" maxWidth="300"
-                      style="-fx-background-color: white;
-                             -fx-border-color: #CCCCCC transparent transparent transparent;
-                             -fx-border-width: 0 0 0 1;">
-                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                <VBox spacing="12.0">
+                    <padding><Insets bottom="20.0" left="20.0" right="20.0" top="15.0"/></padding>
 
-                    <Label text="Fiche Produit"
-                           style="-fx-font-size: 20px; -fx-font-weight: bold;
-                                  -fx-font-family: 'Comic Sans MS'; -fx-text-fill: #1e2545;
-                                  -fx-padding: 0 0 10 0;"/>
-
-                    <StackPane alignment="CENTER"
-                               style="-fx-background-color: #82A9F1; -fx-background-radius: 40;
-                                      -fx-min-width: 64; -fx-min-height: 64;
-                                      -fx-max-width: 64; -fx-max-height: 64; -fx-padding: 10;">
-                        <Label text="📦" style="-fx-font-size: 26px;"/>
-                    </StackPane>
-
-                    <Label fx:id="ficheNom" text="—"
+                    <!-- Nom du produit -->
+                    <Label fx:id="ficheNom" text="Aucun produit sélectionné"
                            style="-fx-font-size: 16px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1e2545; -fx-padding: 10 0 2 0;
-                                  -fx-wrap-text: true;"/>
+                                  -fx-text-fill: #1e2545; -fx-wrap-text: true;"/>
 
-                    <Region style="-fx-background-color: #DDE8FF;
-                                   -fx-min-height: 1; -fx-max-height: 1;">
-                        <VBox.margin><Insets top="10" bottom="10"/></VBox.margin>
-                    </Region>
+                    <Region style="-fx-background-color: #DDE8FF; -fx-min-height: 1; -fx-max-height: 1;"/>
 
+                    <!-- Détails -->
                     <Label text="Détails"
                            style="-fx-font-size: 13px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1e2545; -fx-padding: 0 0 6 0;"/>
+                                  -fx-text-fill: #4B78CC;"/>
 
                     <VBox spacing="8"
                           style="-fx-background-color: #DDE8FF; -fx-background-radius: 8;
@@ -160,17 +154,14 @@
                         </HBox>
                     </VBox>
 
-                    <Region style="-fx-background-color: #DDE8FF;
-                                   -fx-min-height: 1; -fx-max-height: 1;">
-                        <VBox.margin><Insets top="14" bottom="10"/></VBox.margin>
-                    </Region>
+                    <Region style="-fx-background-color: #DDE8FF; -fx-min-height: 1; -fx-max-height: 1;"/>
 
+                    <!-- Actions -->
                     <Label text="Actions rapides"
                            style="-fx-font-size: 13px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1e2545; -fx-padding: 0 0 6 0;"/>
+                                  -fx-text-fill: #4B78CC;"/>
 
                     <VBox spacing="8">
-                        <VBox.margin><Insets top="4"/></VBox.margin>
                         <Button fx:id="btnFicheEntree" text="Entrée (+)"
                                 maxWidth="Infinity" onAction="#onFicheEntree"
                                 style="-fx-background-color: #27ae60; -fx-text-fill: white;
@@ -186,11 +177,17 @@
                                 style="-fx-background-color: #f39c12; -fx-text-fill: white;
                                        -fx-font-weight: bold; -fx-background-radius: 8;
                                        -fx-border-radius: 8; -fx-padding: 9 0; -fx-cursor: hand;"/>
+                        <Button fx:id="btnFicheModifier" text="Modifier ✎ "
+                                maxWidth="Infinity" onAction="#onFicheModifier"
+                                style="-fx-background-color: #5584D5; -fx-text-fill: white;
+                                       -fx-font-weight: bold; -fx-background-radius: 8;
+                                       -fx-border-radius: 8; -fx-padding: 9 0; -fx-cursor: hand;"/>
                     </VBox>
 
                 </VBox>
+            </VBox>
 
-            </HBox>
-        </VBox>
+        </HBox>
     </center>
+
 </BorderPane>

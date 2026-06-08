@@ -2,41 +2,50 @@ package com.eseo.steevejobs.service;
 
 import com.eseo.steevejobs.dao.UserDAO;
 import com.eseo.steevejobs.model.User;
+import org.mindrot.jbcrypt.BCrypt;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Service métier dédié aux opérations sur les utilisateurs.
+ * Opérations métier sur les comptes utilisateurs et l'authentification.
  * <p>
- * Fait le lien entre la couche DAO et la couche de présentation (controllers/views).
- * Contient la logique métier et la validation des données.
+ * Règles métier : email unique ; compte actif requis à la connexion ;
+ * blocage temporaire après 5 échecs (15 minutes, fenêtre de réinitialisation des tentatives).
+ * Effet de bord à l'authentification : envoi asynchrone d'un e-mail d'alerte via
+ * {@link MailService} en cas de blocage. Hachage des mots de passe avec BCrypt (coût 12).
  * </p>
  */
 public class UserService {
 
+    /** Accès persistance aux comptes utilisateurs. */
     private final UserDAO userDAO;
 
     /**
-     * Constructeur par défaut qui initialise le DAO
+     * Constructeur par défaut instanciant un {@link UserDAO}.
      */
     public UserService() {
         this.userDAO = new UserDAO();
     }
 
     /**
-     * Constructeur avec injection de dépendance.
+     * Constructeur avec injection du DAO.
      *
-     * @param userDAO le DAO à utiliser
+     * @param userDAO accès persistance utilisateurs
      */
     public UserService(UserDAO userDAO) {
         this.userDAO = userDAO;
     }
 
+    /**
+     * Crée un utilisateur après validation et contrôle d'unicité de l'email.
+     *
+     * @param user entité utilisateur (mot de passe déjà haché côté appelant si applicable)
+     * @throws IllegalArgumentException si champs obligatoires manquants ou email existant
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public void createUser(User user) throws SQLException {
         if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("L'email est obligatoire");
@@ -56,6 +65,13 @@ public class UserService {
         userDAO.createUser(user);
     }
 
+    /**
+     * Met à jour un utilisateur existant.
+     *
+     * @param user utilisateur avec identifiant valide
+     * @throws IllegalArgumentException si identifiant ou email invalides
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public void updateUser(User user) throws SQLException {
         if (user.getId() <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
@@ -77,6 +93,15 @@ public class UserService {
         userDAO.updateUser(user);
     }
 
+    /**
+     * Met à jour le taux horaire ou assimilé d'un utilisateur (0–99).
+     *
+     * @param userId identifiant utilisateur
+     * @param taux   valeur entière strictement inférieure à 100
+     * @return {@code true} si la mise à jour a réussi
+     * @throws IllegalArgumentException si le taux est hors plage
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public boolean updateTaux(int userId, int taux) throws SQLException {
         if (taux < 0 || taux >= 100) {
             throw new IllegalArgumentException("Le taux doit être entre 0 et 99.");
@@ -84,6 +109,14 @@ public class UserService {
         return userDAO.updateTaux(userId, taux);
     }
 
+    /**
+     * Supprime un utilisateur.
+     *
+     * @param id identifiant utilisateur
+     * @return {@code true} si la suppression a réussi
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public boolean deleteUser(int id) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
@@ -91,6 +124,14 @@ public class UserService {
         return userDAO.deleteUser(id);
     }
 
+    /**
+     * Charge un utilisateur par identifiant.
+     *
+     * @param id identifiant utilisateur
+     * @return utilisateur ou {@code null} selon le DAO
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public User getUserById(int id) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
@@ -98,6 +139,14 @@ public class UserService {
         return userDAO.getById(id);
     }
 
+    /**
+     * Charge un utilisateur par adresse e-mail.
+     *
+     * @param email adresse e-mail
+     * @return utilisateur ou {@code null} selon le DAO
+     * @throws IllegalArgumentException si l'email est vide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public User getUserByEmail(String email) throws SQLException {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("L'email est obligatoire");
@@ -105,12 +154,21 @@ public class UserService {
         return userDAO.getByEmail(email);
     }
 
-
-    public User authenticate(String email, String passwordHash) throws Exception {
+    /**
+     * Authentifie un utilisateur par e-mail et mot de passe clair (BCrypt).
+     *
+     * @param email         adresse e-mail
+     * @param passwordClair mot de passe en clair
+     * @return utilisateur authentifié, ou {@code null} si compte inexistant
+     * @throws IllegalArgumentException si email ou mot de passe vide
+     * @throws SecurityException        si compte désactivé, bloqué ou mot de passe incorrect
+     * @throws Exception                propagation d'erreurs DAO éventuelles
+     */
+    public User authenticate(String email, String passwordClair) throws Exception {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("L'email est obligatoire");
         }
-        if (passwordHash == null || passwordHash.trim().isEmpty()) {
+        if (passwordClair == null || passwordClair.trim().isEmpty()) {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         }
 
@@ -123,6 +181,7 @@ public class UserService {
         if (!user.isActif()) {
             throw new SecurityException("Ce compte est désactivé. Veuillez contacter l'administrateur.");
         }
+
         if (user.getBloqueJusqua() != null && user.getBloqueJusqua().isAfter(LocalDateTime.now())) {
             Duration duration = Duration.between(LocalDateTime.now(), user.getBloqueJusqua());
             long minutes = duration.toMinutes();
@@ -132,8 +191,9 @@ public class UserService {
             throw new SecurityException("Compte bloqué. Réessayez dans " + tempsRestant + ".");
         }
 
-        User validUser = userDAO.authenticate(email, passwordHash);
-        if (validUser == null) {
+        boolean passwordValide = BCrypt.checkpw(passwordClair, user.getPasswordHash());
+
+        if (!passwordValide) {
             int tentatives = user.getTentativesEchouees();
             LocalDateTime maintenant = LocalDateTime.now();
             if (user.getDateDernierEchec() != null && user.getDateDernierEchec().plusMinutes(15).isBefore(maintenant)) {
@@ -163,17 +223,32 @@ public class UserService {
                 throw new SecurityException("Identifiants incorrects. Il vous reste " + (5 - tentatives) + " essai(s).");
             }
         }
+
         if (user.getTentativesEchouees() > 0 || user.getDateDernierEchec() != null) {
-            userDAO.updateTentativesEtBlocage(validUser.getId(), 0, null, null);
+            userDAO.updateTentativesEtBlocage(user.getId(), 0, null, null);
         }
 
-        return validUser;
+        return user;
     }
 
+    /**
+     * Liste tous les utilisateurs.
+     *
+     * @return liste complète
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<User> getAllUsers() throws SQLException {
         return userDAO.findAll();
     }
 
+    /**
+     * Liste les utilisateurs d'un rôle donné.
+     *
+     * @param role nom du rôle
+     * @return utilisateurs du rôle
+     * @throws IllegalArgumentException si le rôle est vide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public List<User> getUsersByRole(String role) throws SQLException {
         if (role == null || role.trim().isEmpty()) {
             throw new IllegalArgumentException("Le rôle est obligatoire");
@@ -181,10 +256,24 @@ public class UserService {
         return userDAO.findByRole(role);
     }
 
+    /**
+     * Liste les comptes actifs.
+     *
+     * @return utilisateurs actifs
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<User> getActiveUsers() throws SQLException {
         return userDAO.findActiveUsers();
     }
 
+    /**
+     * Recherche des utilisateurs par fragment de nom.
+     *
+     * @param searchTerm terme de recherche non vide
+     * @return résultats correspondants
+     * @throws IllegalArgumentException si le terme est vide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public List<User> searchUsersByName(String searchTerm) throws SQLException {
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
             throw new IllegalArgumentException("Le terme de recherche est obligatoire");
@@ -192,6 +281,14 @@ public class UserService {
         return userDAO.searchByName(searchTerm);
     }
 
+    /**
+     * Désactive un compte utilisateur.
+     *
+     * @param id identifiant utilisateur
+     * @return {@code true} si la désactivation a réussi
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public boolean deactivateUser(int id) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
@@ -199,6 +296,14 @@ public class UserService {
         return userDAO.deactivateUser(id);
     }
 
+    /**
+     * Réactive un compte utilisateur.
+     *
+     * @param id identifiant utilisateur
+     * @return {@code true} si l'activation a réussi
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public boolean activateUser(int id) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
@@ -206,16 +311,34 @@ public class UserService {
         return userDAO.activateUser(id);
     }
 
-    public boolean updateUserPassword(int id, String newPasswordHash) throws SQLException {
+    /**
+     * Remplace le mot de passe par un nouveau hash BCrypt.
+     *
+     * @param id                identifiant utilisateur
+     * @param newPasswordClair  nouveau mot de passe en clair
+     * @return {@code true} si la mise à jour a réussi
+     * @throws IllegalArgumentException si identifiant ou mot de passe invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
+    public boolean updateUserPassword(int id, String newPasswordClair) throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID utilisateur invalide");
         }
-        if (newPasswordHash == null || newPasswordHash.trim().isEmpty()) {
+        if (newPasswordClair == null || newPasswordClair.trim().isEmpty()) {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         }
-        return userDAO.updatePassword(id, newPasswordHash);
+        String hashed = hashPassword(newPasswordClair);
+        return userDAO.updatePassword(id, hashed);
     }
 
+    /**
+     * Indique si un e-mail est déjà enregistré.
+     *
+     * @param email adresse e-mail
+     * @return {@code true} si l'e-mail existe
+     * @throws IllegalArgumentException si l'email est vide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public boolean checkEmailExists(String email) throws SQLException {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("L'email est obligatoire");
@@ -223,33 +346,59 @@ public class UserService {
         return userDAO.emailExists(email);
     }
 
+    /**
+     * Retourne le nombre total d'utilisateurs.
+     *
+     * @return effectif total
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public int getTotalUserCount() throws SQLException {
         return userDAO.countUsers();
     }
 
+    /**
+     * Retourne le nombre d'utilisateurs actifs.
+     *
+     * @return effectif actif
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public int getActiveUserCount() throws SQLException {
         return userDAO.countActiveUsers();
     }
 
-    public String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes());
-            StringBuilder hexString = new StringBuilder();
-
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Erreur lors du hachage du mot de passe", e);
+    /**
+     * Met à jour le taux de cotisations patronales (0–99).
+     *
+     * @param userId       identifiant utilisateur
+     * @param tauxPatronal taux entier
+     * @return {@code true} si la mise à jour a réussi
+     * @throws IllegalArgumentException si le taux est hors plage
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
+    public boolean updateTauxPatronal(int userId, int tauxPatronal) throws SQLException {
+        if (tauxPatronal < 0 || tauxPatronal >= 100) {
+            throw new IllegalArgumentException("Le taux patronal doit être entre 0 et 99.");
         }
+        return userDAO.updateTauxPatronal(userId, tauxPatronal);
     }
 
+    /**
+     * Produit un hash BCrypt d'un mot de passe clair (coût 12).
+     *
+     * @param password mot de passe en clair
+     * @return hash BCrypt
+     */
+    public String hashPassword(String password) {
+        return BCrypt.hashpw(password, BCrypt.gensalt(12));
+    }
+
+    /**
+     * Retourne les identifiants des utilisateurs d'un rôle.
+     *
+     * @param role nom du rôle
+     * @return liste d'identifiants
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<Integer> getIdsByRole(String role) throws SQLException {
         List<User> users = getUsersByRole(role);
         return users.stream()

@@ -5,18 +5,10 @@ import com.eseo.steevejobs.model.Enum.TiersType;
 import java.util.ArrayList;
 import java.util.List;
 
-//Commentaires géré par IA
-
 /**
- * Représente un tiers de l'entreprise.
- *
- * Un tiers correspond à une personne ou une entité externe
- * (client particulier ou entreprise) pouvant être destinataire
- * de documents commerciaux tels que des devis ou des factures.
- *
- * Un tiers peut être associé à plusieurs documents.
+ * Tiers externe (client ou fournisseur) de l'entreprise.
+ * Entité persistée référencée par les {@code Document} commerciaux ; gérée dans les écrans clients et devis/factures.
  */
-
 public class Tiers {
 
     /** Identifiant unique du tiers */
@@ -28,7 +20,7 @@ public class Tiers {
     /** Prénom du tiers (utilisé principalement pour les particuliers) */
     private String prenom;
 
-    /** Type du tiers (CLIENTS ou FOURNISSEUR) */
+    /** Type du tiers (CLIENT ou FOURNISSEUR) */
     private TiersType type;
 
     /** Adresse email du tiers */
@@ -53,19 +45,12 @@ public class Tiers {
     private List<Document> documents;
 
     /**
-     * Constructeur par défaut.
-     *
-     * Initialise la liste des documents afin d'éviter
-     * toute erreur de type NullPointerException.
+     * Constructeur par défaut ; initialise la liste des documents.
      */
-
     public Tiers() { this.documents = new ArrayList<>();}
 
     /**
-     * Constructeur complet permettant d'initialiser
-     * toutes les informations d'un tiers.
-     *
-     * Le tiers est actif par défaut.
+     * Construit un tiers actif avec ses coordonnées.
      *
      * @param id        identifiant du tiers
      * @param nom       nom ou raison sociale
@@ -77,7 +62,6 @@ public class Tiers {
      * @param siret     numéro SIRET
      * @param num_tva   numéro de TVA
      */
-
     public Tiers( int id, String nom, String prenom, TiersType type, String email, String adresse, String tel, String siret, String num_tva ) {
         this.id = id;
         this.nom = nom;
@@ -93,72 +77,117 @@ public class Tiers {
         this.documents = new ArrayList<>();
     }
 
+    /** @return identifiant technique */
     public int  getId() {
         return id;
     }
+
+    /** @param id identifiant technique */
     public void setId(int id) {
         this.id = id;
     }
+
+    /** @return nom ou raison sociale */
     public String getNom() {
         return nom;
     }
+
+    /** @param nom nom ou raison sociale */
     public void setNom(String nom) {
         this.nom = nom;
     }
+
+    /** @return prénom */
     public String getPrenom() {
         return prenom;
     }
+
+    /** @param prenom prénom */
     public void setPrenom(String prenom) {
         this.prenom = prenom;
     }
+
+    /** @return type client ou fournisseur */
     public TiersType getType() {
         return type;
     }
+
+    /** @param type type client ou fournisseur */
     public void setType(TiersType type) {
         this.type = type;
     }
+
+    /** @return adresse email */
     public String getEmail() {
         return email;
     }
+
+    /** @param email adresse email */
     public void setEmail(String email) {
         this.email = email;
     }
+
+    /** @return adresse postale */
     public String getAdresse() {
         return adresse;
     }
+
+    /** @param adresse adresse postale */
     public void setAdresse(String adresse) {
         this.adresse = adresse;
     }
+
+    /** @return numéro de téléphone */
     public String getTel() {
         return tel;
     }
+
+    /** @param tel numéro de téléphone */
     public void setTel(String tel) {
         this.tel = tel;
     }
+
+    /** @return numéro SIRET */
     public String getSiret() {
         return siret;
     }
+
+    /** @param siret numéro SIRET */
     public void setSiret(String siret) {
         this.siret = siret;
     }
+
+    /** @return numéro de TVA intracommunautaire */
     public String getNum_tva() {
         return num_tva;
     }
+
+    /** @param num_tva numéro de TVA intracommunautaire */
     public void setNum_tva(String num_tva) {
         this.num_tva = num_tva;
     }
+
+    /** @return {@code true} si le tiers est actif */
     public boolean isActif() {
         return actif;
     }
+
+    /** @param actif statut actif du tiers */
     public void setActif(boolean actif) {
         this.actif = actif;
     }
+
+    /** @return documents liés (liste modifiable en mémoire) */
     public List<Document> getDocuments() {
         return documents;
     }
+
+    /** @param document document à associer */
     public void addDocument(Document document) {
         this.documents.add(document);
     }
+
+    /** @param document document à retirer */
     public void removeDocument(Document document) {
         this.documents.remove(document);
     }

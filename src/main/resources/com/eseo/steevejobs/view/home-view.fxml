@@ -16,7 +16,7 @@
 
 
             <HBox alignment="CENTER_LEFT">
-                <Label styleClass="header-title" text="&lt; APP CENTER"/>
+                <Label styleClass="header-title" text="APP CENTER" style="-fx-text-fill: #5584D5"/>
             </HBox>
             <VBox styleClass="apps-container" VBox.vgrow="ALWAYS">
                 <padding>

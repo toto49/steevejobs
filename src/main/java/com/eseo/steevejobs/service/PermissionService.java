@@ -1,83 +1,96 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.dao.PermissionDao;
-import com.eseo.steevejobs.dao.PermissionDaoImpl;
+import com.eseo.steevejobs.dao.PermissionDAO;
+import com.eseo.steevejobs.dao.PermissionDAOImpl;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.Permission;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Gestion des permissions applicatives et de leur attribution par rôle.
+ * <p>
+ * Règles métier : le rôle {@code SuperAdmin} ne peut pas être modifié via cette couche ;
+ * cache mémoire des identifiants de permission par rôle ; synchronisation automatique
+ * des codes {@link AppModule} manquants en base. Aucun effet réseau.
+ * </p>
+ */
 public class PermissionService {
 
-    private final PermissionDao permissionDao;
-
-    // Cache local pour éviter des allers-retours BDD inutiles
-    private final Map<String, List<Integer>> cacheRoles = new HashMap<>();
-
-    // Rôle protégé : ses droits ne peuvent jamais être modifiés via l'interface
+    /** Accès persistance aux permissions et associations rôle-permission. */
+    private final PermissionDAO permissionDAO;
+    /** Cache mémoire des identifiants de permission par nom de rôle. */
+    private final Map<String, List<Integer>> roleCache = new HashMap<>();
+    /** Nom du rôle protégé contre toute modification via cette couche. */
     private static final String ROLE_SUPER_ADMIN = "SuperAdmin";
 
+    /**
+     * Constructeur par défaut avec {@link PermissionDAOImpl}.
+     */
     public PermissionService() {
-        this.permissionDao = new PermissionDaoImpl();
+        this.permissionDAO = new PermissionDAOImpl();
     }
 
-    public PermissionService(PermissionDao permissionDao) {
-        this.permissionDao = permissionDao;
+    /**
+     * Constructeur avec injection du DAO.
+     *
+     * @param permissionDAO accès persistance permissions
+     */
+    public PermissionService(PermissionDAO permissionDAO) {
+        this.permissionDAO = permissionDAO;
     }
 
-    // --------------------------------------------------------
-    // MÉTHODES PUBLIQUES
-    // --------------------------------------------------------
-
-    public List<String> obtenirPermissionsUtilisateur(int idUser)
-            throws IllegalArgumentException {
-
+    /**
+     * Retourne les codes de permission effectifs d'un utilisateur.
+     *
+     * @param idUser identifiant utilisateur strictement positif
+     * @return liste des codes action
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     */
+    public List<String> getUserPermissions(int idUser) {
         if (idUser <= 0) {
             throw new IllegalArgumentException("L'ID utilisateur est invalide.");
         }
-        return permissionDao.getPermissionCodesByUserId(idUser);
+        return permissionDAO.getPermissionCodesByUserId(idUser);
     }
 
-    public List<Permission> obtenirToutesLesPermissions() {
-        return permissionDao.getAllPermissions();
+    /**
+     * Liste toutes les permissions référencées en base.
+     *
+     * @return catalogue des permissions
+     */
+    public List<Permission> getAllPermissions() {
+        return permissionDAO.getAllPermissions();
     }
 
-    public List<Integer> obtenirPermissionsParRole(String nomRole)
-            throws IllegalArgumentException {
-
+    /**
+     * Retourne les identifiants de permission liés à un rôle (avec cache).
+     *
+     * @param nomRole nom du rôle
+     * @return liste d'identifiants de permission
+     * @throws IllegalArgumentException si le nom de rôle est invalide
+     */
+    public List<Integer> getPermissionIdsByRole(String nomRole) {
         validerNomRole(nomRole);
 
-        if (!cacheRoles.containsKey(nomRole)) {
-            List<Integer> ids = permissionDao.getPermissionIdsByRole(nomRole);
-            cacheRoles.put(nomRole, ids);
+        if (!roleCache.containsKey(nomRole)) {
+            List<Integer> ids = permissionDAO.getPermissionIdsByRole(nomRole);
+            roleCache.put(nomRole, ids);
         }
-        return cacheRoles.get(nomRole);
+        return roleCache.get(nomRole);
     }
 
-    public boolean assignerPermissionAuRole(String nomRole, int idPermission)
-            throws IllegalArgumentException {
-
-        validerNomRole(nomRole);
-        validerIdPermission(idPermission);
-
-        if (ROLE_SUPER_ADMIN.equalsIgnoreCase(nomRole)) {
-            throw new IllegalArgumentException(
-                    "Impossible de modifier les droits du rôle SuperAdmin depuis cette interface.");
-        }
-
-        boolean success = permissionDao.insertRolePermission(nomRole, idPermission);
-        if (success && cacheRoles.containsKey(nomRole)) {
-            cacheRoles.get(nomRole).add(idPermission);
-        }
-        return success;
-    }
-
-    public boolean revoquerPermissionDuRole(String nomRole, int idPermission)
-            throws IllegalArgumentException {
-
+    /**
+     * Associe une permission à un rôle et met à jour le cache si présent.
+     *
+     * @param nomRole       nom du rôle (hors SuperAdmin)
+     * @param idPermission  identifiant de permission
+     * @return {@code true} si l'insertion a réussi
+     * @throws IllegalArgumentException si rôle SuperAdmin ou paramètres invalides
+     */
+    public boolean assignPermissionToRole(String nomRole, int idPermission) {
         validerNomRole(nomRole);
         validerIdPermission(idPermission);
 
@@ -86,16 +99,46 @@ public class PermissionService {
                     "Impossible de modifier les droits du rôle SuperAdmin depuis cette interface.");
         }
 
-        boolean success = permissionDao.deleteRolePermission(nomRole, idPermission);
-        if (success && cacheRoles.containsKey(nomRole)) {
-            cacheRoles.get(nomRole).remove(Integer.valueOf(idPermission));
+        boolean success = permissionDAO.insertRolePermission(nomRole, idPermission);
+        if (success && roleCache.containsKey(nomRole)) {
+            roleCache.get(nomRole).add(idPermission);
         }
         return success;
     }
 
-    public boolean creerNouvellePermission(String codeAction, String description)
-            throws IllegalArgumentException {
+    /**
+     * Retire une permission d'un rôle et met à jour le cache si présent.
+     *
+     * @param nomRole       nom du rôle (hors SuperAdmin)
+     * @param idPermission  identifiant de permission
+     * @return {@code true} si la suppression de liaison a réussi
+     * @throws IllegalArgumentException si rôle SuperAdmin ou paramètres invalides
+     */
+    public boolean revokePermissionFromRole(String nomRole, int idPermission) {
+        validerNomRole(nomRole);
+        validerIdPermission(idPermission);
 
+        if (ROLE_SUPER_ADMIN.equalsIgnoreCase(nomRole)) {
+            throw new IllegalArgumentException(
+                    "Impossible de modifier les droits du rôle SuperAdmin depuis cette interface.");
+        }
+
+        boolean success = permissionDAO.deleteRolePermission(nomRole, idPermission);
+        if (success && roleCache.containsKey(nomRole)) {
+            roleCache.get(nomRole).remove(Integer.valueOf(idPermission));
+        }
+        return success;
+    }
+
+    /**
+     * Crée une nouvelle permission applicative.
+     *
+     * @param codeAction  code normalisé (majuscules, chiffres, underscore)
+     * @param description libellé descriptif (max 255 caractères)
+     * @return {@code true} si la création a réussi
+     * @throws IllegalArgumentException si code ou description invalides
+     */
+    public boolean createNewPermission(String codeAction, String description) {
         validerCodeAction(codeAction);
 
         if (description == null || description.trim().isEmpty()) {
@@ -106,15 +149,17 @@ public class PermissionService {
                     "La description ne peut pas dépasser 255 caractères.");
         }
 
-        return permissionDao.createPermission(codeAction.toUpperCase().trim(), description.trim());
+        return permissionDAO.createPermission(codeAction.toUpperCase().trim(), description.trim());
     }
 
     /**
-     * Synchronise automatiquement les permissions définies dans AppModule
-     * avec celles présentes en base de données.
+     * Crée en base les permissions manquantes pour chaque {@link AppModule} déclaré.
+     * <p>
+     * Effet de bord console : journalisation des créations automatiques réussies.
+     * </p>
      */
-    public void synchroniserPermissionsBaseDeDonnees() {
-        List<Permission> permissionsEnBase = obtenirToutesLesPermissions();
+    public void syncAppModulePermissions() {
+        List<Permission> permissionsEnBase = getAllPermissions();
         List<String> codesEnBase = permissionsEnBase.stream()
                 .map(Permission::getCodeAction)
                 .toList();
@@ -122,7 +167,7 @@ public class PermissionService {
         for (AppModule module : AppModule.values()) {
             if (!codesEnBase.contains(module.getCodeAction())) {
                 String description = module.getTitle().replace("\n", " ");
-                boolean success = creerNouvellePermission(module.getCodeAction(), description);
+                boolean success = createNewPermission(module.getCodeAction(), description);
                 if (success) {
                     System.out.println("Auto-génération de la permission : " + module.getCodeAction());
                 }
@@ -130,42 +175,13 @@ public class PermissionService {
         }
     }
 
-    public void viderCache() {
-        cacheRoles.clear();
-    }
-
-    // Méthodes conservées pour rétrocompatibilité
-    public List<String> getUserPermissions(int idUser) {
-        return obtenirPermissionsUtilisateur(idUser);
-    }
-
-    public List<Permission> getAllPermissions() {
-        return obtenirToutesLesPermissions();
-    }
-
-    public List<Integer> getPermissionIdsByRole(String nomRole) {
-        return obtenirPermissionsParRole(nomRole);
-    }
-
-    public boolean assignPermissionToRole(String nomRole, int idPermission) {
-        return assignerPermissionAuRole(nomRole, idPermission);
-    }
-
-    public boolean revokePermissionFromRole(String nomRole, int idPermission) {
-        return revoquerPermissionDuRole(nomRole, idPermission);
-    }
-
-    public boolean createNewPermission(String codeAction, String description) {
-        if (codeAction == null || codeAction.trim().isEmpty()) return false;
-        String desc = (description != null) ? description : "";
-        return permissionDao.createPermission(codeAction.toUpperCase().trim(), desc);
-    }
-
-    // --------------------------------------------------------
-    // MÉTHODES PRIVÉES (Logique métier interne)
-    // --------------------------------------------------------
-
-    private void validerNomRole(String nomRole) throws IllegalArgumentException {
+    /**
+     * Valide le nom d'un rôle avant lecture ou modification des permissions associées.
+     *
+     * @param nomRole nom du rôle (obligatoire, longueur maximale 50 caractères)
+     * @throws IllegalArgumentException si le nom est absent ou trop long
+     */
+    private void validerNomRole(String nomRole) {
         if (nomRole == null || nomRole.trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom du rôle est obligatoire.");
         }
@@ -175,13 +191,25 @@ public class PermissionService {
         }
     }
 
-    private void validerIdPermission(int idPermission) throws IllegalArgumentException {
+    /**
+     * Valide l'identifiant technique d'une permission.
+     *
+     * @param idPermission identifiant strictement positif attendu
+     * @throws IllegalArgumentException si l'identifiant est nul ou négatif
+     */
+    private void validerIdPermission(int idPermission) {
         if (idPermission <= 0) {
             throw new IllegalArgumentException("L'ID de la permission est invalide.");
         }
     }
 
-    private void validerCodeAction(String codeAction) throws IllegalArgumentException {
+    /**
+     * Valide le code action d'une permission applicative.
+     *
+     * @param codeAction code normalisé (majuscules, chiffres, underscore ; max 100 caractères)
+     * @throws IllegalArgumentException si le code est absent, trop long ou mal formé
+     */
+    private void validerCodeAction(String codeAction) {
         if (codeAction == null || codeAction.trim().isEmpty()) {
             throw new IllegalArgumentException("Le code action est obligatoire.");
         }
@@ -189,7 +217,6 @@ public class PermissionService {
             throw new IllegalArgumentException(
                     "Le code action ne peut pas dépasser 100 caractères.");
         }
-        // Un code action valide ne contient que des lettres majuscules, chiffres et underscore
         if (!codeAction.trim().matches("[A-Z0-9_]+")) {
             throw new IllegalArgumentException(
                     "Le code action ne doit contenir que des lettres majuscules, chiffres et underscores (ex : APP_MODULE_VIEW).");

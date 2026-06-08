@@ -2,6 +2,7 @@ package com.eseo.steevejobs.controller;
 
 import com.eseo.steevejobs.model.Permission;
 import com.eseo.steevejobs.service.PermissionService;
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.animation.FillTransition;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
@@ -20,25 +21,42 @@ import javafx.util.Duration;
 
 import java.util.List;
 
+/**
+ * Contrôleur FXML de l'écran d'administration des permissions par rôle.
+ * Liaisons FXML : {@code roleComboBox}, {@code permissionsContainer}.
+ * Synchronise les permissions applicatives et affiche des interrupteurs par action.
+ */
 public class AdminPermissionController {
 
+    /** Liste déroulante de sélection du rôle à configurer. */
     @FXML
     private ComboBox<String> roleComboBox;
 
+    /** Conteneur affichant les interrupteurs de permissions par action. */
     @FXML
     private VBox permissionsContainer;
 
+    /** Service d'accès aux permissions et à leur affectation par rôle. */
     private PermissionService permissionService;
 
+    /** Cache de l'ensemble des permissions applicatives synchronisées. */
     private List<Permission> toutesLesPermissionsCache;
 
+    /**
+     * Initialise la liste des rôles, synchronise les permissions et charge le rôle ADMIN par défaut.
+     * Ne charge pas les données en mode test ({@link com.eseo.steevejobs.util.TestRuntime}).
+     *
+     * @throws RuntimeException non propagée ; erreurs traitées dans l'interface ou ignorées en arrière-plan
+     */
     @FXML
     public void initialize() {
         this.permissionService = new PermissionService();
-        permissionService.synchroniserPermissionsBaseDeDonnees();
-        this.toutesLesPermissionsCache = permissionService.getAllPermissions();
-
         roleComboBox.getItems().addAll("ADMIN", "RH", "EMPLOYE");
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
+        permissionService.syncAppModulePermissions();
+        this.toutesLesPermissionsCache = permissionService.getAllPermissions();
 
         roleComboBox.setOnAction(event -> {
             String roleChoisi = roleComboBox.getValue();
@@ -51,6 +69,11 @@ public class AdminPermissionController {
         chargerPermissionsPourRole("ADMIN");
     }
 
+    /**
+     * Charge et affiche les permissions associées au rôle sélectionné.
+     *
+     * @param nomRole identifiant du rôle ({@code ADMIN}, {@code RH}, {@code EMPLOYE})
+     */
     public void chargerPermissionsPourRole(String nomRole) {
         permissionsContainer.getChildren().clear();
         Label loadingLabel = new Label("Chargement des permissions...");
@@ -74,6 +97,14 @@ public class AdminPermissionController {
         }).start();
     }
 
+    /**
+     * Construit un interrupteur visuel pour activer ou révoquer une permission pour le rôle donné.
+     *
+     * @param perm permission représentée
+     * @param isSelected {@code true} si la permission est déjà active pour le rôle
+     * @param nomRole identifiant du rôle concerné
+     * @return conteneur horizontal avec interrupteur et libellé
+     */
     private HBox createCustomSwitch(Permission perm, boolean isSelected, String nomRole) {
         HBox container = new HBox(15);
         container.setAlignment(Pos.CENTER_LEFT);
@@ -141,6 +172,15 @@ public class AdminPermissionController {
         return container;
     }
 
+    /**
+     * Met à jour l'apparence d'un interrupteur selon son état activé ou désactivé.
+     *
+     * @param isSelected {@code true} pour l'état activé
+     * @param bg rectangle de fond de l'interrupteur
+     * @param thumb curseur circulaire
+     * @param yes libellé « activé »
+     * @param no libellé « désactivé »
+     */
     private void updateSwitchVisuals(boolean isSelected, Rectangle bg, Circle thumb, Label yes, Label no) {
         if (isSelected) {
             bg.setFill(Color.web("#2ECC71"));

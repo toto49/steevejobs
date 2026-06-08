@@ -3,10 +3,8 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.HelloApplication;
 import com.eseo.steevejobs.model.Enum.AppModule;
 import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.PermissionService;
-import com.eseo.steevejobs.service.SessionService;
-import com.eseo.steevejobs.service.TicketService;
-import com.eseo.steevejobs.service.TicketServiceImpl;
+import com.eseo.steevejobs.util.TestRuntime;
+import com.eseo.steevejobs.service.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
@@ -20,6 +18,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -30,36 +29,73 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Contrôleur FXML du tableau de bord (accueil) affichant les modules applicatifs.
+ * Liaison FXML : {@code appsGrid}.
+ * Filtre les cartes selon les permissions utilisateur ({@link AppModule#getCodeAction()}).
+ */
 public class HomeController {
 
+    /** Cache des images de modules par chemin de ressource. */
     private static final Map<String, Image> IMAGE_CACHE = new HashMap<>();
+    /** Utilisateur connecté pour le filtrage des modules affichés. */
     private User currentUser;
+    /** Cache des codes de permission du dernier utilisateur chargé. */
     private static List<String> cachedPermissions = null;
-    private static final long CACHE_TTL_MS = 30_000; // 30 secondes
+    /** Durée de validité du cache des permissions (millisecondes). */
+    private static final long CACHE_TTL_MS = 30_000;
+    /** Horodatage du dernier remplissage du cache des permissions. */
     private static long cacheTimestamp = -1;
 
+    /** Grille affichant les cartes des modules applicatifs. */
     @FXML
     private FlowPane appsGrid;
 
+    /** Compteur global de tickets non lus pour la vue technicien (staff). */
     public static int notificationsTech = 0;
+    /** Compteur global de tickets non lus pour la vue auteur (demandeur). */
     public static int notificationsAuteur = 0;
 
+    /** Instance du contrôleur d'accueil actuellement affichée. */
     private static HomeController activeInstance;
 
+    /** Badge de notification sur la carte tickets (vue staff). */
     private Label badgeCarteTech;
+    /** Badge de notification sur la carte tickets (vue demandeur). */
     private Label badgeCarteAuteur;
+    /** Identifiant utilisateur associé au cache des permissions. */
     private static int cachedUserId = -1;
+    /** Service de chargement des permissions utilisateur. */
     private final PermissionService permissionService = new PermissionService();
+    /** Liste des codes d'action autorisés pour l'utilisateur courant. */
     private List<String> currentUserPermissions;
+    /** Planificateur de rafraîchissement périodique des permissions. */
     private ScheduledExecutorService permissionScheduler;
+
+    /**
+     * Retourne l'instance active du contrôleur d'accueil.
+     *
+     * @return instance courante ou {@code null} si non initialisée
+     */
     public static HomeController getActiveInstance() {
         return activeInstance;
     }
 
+    /**
+     * Constructeur par défaut requis par le chargeur FXML.
+     */
     public HomeController() {
     }
 
+    /**
+     * Met à jour les compteurs de notifications tickets et synchronise les badges menu/accueil.
+     *
+     * @param typeCible {@code TECH} (staff) ou {@code AUTEUR} (demandeur)
+     */
     public static void ajouterNotification(String typeCible) {
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         User user = SessionService.getUtilisateurConnecte();
         if (user == null) return;
 
@@ -95,40 +131,56 @@ public class HomeController {
         });
     }
 
+    /**
+     * Invalide le cache des permissions et relance le rendu du centre applicatif.
+     */
     public static void invaliderCachePermissions() {
         cachedPermissions = null;
         cachedUserId = -1;
         cacheTimestamp = -1;
         if (activeInstance != null) {
-            Platform.runLater(() -> activeInstance.onUserLogin(
-                    SessionService.getUtilisateurConnecte().getId()
-            ));
+            Platform.runLater(() -> {
+                User user = SessionService.getUtilisateurConnecte();
+                if (user != null) {
+                    activeInstance.onUserLogin(user.getId());
+                }
+            });
         }
     }
 
+    /**
+     * Charge permissions et compteurs de tickets après connexion, puis affiche les modules autorisés.
+     *
+     * @param idUserConnecte identifiant de l'utilisateur connecté
+     */
     public void onUserLogin(int idUserConnecte) {
+        if (TestRuntime.isEnabled()) {
+            this.currentUserPermissions = List.of();
+            renderAppCenter();
+            return;
+        }
         CompletableFuture.supplyAsync(() -> {
             TicketService ticketService = new TicketServiceImpl();
             int nTech = 0;
-            if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
+            if (currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole()))) {
                 nTech = ticketService.getNombreTicketsNonLusAdmin(currentUser.getRole(), currentUser.getId());
             }
-            int nAuteur = ticketService.getNombreTicketsNonLusAuteur(currentUser.getId());
+            int nAuteur = currentUser != null ? ticketService.getNombreTicketsNonLusAuteur(currentUser.getId()) : 0;
             return new int[]{nTech, nAuteur};
         }).thenAcceptAsync(counts -> {
             notificationsTech = counts[0];
             notificationsAuteur = counts[1];
 
-            if (badgeCarteTech != null && notificationsTech > 0) {
+            if (badgeCarteTech != null) {
                 badgeCarteTech.setText(String.valueOf(notificationsTech));
-                badgeCarteTech.setVisible(true);
+                badgeCarteTech.setVisible(notificationsTech > 0);
             }
-            if (badgeCarteAuteur != null && notificationsAuteur > 0) {
+            if (badgeCarteAuteur != null) {
                 badgeCarteAuteur.setText(String.valueOf(notificationsAuteur));
-                badgeCarteAuteur.setVisible(true);
+                badgeCarteAuteur.setVisible(notificationsAuteur > 0);
             }
 
-            if (MenuController.getInstance() != null) {
+            if (MenuController.getInstance() != null && currentUser != null) {
                 if ("ADMIN".equals(currentUser.getRole()) || "RH".equals(currentUser.getRole())) {
                     MenuController.getInstance().allumerBadge("TECH", notificationsTech);
                 }
@@ -145,27 +197,29 @@ public class HomeController {
 
         if (cacheValide) {
             this.currentUserPermissions = cachedPermissions;
-            Platform.runLater(this::renderAppCenter);
+            renderAppCenter();
         } else {
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(idUserConnecte))
                     .thenAcceptAsync(perms -> {
-                        boolean permissionsChangees = !perms.equals(cachedPermissions);
-
                         cachedPermissions = perms;
                         cachedUserId = idUserConnecte;
                         cacheTimestamp = System.currentTimeMillis();
                         this.currentUserPermissions = perms;
 
-                        if (permissionsChangees) {
-                            renderAppCenter();
-                        }
-                    }, Platform::runLater).exceptionally(ex -> {
+                        renderAppCenter();
+                    }, Platform::runLater)
+                    .exceptionally(ex -> {
                         ex.printStackTrace();
                         return null;
                     });
         }
     }
 
+    /**
+     * Point d'entrée FXML : enregistre l'instance, charge l'accueil ou redirige vers la connexion.
+     *
+     * @throws IOException si le chargement de {@code bienvenue-view.fxml} échoue
+     */
     @FXML
     public void initialize() throws IOException {
         activeInstance = this;
@@ -182,6 +236,9 @@ public class HomeController {
         }
     }
 
+    /**
+     * Démarre une tâche planifiée qui vérifie les permissions toutes les 30 secondes.
+     */
     private void demarrerSchedulerPermissions() {
         if (permissionScheduler != null && !permissionScheduler.isShutdown()) {
             permissionScheduler.shutdown();
@@ -197,14 +254,16 @@ public class HomeController {
             if (currentUser == null) return;
 
             CompletableFuture.supplyAsync(() -> permissionService.getUserPermissions(currentUser.getId()))
-                    .thenAcceptAsync(perms -> {
+                    .thenAccept(perms -> {
                         if (!perms.equals(cachedPermissions)) {
-                            cachedPermissions = perms;
-                            cacheTimestamp = System.currentTimeMillis();
-                            this.currentUserPermissions = perms;
-                            renderAppCenter();
+                            Platform.runLater(() -> {
+                                cachedPermissions = perms;
+                                cacheTimestamp = System.currentTimeMillis();
+                                this.currentUserPermissions = perms;
+                                renderAppCenter();
+                            });
                         }
-                    }, Platform::runLater)
+                    })
                     .exceptionally(ex -> {
                         ex.printStackTrace();
                         return null;
@@ -212,7 +271,20 @@ public class HomeController {
         }, 30, 30, TimeUnit.SECONDS);
     }
 
+    /**
+     * Reconstruit la grille des cartes de modules selon les permissions de l'utilisateur.
+     */
     private void renderAppCenter() {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(this::renderAppCenter);
+            return;
+        }
+
+        if (appsGrid == null) {
+            System.err.println("⚠️ [SteeveJobs] Impossible d'afficher le tableau de bord : appsGrid est null.");
+            return;
+        }
+
         appsGrid.getChildren().clear();
 
         for (AppModule app : AppModule.values()) {
@@ -220,7 +292,7 @@ public class HomeController {
 
                 String parametre = null;
                 String codeAction = app.getCodeAction();
-                if ("APP_TICKETS_VIEW".equals(codeAction)) {
+                if ("APP_TICKETS_VIEW".equals(codeAction) && currentUser != null) {
                     parametre = currentUser.getRole();
                 }
 
@@ -260,6 +332,13 @@ public class HomeController {
         }
     }
 
+    /**
+     * Charge une vue FXML paramétrée dans la zone centrale du menu.
+     *
+     * @param chemin nom de base de la vue (sans suffixe {@code -view.fxml})
+     * @param parametre donnée passée au contrôleur paramétrable
+     * @param titreCard titre affiché dans l'en-tête du menu
+     */
     private void chargerPageAvecParametre(String chemin, String parametre, String titreCard) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/" + chemin + "-view.fxml"));
@@ -269,14 +348,27 @@ public class HomeController {
                 ((ParametrizedController) controller).initData(parametre);
             }
             MenuController.getInstance().setCenterView(view);
-            MenuController.getInstance().changerTitre(titreCard);
+            MenuController.getInstance().changerTitre(formaterTitreModule(titreCard));
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            System.err.println("Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
+            System.err.println("❌ Erreur lors de l'ouverture de la vue paramétrée : " + chemin);
         }
     }
 
+    /**
+     * Crée une carte cliquable représentant un module applicatif.
+     *
+     * @param title titre principal
+     * @param subtitle sous-titre
+     * @param badge badge de notification optionnel
+     * @param bgColor couleur de fond CSS
+     * @param chemin chemin de navigation du module
+     * @param nomFichierImage nom du fichier image dans {@code /images/}
+     * @param parametreFacultatif paramètre transmis au contrôleur cible, ou {@code null}
+     * @param codeAction code permission / action du module
+     * @return carte horizontale interactive
+     */
     private HBox createAppCard(String title, String subtitle, Label badge, String bgColor, String chemin, String nomFichierImage, String parametreFacultatif, String codeAction) {
         HBox card = new HBox();
         card.setMinSize(250, 220);
@@ -326,22 +418,62 @@ public class HomeController {
         card.setOnMouseEntered(e -> card.setOpacity(0.8));
         card.setOnMouseExited(e -> card.setOpacity(1.0));
         card.setOnMouseClicked(e -> {
-            if (MenuController.getInstance() != null) {
-                if (parametreFacultatif != null) {
-                    chargerPageAvecParametre(chemin, parametreFacultatif, title);
-                } else {
-                    MenuController.getInstance().chargerPage(chemin);
-                    MenuController.getInstance().changerTitre(title);
-                }
-            } else {
+            if (MenuController.getInstance() == null) {
                 System.err.println("Erreur : MenuController n'est pas initialisé.");
+                return;
+            }
+
+            if ("APP_VISO_VIEW".equals(codeAction)) {
+                try {
+                    JSONObject requete = new JSONObject();
+                    requete.put("type", "REQUEST_VISIO_TOKEN");
+                    requete.put("roomName", "Salle_De_Crise");
+
+                    if (currentUser != null) {
+                        requete.put("identity", String.valueOf(currentUser.getId()));
+                        requete.put("displayName", currentUser.getPrenom() + " " + currentUser.getNom());
+                    } else {
+                        requete.put("identity", "0");
+                        requete.put("displayName", "Invité");
+                    }
+                    WebSocketService.getInstance().envoyerMessageBrut(requete.toString());
+                    System.out.println("⏳ Requête de token envoyée au NAS Synology...");
+
+                } catch (Exception ex) {
+                    System.err.println("❌ Erreur lors de l'action sur la carte Visio : " + ex.getMessage());
+                }
+            }
+            if (parametreFacultatif != null) {
+                chargerPageAvecParametre(chemin, parametreFacultatif, title);
+            } else {
+                MenuController.getInstance().chargerPage(chemin);
+                MenuController.getInstance().changerTitre(formaterTitreModule(title));
             }
         });
 
         return card;
     }
 
+    /**
+     * Vérifie si l'utilisateur connecté possède la permission demandée.
+     *
+     * @param requiredPermission code action requis
+     * @return {@code true} si la permission est accordée
+     */
     private boolean hasPermission(String requiredPermission) {
         return currentUserPermissions != null && currentUserPermissions.contains(requiredPermission);
+    }
+
+    /**
+     * Normalise le titre d'un module pour l'affichage dans l'en-tête du menu.
+     *
+     * @param title titre brut de la carte
+     * @return titre sur une seule ligne
+     */
+    private String formaterTitreModule(String title) {
+        if (title == null) {
+            return "";
+        }
+        return title.replace('\n', ' ').replaceAll("\\s+", " ").trim();
     }
 }

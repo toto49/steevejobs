@@ -1,7 +1,34 @@
 # Politique de Sécurité de SteeveJobs
 
-Nous prenons la sécurité très au sérieux. Ce document décrit la procédure à suivre si vous découvrez une vulnérabilité
-de sécurité dans le code source de MediaStock.
+Nous prenons la sécurité très au sérieux. Ce document décrit les mesures mises en place dans l'application, les bonnes pratiques de déploiement, et la procédure à suivre si vous découvrez une vulnérabilité.
+
+## Mesures de sécurité implémentées
+
+| Domaine | Mesure | Détail |
+|---------|--------|--------|
+| **Mots de passe** | Hachage BCrypt | Cost factor 12 via `UserService` ; aucun mot de passe en clair en base |
+| **Bruteforce** | Verrouillage temporaire | 5 tentatives échouées → blocage 15 minutes + alerte email |
+| **Accès** | Rôles et permissions | Modules filtrés par `PermissionService` et enum `AppModule` |
+| **SQL** | Requêtes paramétrées | `PreparedStatement` dans les DAO ; pas de concaténation d'entrées utilisateur |
+| **Secrets** | Variables d'environnement | Credentials lus depuis `.env` (gitignoré) ; modèle dans `.env.example` |
+| **WebSocket** | JWT | Token généré à la connexion (`JwtService`) ; enregistrement serveur via session |
+| **Validation** | Couche service | Contrôles métier (`IllegalArgumentException`, `SecurityException`) avant persistance |
+
+### Limites connues
+
+- Application **desktop JavaFX** : pas de protection CSRF web classique (hors périmètre navigateur).
+- Compte **seeder** de développement (`DatabaseSeeder`) : mot de passe faible par défaut — **à changer immédiatement** en environnement réel.
+- Le serveur WebSocket et LiveKit sont déployés séparément (branche `websocket`) — voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Bonnes pratiques de déploiement
+
+1. Copier `.env.example` vers `.env` et **ne jamais committer** `.env`.
+2. Choisir un `JWT_SECRET` long et aléatoire ; renouveler les mots de passe admin après la première installation.
+3. Utiliser MySQL avec un compte dédié à l'application (droits minimaux).
+4. En production : reverse proxy HTTPS, certificats Let's Encrypt, WebDAV et SMTP configurés côté NAS (voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+5. Exécuter `mvn test` avant chaque livraison — les scénarios de sécurité auth sont couverts par `UserServiceTest`.
+6. Le front visio (`docs/livekit/js/config.js`) ne doit pas contenir de domaines ou clés de production dans le dépôt
+   public.
 
 ## Versions prises en charge
 
@@ -22,10 +49,9 @@ Veuillez ne pas signaler les problèmes suivants :
 
 ## Signaler une vulnérabilité
 
-**Ne signalez jamais une faille de sécurité critique en ouvrant une Issue publique sur GitHub.** Si vous pensez avoir
-trouvé une vulnérabilité (par exemple, une Injection SQL, un accès non autorisé aux données des adhérents, etc.),
-veuillez envoyer un e-mail directement à l'équipe de développement principale :
-👉 **[tom.boudaud@reseau.eseo.fr]**
+**Ne signalez jamais une faille de sécurité critique en ouvrant une Issue publique sur GitHub.** Si vous pensez avoir trouvé une vulnérabilité (par exemple, une injection SQL, un accès non autorisé aux données utilisateurs, etc.), veuillez envoyer un e-mail directement à l'équipe de développement principale :
+
+👉 **tom.boudaud@reseau.eseo.fr**
 
 **Dans votre e-mail, veuillez inclure :**
 

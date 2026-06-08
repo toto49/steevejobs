@@ -1,8 +1,8 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.FichePayeDAO;
 import com.eseo.steevejobs.model.FichePaye;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.service.FichePayeService;
 import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.WebDavService;
 import javafx.application.Platform;
@@ -26,21 +26,39 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML de consultation des fiches de paie de l'employé connecté.
+ * Liaisons FXML : {@code tableFiches}, {@code btnOuvrirPdf}, {@code lblMessage}.
+ */
 public class DocumentUserController implements Initializable {
 
-    private final FichePayeDAO fichePayeDAO = new FichePayeDAO();
+    /** Service d'accès aux fiches de paie de l'employé. */
+    private final FichePayeService fichePayeService = new FichePayeService();
+    /** Liste observable des fiches de l'utilisateur connecté. */
     private final ObservableList<FichePaye> mesFiches = FXCollections.observableArrayList();
+    /** Tableau des fiches de paie disponibles. */
     @FXML
     private TableView<FichePaye> tableFiches;
+    /** Colonne affichant la période de chaque fiche. */
     @FXML
     private TableColumn<FichePaye, LocalDateTime> colPeriode;
+    /** Bouton d'ouverture du PDF de la fiche sélectionnée. */
     @FXML
     private Button btnOuvrirPdf;
+    /** Message d'information ou d'erreur affiché sous le tableau. */
     @FXML
     private Label lblMessage;
+    /** Utilisateur actuellement connecté. */
     private User utilisateurConnecte;
+    /** Fiche de paie actuellement sélectionnée. */
     private FichePaye ficheSelectionnee = null;
 
+    /**
+     * Charge les fiches de l'utilisateur en session et configure le tableau.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         utilisateurConnecte = SessionService.getUtilisateurConnecte();
@@ -52,10 +70,19 @@ public class DocumentUserController implements Initializable {
         btnOuvrirPdf.setDisable(true);
     }
 
+    /**
+     * Configure la colonne période et le tri décroissant du tableau.
+     */
     private void configurerColonnes() {
         colPeriode.setCellValueFactory(data -> new SimpleObjectProperty<>(data.getValue().getDate()));
 
         colPeriode.setCellFactory(col -> new TableCell<FichePaye, LocalDateTime>() {
+            /**
+             * Formate la période au format « Mois année » en français.
+             *
+             * @param item date de la fiche
+             * @param empty {@code true} si la cellule est vide
+             */
             @Override
             protected void updateItem(LocalDateTime item, boolean empty) {
                 super.updateItem(item, empty);
@@ -73,6 +100,9 @@ public class DocumentUserController implements Initializable {
         tableFiches.getSortOrder().add(colPeriode);
     }
 
+    /**
+     * Active le bouton d'ouverture PDF lorsqu'une fiche est sélectionnée.
+     */
     private void configurerSelectionTableau() {
         tableFiches.getSelectionModel().selectedItemProperty().addListener((obs, ancien, nouveau) -> {
             if (nouveau != null) {
@@ -85,11 +115,14 @@ public class DocumentUserController implements Initializable {
         });
     }
 
+    /**
+     * Charge les fiches de paie de l'utilisateur connecté depuis la base.
+     */
     private void chargerMesFiches() {
         if (utilisateurConnecte == null) return;
 
         try {
-            mesFiches.setAll(fichePayeDAO.findByEmployeId(utilisateurConnecte.getId()));
+            mesFiches.setAll(fichePayeService.findByEmployeId(utilisateurConnecte.getId()));
             tableFiches.setItems(mesFiches);
 
             tableFiches.sort();
@@ -104,6 +137,10 @@ public class DocumentUserController implements Initializable {
         }
     }
 
+    /**
+     * Télécharge si nécessaire puis ouvre le PDF de la fiche sélectionnée.
+     * Liaison FXML : {@code btnOuvrirPdf}.
+     */
     @FXML
     private void ouvrirPdf() {
         if (ficheSelectionnee == null) return;
@@ -162,6 +199,11 @@ public class DocumentUserController implements Initializable {
         });
     }
 
+    /**
+     * Affiche une alerte d'erreur.
+     *
+     * @param msg message affiché
+     */
     private void afficherErreur(String msg) {
         new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
     }

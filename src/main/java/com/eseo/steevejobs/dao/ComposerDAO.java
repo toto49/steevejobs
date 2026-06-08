@@ -10,12 +10,26 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Accès aux données de la table {@code COMPOSER} (lignes produit d'un document).
+ * <p>
+ * Chaque opération ouvre une connexion via {@link DatabaseConnection} en auto-commit.
+ * Les jointures avec {@code PRODUITS} enrichissent les lignes lors des lectures.
+ * Les {@link SQLException} sont propagées à l'appelant.
+ * </p>
+ */
 public class ComposerDAO {
 
     /**
-     * Récupérer toutes les lignes produits d'un document
-     * @param idDocument l'ID du document
-     * @return la liste des lignes
+     * Récupère toutes les lignes produit associées à un document.
+     * <p>
+     * SQL : {@code SELECT} sur {@code COMPOSER} avec {@code INNER JOIN PRODUITS}
+     * filtré par {@code id_documents}.
+     * </p>
+     *
+     * @param idDocument identifiant du document
+     * @return liste des lignes composant le document (vide si aucune ligne)
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public List<Composer> findByDocumentId(int idDocument) throws SQLException {
         List<Composer> lignes = new ArrayList<>();
@@ -53,7 +67,14 @@ public class ComposerDAO {
     }
 
     /**
-     * Ajouter une ligne produit à un document
+     * Insère une ligne produit dans un document.
+     * <p>
+     * SQL : {@code INSERT INTO COMPOSER} avec quantité et prix de vente.
+     * </p>
+     *
+     * @param composer ligne à persister (document, produit, quantité, prix)
+     * @return {@code true} si au moins une ligne a été insérée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean createLigne(Composer composer) throws SQLException {
         String sql = "INSERT INTO COMPOSER (id_documents, id_produits, quantite, prix_vente) " +
@@ -70,7 +91,15 @@ public class ComposerDAO {
     }
 
     /**
-     * Supprimer toutes les lignes d'un document
+     * Supprime toutes les lignes produit d'un document.
+     * <p>
+     * SQL : {@code DELETE FROM COMPOSER WHERE id_documents = ?}.
+     * Retourne {@code false} si aucune ligne n'existait pour ce document.
+     * </p>
+     *
+     * @param idDocument identifiant du document
+     * @return {@code true} si au moins une ligne a été supprimée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean deleteByDocumentId(int idDocument) throws SQLException {
         String sql = "DELETE FROM COMPOSER WHERE id_documents = ?";

@@ -6,8 +6,22 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 import java.util.Date;
 
+/**
+ * Émission de jetons JWT pour l'enregistrement des clients WebSocket.
+ * <p>
+ * Le secret est lu depuis la variable d'environnement {@code JWT_SECRET} (fichier .env).
+ * Durée de validité : 24 heures. Émetteur fixe : {@code steevejobs-api}.
+ * Aucun effet de bord persistant en cas d'échec (journalisation console, retour {@code null}).
+ * </p>
+ */
 public class JwtService {
 
+    /**
+     * Construit un JWT HMAC256 portant l'identifiant utilisateur en sujet.
+     *
+     * @param userId identifiant technique de l'utilisateur
+     * @return jeton signé, ou {@code null} si {@code JWT_SECRET} est absent ou en cas d'erreur de signature
+     */
     public static String genererToken(int userId) {
         try {
             String secret = Dotenv.load().get("JWT_SECRET");

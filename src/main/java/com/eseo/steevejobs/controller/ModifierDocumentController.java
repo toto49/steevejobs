@@ -1,9 +1,5 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.ComposerDAO;
-import com.eseo.steevejobs.dao.DocumentDAO;
-import com.eseo.steevejobs.dao.ProduitDAO;
-import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.Composer;
 import com.eseo.steevejobs.model.Document;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
@@ -11,6 +7,8 @@ import com.eseo.steevejobs.model.Enum.DocumentType;
 import com.eseo.steevejobs.model.Produit;
 import com.eseo.steevejobs.model.Tiers;
 import com.eseo.steevejobs.service.DocumentService;
+import com.eseo.steevejobs.service.ProduitService;
+import com.eseo.steevejobs.service.TiersService;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -24,33 +22,61 @@ import javafx.util.StringConverter;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML du formulaire de modification de document commercial.
+ * Liaisons FXML : combos type/tiers/statut, tableau des lignes, totaux HT/TVA/TTC.
+ */
 public class ModifierDocumentController implements Initializable {
 
+    /** Liste déroulante du type de document. */
     @FXML private ComboBox<DocumentType> comboType;
+    /** Liste déroulante du tiers associé. */
     @FXML private ComboBox<Tiers> comboTiers;
+    /** Sélecteur de date du document. */
     @FXML private DatePicker datePicker;
+    /** Liste déroulante du statut du document. */
     @FXML private ComboBox<DocumentStatut> comboStatut;
+    /** Liste déroulante du produit à ajouter. */
     @FXML private ComboBox<Produit> comboProduit;
+    /** Champ de saisie de la quantité. */
     @FXML private TextField txtQuantite;
+    /** Champ de saisie du prix de vente. */
     @FXML private TextField txtPrixVente;
+    /** Bouton d'ajout d'une ligne au document. */
     @FXML private Button btnAjouterLigne;
+    /** Tableau des lignes du document. */
     @FXML private TableView<Composer> tableLignes;
+    /** Colonnes lignes : {@code colProduit}, {@code colQuantite}, {@code colPrixUnitaire}, {@code colTotalLigne}. */
     @FXML private TableColumn<Composer, String> colProduit, colQuantite, colPrixUnitaire, colTotalLigne;
+    /** Colonne des actions sur chaque ligne. */
     @FXML private TableColumn<Composer, Void> colActions;
+    /** Labels d'affichage des totaux HT, TVA et TTC. */
     @FXML private Label lblTotalHT, lblTVA, lblTotalTTC;
+    /** Boutons d'annulation et de modification du document. */
     @FXML private Button btnAnnuler, btnModifier;
 
-    private final TiersDAO tiersDAO = new TiersDAO();
-    private final ProduitDAO produitDAO = new ProduitDAO();
-    private final ComposerDAO composerDAO = new ComposerDAO();
-    private final DocumentService documentService = new DocumentService(new DocumentDAO());
+    /** Service d'accès aux tiers. */
+    private final TiersService tiersService = new TiersService();
+    /** Service d'accès aux produits. */
+    private final ProduitService produitService = new ProduitService();
+    /** Service de gestion des documents. */
+    private final DocumentService documentService = new DocumentService();
 
+    /** Lignes composant le document en cours de modification. */
     private final ObservableList<Composer> lignes = FXCollections.observableArrayList();
+    /** Document chargé pour modification. */
     private Document documentModification;
 
+    /**
+     * Configure combos, tableau des lignes et charge tiers/produits.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerComboBox();
@@ -59,6 +85,11 @@ public class ModifierDocumentController implements Initializable {
         tableLignes.setItems(lignes);
     }
 
+    /**
+     * Préremplit le formulaire avec le document à modifier.
+     *
+     * @param document document source ; ne doit pas être {@code null}
+     */
     public void setDocument(Document document) {
         this.documentModification = document;
 
@@ -68,24 +99,31 @@ public class ModifierDocumentController implements Initializable {
         comboStatut.setValue(document.getStatut());
 
         try {
-            lignes.setAll(composerDAO.findByDocumentId(document.getId()));
+            lignes.setAll(documentService.findLignesByDocumentId(document.getId()));
             updateTotaux();
         } catch (SQLException e) {
             afficherErreur("Erreur chargement des lignes : " + e.getMessage());
         }
     }
 
+    /**
+     * Configure les listes déroulantes et le remplissage automatique du prix produit.
+     */
     private void configurerComboBox() {
         comboType.setItems(FXCollections.observableArrayList(DocumentType.values()));
         comboStatut.setItems(FXCollections.observableArrayList(DocumentStatut.values()));
 
         comboTiers.setConverter(new StringConverter<>() {
+            /** @param t tiers affiché dans la liste */
             @Override public String toString(Tiers t) { return t == null ? "" : t.getNom() + (t.getPrenom() != null ? " " + t.getPrenom() : ""); }
+            /** @param s saisie utilisateur (non convertie) */
             @Override public Tiers fromString(String s) { return null; }
         });
 
         comboProduit.setConverter(new StringConverter<>() {
+            /** @param p produit affiché dans la liste */
             @Override public String toString(Produit p) { return p == null ? "" : p.getNom(); }
+            /** @param s saisie utilisateur (non convertie) */
             @Override public Produit fromString(String s) { return null; }
         });
 
@@ -97,6 +135,9 @@ public class ModifierDocumentController implements Initializable {
         });
     }
 
+    /**
+     * Configure les colonnes du tableau des lignes et le bouton de suppression.
+     */
     private void configurerTableLignes() {
         colProduit.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getProduit().getNom()));
 
@@ -122,21 +163,34 @@ public class ModifierDocumentController implements Initializable {
                     updateTotaux();
                 });
             }
+            /**
+             * Affiche le bouton de suppression de ligne ou une cellule vide.
+             *
+             * @param item non utilisé
+             * @param empty {@code true} si la ligne est hors plage
+             */
             @Override protected void updateItem(Void item, boolean empty) {
                 setGraphic(empty ? null : btnSuppr);
             }
         });
     }
 
+    /**
+     * Charge la liste des tiers et des produits actifs depuis la base.
+     */
     private void chargerDonnees() {
         try {
-            comboTiers.setItems(FXCollections.observableArrayList(tiersDAO.findAll()));
-            comboProduit.setItems(FXCollections.observableArrayList(produitDAO.findAllActive()));
+            comboTiers.setItems(FXCollections.observableArrayList(tiersService.findAll()));
+            comboProduit.setItems(FXCollections.observableArrayList(produitService.findAllActive()));
         } catch (SQLException e) {
             afficherErreur("Erreur chargement : " + e.getMessage());
         }
     }
 
+    /**
+     * Ajoute une ligne produit au document en cours de modification.
+     * Liaison FXML : {@code btnAjouterLigne}.
+     */
     @FXML
     private void ajouterLigne() {
         Produit produit = comboProduit.getValue();
@@ -180,6 +234,9 @@ public class ModifierDocumentController implements Initializable {
         }
     }
 
+    /**
+     * Recalcule et affiche les totaux HT, TVA et TTC du document.
+     */
     private void updateTotaux() {
         BigDecimal totalHT = BigDecimal.ZERO;
         for (Composer ligne : lignes) {
@@ -193,6 +250,10 @@ public class ModifierDocumentController implements Initializable {
         lblTotalTTC.setText(String.format("%.2f €", totalTTC));
     }
 
+    /**
+     * Enregistre les modifications du document et régénère le PDF sur le NAS.
+     * Liaison FXML : {@code btnModifier}.
+     */
     @FXML
     private void modifierDocument() {
         if (comboType.getValue() == null || comboTiers.getValue() == null
@@ -222,12 +283,7 @@ public class ModifierDocumentController implements Initializable {
         btnAnnuler.setDisable(true);
 
         try {
-            documentService.modifierDocument(documentModification);
-            composerDAO.deleteByDocumentId(documentModification.getId());
-            for (Composer nouvelleLigne : lignes) {
-                nouvelleLigne.setIdDocument(documentModification.getId());
-                composerDAO.createLigne(nouvelleLigne);
-            }
+            documentService.modifierDocumentAvecLignes(documentModification, List.copyOf(lignes));
             CompletableFuture.supplyAsync(() -> {
                 try {
                     return documentService.exporterPdf(documentModification.getId());
@@ -256,15 +312,29 @@ public class ModifierDocumentController implements Initializable {
         }
     }
 
+    /**
+     * Ferme la fenêtre de modification.
+     * Liaison FXML : {@code btnAnnuler}.
+     */
     @FXML
     private void fermer() {
         ((Stage) btnAnnuler.getScene().getWindow()).close();
     }
 
+    /**
+     * Affiche une boîte de dialogue d'erreur.
+     *
+     * @param msg message à afficher
+     */
     private void afficherErreur(String msg) {
         new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
     }
 
+    /**
+     * Affiche une boîte de dialogue de succès.
+     *
+     * @param msg message à afficher
+     */
     private void afficherSucces(String msg) {
         new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
     }

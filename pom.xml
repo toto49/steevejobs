@@ -13,15 +13,86 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
 
         <junit.version>5.12.1</junit.version>
         <mockito.version>5.20.0</mockito.version>
         <bytebuddy.version>1.17.8</bytebuddy.version>
-        <javafx.version>21.0.6</javafx.version>
-        <kotlin.version>2.2.0</kotlin.version>
+        <javafx.version>25.0.1</javafx.version>
+        <!-- Surcharge possible : mvn test -Djfx.os=linux -->
+        <jfx.os>win</jfx.os>
+
+        <app.name>SteeveJobs</app.name>
+        <app.icon>${project.basedir}/src/main/resources/images/logo.png</app.icon>
+        <jpackage.input>${project.build.directory}/jpackage-input</jpackage.input>
+        <jpackage.dest>${project.build.directory}/dist</jpackage.dest>
+        <jpackage.skip>false</jpackage.skip>
+        <jpackage.executable>${java.home}/bin/jpackage</jpackage.executable>
+        <!-- jpackage n'accepte pas SNAPSHOT (CFBundleVersion macOS, etc.) -->
+        <jpackage.app.version>1.0</jpackage.app.version>
+        <jpackage.javafx.path>${project.build.directory}/javafx-libs</jpackage.javafx.path>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>jpackage-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.executable>${java.home}/bin/jpackage.exe</jpackage.executable>
+            </properties>
+        </profile>
+        <profile>
+            <id>jfx-win</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jfx.os>win</jfx.os>
+            </properties>
+        </profile>
+        <profile>
+            <id>jfx-linux</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <jfx.os>linux</jfx.os>
+            </properties>
+        </profile>
+        <profile>
+            <id>jfx-mac-aarch64</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>aarch64</arch>
+                </os>
+            </activation>
+            <properties>
+                <jfx.os>mac-aarch64</jfx.os>
+            </properties>
+        </profile>
+        <profile>
+            <id>jfx-mac-x64</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>x86_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <jfx.os>mac</jfx.os>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -53,34 +124,28 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-base</artifactId>
             <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <classifier>${jfx.os}</classifier>
         </dependency>
 
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
             <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <classifier>${jfx.os}</classifier>
         </dependency>
 
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <classifier>${jfx.os}</classifier>
         </dependency>
 
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
-            <classifier>win</classifier>
-        </dependency>
-
-        <dependency>
-            <groupId>org.controlsfx</groupId>
-            <artifactId>controlsfx</artifactId>
-            <version>11.2.1</version>
+            <classifier>${jfx.os}</classifier>
         </dependency>
 
         <dependency>
@@ -93,6 +158,13 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
@@ -115,12 +187,24 @@
             <groupId>io.github.mkpaz</groupId>
             <artifactId>atlantafx-base</artifactId>
             <version>2.0.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mindrot</groupId>
-            <artifactId>jbcrypt</artifactId>
-            <version>0.4</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-base</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-controls</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-graphics</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-fxml</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -146,17 +230,6 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>${kotlin.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.java-websocket</groupId>
             <artifactId>Java-WebSocket</artifactId>
             <version>1.5.3</version>
@@ -178,6 +251,19 @@
             <version>5.1.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.3.232</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -188,7 +274,14 @@
                 <version>3.2.5</version>
                 <configuration>
                     <useFile>false</useFile>
-                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                    <argLine>
+                        -Dnet.bytebuddy.experimental=true
+                        -Dsteevejobs.test=true
+                        -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
+                        -Dorg.slf4j.simpleLogger.log.com.zaxxer.hikari=warn
+                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
+                        -Xshare:off
+                    </argLine>
                 </configuration>
             </plugin>
             <plugin>
@@ -196,63 +289,111 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.eseo.steevejobs/com.eseo.steevejobs.HelloApplication</mainClass>
+                    <mainClass>com.eseo.steevejobs.Launcher</mainClass>
+                    <options>
+                        <option>--enable-native-access=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-maven-plugin</artifactId>
-                <version>${kotlin.version}</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <outputDirectory>${jpackage.input}</outputDirectory>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.eseo.steevejobs.Launcher</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>libs/</classpathPrefix>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
                 <executions>
                     <execution>
-                        <id>compile</id>
-                        <phase>compile</phase>
+                        <id>jpackage-copy-app-libs</id>
+                        <phase>prepare-package</phase>
                         <goals>
-                            <goal>compile</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
+                        <configuration>
+                            <outputDirectory>${jpackage.input}/libs</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeGroupIds>org.openjfx</excludeGroupIds>
+                        </configuration>
                     </execution>
                     <execution>
-                        <id>test-compile</id>
-                        <phase>test-compile</phase>
+                        <id>jpackage-copy-javafx</id>
+                        <phase>prepare-package</phase>
                         <goals>
-                            <goal>test-compile</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
+                        <configuration>
+                            <outputDirectory>${jpackage.javafx.path}</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <includeGroupIds>org.openjfx</includeGroupIds>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <jvmTarget>${maven.compiler.target}</jvmTarget>
-                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>jpackage-app-image</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jpackage.skip}</skip>
+                            <executable>${jpackage.executable}</executable>
+                            <arguments>
+                                <argument>--verbose</argument>
+                                <argument>--input</argument>
+                                <argument>${jpackage.input}</argument>
+                                <argument>--dest</argument>
+                                <argument>${jpackage.dest}</argument>
+                                <argument>--name</argument>
+                                <argument>${app.name}</argument>
+                                <argument>--app-version</argument>
+                                <argument>${jpackage.app.version}</argument>
+                                <argument>--vendor</argument>
+                                <argument>ESEO</argument>
+                                <argument>--main-jar</argument>
+                                <argument>${project.build.finalName}.jar</argument>
+                                <argument>--main-class</argument>
+                                <argument>com.eseo.steevejobs.Launcher</argument>
+                                <argument>--type</argument>
+                                <argument>app-image</argument>
+                                <argument>--icon</argument>
+                                <argument>${app.icon}</argument>
+                                <argument>--module-path</argument>
+                                <argument>${jpackage.javafx.path}</argument>
+                                <argument>--add-modules</argument>
+                                <argument>javafx.controls,javafx.fxml,javafx.graphics,javafx.base</argument>
+                                <argument>--java-options</argument>
+                                <argument>-Dfile.encoding=UTF-8</argument>
+                                <argument>--java-options</argument>
+                                <argument>--enable-native-access=ALL-UNNAMED</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>default-testCompile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>compile</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>testCompile</id>
-                        <phase>test-compile</phase>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                    </execution>
-                </executions>
                 <configuration>
-                    <release>21</release>
+                    <release>25</release>
                 </configuration>
             </plugin>
         </plugins>

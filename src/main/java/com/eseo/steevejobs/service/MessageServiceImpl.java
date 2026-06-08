@@ -6,18 +6,39 @@ import com.eseo.steevejobs.model.Message;
 import java.sql.SQLException;
 import java.util.List;
 
-public class MessageServiceImpl {
+/**
+ * Implémentation DAO du service de messages de tickets.
+ * <p>
+ * Aucun effet de bord réseau : accès base de données uniquement.
+ * Les erreurs SQL sont encapsulées en {@link RuntimeException} avec message métier.
+ * </p>
+ */
+public class MessageServiceImpl implements MessageService {
+
+    /** Accès persistance aux messages de tickets. */
     private final MessageDAO messageDAO;
 
+    /**
+     * Constructeur par défaut instanciant un {@link MessageDAO}.
+     */
     public MessageServiceImpl() {
         this.messageDAO = new MessageDAO();
     }
 
+    /**
+     * Constructeur avec injection du DAO (tests ou composition).
+     *
+     * @param messageDAO accès persistance des messages
+     */
     public MessageServiceImpl(MessageDAO messageDAO) {
         this.messageDAO = messageDAO;
     }
 
-    public Message getMessageByID(int id) {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Message getMessage(int id) {
         try {
             return messageDAO.getById(id);
         } catch (SQLException e) {
@@ -25,6 +46,10 @@ public class MessageServiceImpl {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public List<Message> getMessagesByAuteur(int auteurId) {
         try {
             return messageDAO.findByAuteurId(auteurId);
@@ -33,12 +58,40 @@ public class MessageServiceImpl {
         }
     }
 
-    public boolean supprimerMessage(int id) {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<Message> getMessagesByTicketId(int ticketId) {
+        try {
+            return messageDAO.findByTicketId(ticketId);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur BDD : Impossible de récupérer les messages du ticket.", e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Message createMessage(Message message) {
+        try {
+            messageDAO.createMessage(message);
+            return message;
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur BDD : Impossible d'ajouter le message.", e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean deleteMessage(int id) {
         try {
             return messageDAO.deleteMessage(id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
-
 }

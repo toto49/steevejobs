@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Visioconférence</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap"
+          rel="stylesheet"/>
+    <meta content="light" name="color-scheme"/>
+    <link href="css/style.css?v=25" rel="stylesheet"/>
+    <script src="js/config.js?v=2"></script>
+</head>
+<body>
+<div class="app">
+    <section class="status-screen" hidden id="loading-screen">
+        <div class="status-card">
+            <div class="brand-logo" hidden id="brand-logo"></div>
+            <div aria-hidden="true" class="brand-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1 id="brand-name">Visioconférence</h1>
+            <p class="status-text" id="loading-message">Connexion à la salle...</p>
+            <div aria-hidden="true" class="spinner"></div>
+        </div>
+    </section>
+
+    <section class="status-screen" hidden id="error-screen">
+        <div class="status-card">
+            <div aria-hidden="true" class="error-icon">!</div>
+            <h1>Connexion impossible</h1>
+            <p class="status-text" id="error-message"></p>
+            <a class="btn btn-primary" href="/" id="error-back-link">Retour</a>
+        </div>
+    </section>
+
+    <section class="status-screen" id="permission-screen">
+        <div class="status-card">
+            <div aria-hidden="true" class="brand-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1>Visioconférence</h1>
+            <p class="status-text permission-room" id="permission-room-name"></p>
+            <p class="status-text">
+                Cliquez sur « Rejoindre la salle », puis activez la caméra et le micro une fois dans la visio.
+            </p>
+            <p class="permission-status" hidden id="permission-status"></p>
+            <div class="join-actions">
+                <button class="btn btn-primary" id="join-room-button" type="button">
+                    Rejoindre la salle
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="room-screen" hidden id="room-screen">
+        <header class="room-header">
+            <div class="room-info">
+                <h2 id="room-title">Salle</h2>
+                <span class="participant-count" id="participant-count">1 participant</span>
+            </div>
+            <button class="btn btn-leave btn-sm" id="leave-button">Quitter</button>
+        </header>
+
+        <div class="room-body">
+            <div class="gallery-wrap">
+                <main aria-live="polite" class="video-grid" id="video-grid"></main>
+                <nav aria-label="Navigation de la galerie" class="gallery-nav" hidden id="gallery-nav">
+                    <button aria-label="Page précédente" class="gallery-nav-btn" id="gallery-prev" type="button">
+                        <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5"
+                             viewBox="0 0 24 24">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                    </button>
+                    <span class="gallery-status" id="gallery-status">1 / 1</span>
+                    <button aria-label="Page suivante" class="gallery-nav-btn" id="gallery-next" type="button">
+                        <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5"
+                             viewBox="0 0 24 24">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+
+            <button aria-label="Fermer le chat" class="chat-backdrop" hidden id="chat-backdrop" type="button"></button>
+
+            <aside class="chat-panel" hidden id="chat-panel">
+                <div class="chat-header">
+                    <h3>Chat</h3>
+                    <button aria-label="Fermer le chat" class="chat-close" id="close-chat" type="button">
+                        <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <line x1="18" x2="6" y1="6" y2="18"/>
+                            <line x1="6" x2="18" y1="6" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div aria-live="polite" class="chat-messages" id="chat-messages"></div>
+                <form class="chat-form" id="chat-form">
+                    <input autocomplete="off" class="chat-input" id="chat-input" placeholder="Votre message..."
+                           type="text"/>
+                    <button aria-label="Envoyer" class="chat-send-btn" id="chat-send" type="submit">
+                        <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <line x1="22" x2="11" y1="2" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </form>
+            </aside>
+        </div>
+
+        <footer class="controls">
+            <div class="control-split" id="mic-control">
+                <button aria-label="Activer ou désactiver le micro" class="control-btn control-btn-labeled control-split-main" id="toggle-mic"
+                        title="Microphone" type="button">
+                    <!-- AJOUT DE LA CLASSE icon-mic-on ICI -->
+                    <svg class="icon-mic-on" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                        <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
+                    </svg>
+                    <!-- AJOUT DE LA CLASSE icon-mic-off ET hidden ICI -->
+                    <svg class="icon-mic-off" fill="none" hidden stroke="currentColor" stroke-width="2"
+                         viewBox="0 0 24 24">
+                        <line x1="1" x2="23" y1="1" y2="23"/>
+                        <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
+                        <path d="M17 16.95A7 7 0 015 12v-2m14 0v2a7 7 0 01-.11 1.23"/>
+                        <line x1="12" x2="12" y1="19" y2="23"/>
+                        <line x1="8" x2="16" y1="23" y2="23"/>
+                    </svg>
+                    <span class="control-label">Micro</span>
+                </button>
+                <button aria-expanded="false" aria-haspopup="listbox" aria-label="Choisir le micro" class="control-split-menu"
+                        id="mic-device-menu" title="Choisir le micro" type="button">
+                    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div aria-label="Microphones disponibles" class="device-menu" hidden id="mic-device-list"
+                     role="listbox"></div>
+            </div>
+
+            <div class="control-split" id="cam-control">
+                <button aria-label="Activer ou désactiver la caméra" class="control-btn control-btn-labeled control-split-main" id="toggle-cam"
+                        title="Caméra" type="button">
+                    <svg class="icon-cam-on" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M23 7l-7 5 7 5V7z"/>
+                        <rect height="14" rx="2" width="15" x="1" y="5"/>
+                    </svg>
+                    <svg class="icon-cam-off" fill="none" hidden stroke="currentColor" stroke-width="2"
+                         viewBox="0 0 24 24">
+                        <path d="M16 16v1a2 2 0 01-2 2H3a2 2 0 01-2-2V7a2 2 0 012-2h2"/>
+                        <path d="M17 9l5-3v11l-5-3"/>
+                        <line x1="1" x2="23" y1="1" y2="23"/>
+                    </svg>
+                    <span class="control-label">Caméra</span>
+                </button>
+                <button aria-expanded="false" aria-haspopup="listbox" aria-label="Choisir la caméra" class="control-split-menu"
+                        id="cam-device-menu" title="Choisir la caméra" type="button">
+                    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div aria-label="Caméras disponibles" class="device-menu" hidden id="cam-device-list"
+                     role="listbox"></div>
+            </div>
+
+            <button aria-label="Partager l'écran" class="control-btn control-btn-labeled" id="toggle-screen"
+                    title="Partage d'écran">
+                <svg class="icon-screen-on" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect height="14" rx="2" width="20" x="2" y="3"/>
+                    <path d="M8 21h8M12 17v4"/>
+                </svg>
+                <svg class="icon-screen-off" fill="none" hidden stroke="currentColor" stroke-width="2"
+                     viewBox="0 0 24 24">
+                    <rect height="14" rx="2" width="20" x="2" y="3"/>
+                    <path d="M8 21h8M12 17v4"/>
+                    <line x1="1" x2="23" y1="1" y2="23"/>
+                </svg>
+                <span class="control-label">Partage</span>
+            </button>
+
+            <button aria-label="Ouvrir le chat" class="control-btn control-btn-labeled" id="toggle-chat" title="Chat">
+                <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span class="control-label">Chat</span>
+            </button>
+        </footer>
+    </section>
+</div>
+
+<script src="js/vendor/livekit-client.umd.min.js?v=1"></script>
+<script src="js/app.js?v=33"></script>
+</body>
+</html>

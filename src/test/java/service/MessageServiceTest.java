@@ -2,6 +2,7 @@ package service;
 
 import com.eseo.steevejobs.dao.MessageDAO;
 import com.eseo.steevejobs.model.Message;
+import com.eseo.steevejobs.service.MessageService;
 import com.eseo.steevejobs.service.MessageServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.MessageServiceImpl}.
+ * <p>
+ * Vérifie lecture, liste par auteur, suppression et encapsulation des erreurs SQL.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
 
@@ -26,7 +33,7 @@ class MessageServiceTest {
     @Mock
     private MessageDAO messageDAO;
 
-    private MessageServiceImpl service;
+    private MessageService service;
 
     @BeforeEach
     void setUp() {
@@ -34,18 +41,18 @@ class MessageServiceTest {
     }
 
     @Test
-    void getMessageByID_retourneLeMessage() throws SQLException {
+    void getMessage_retourneLeMessage() throws SQLException {
         Message message = new Message();
         when(messageDAO.getById(1)).thenReturn(message);
 
-        assertSame(message, service.getMessageByID(1));
+        assertSame(message, service.getMessage(1));
     }
 
     @Test
-    void getMessageByID_erreurSql_doitLeverRuntimeException() throws SQLException {
+    void getMessage_erreurSql_doitLeverRuntimeException() throws SQLException {
         when(messageDAO.getById(1)).thenThrow(new SQLException("Erreur BDD"));
 
-        assertThrows(RuntimeException.class, () -> service.getMessageByID(1));
+        assertThrows(RuntimeException.class, () -> service.getMessage(1));
     }
 
     @Test
@@ -56,16 +63,16 @@ class MessageServiceTest {
     }
 
     @Test
-    void supprimerMessage_succes_retourneTrue() throws SQLException {
+    void deleteMessage_succes_retourneTrue() throws SQLException {
         when(messageDAO.deleteMessage(5)).thenReturn(true);
 
-        assertTrue(service.supprimerMessage(5));
+        assertTrue(service.deleteMessage(5));
     }
 
     @Test
-    void supprimerMessage_echec_retourneFalse() throws SQLException {
+    void deleteMessage_echec_retourneFalse() throws SQLException {
         when(messageDAO.deleteMessage(5)).thenReturn(false);
 
-        assertFalse(service.supprimerMessage(5));
+        assertFalse(service.deleteMessage(5));
     }
 }

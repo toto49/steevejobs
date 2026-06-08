@@ -8,20 +8,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object dédié aux opérations sur la table des tiers (clients/fournisseurs).
+ * Accès aux données de la table {@code TIERS} (clients et fournisseurs).
  * <p>
- * Contient les requêtes SQL (INSERT, SELECT, UPDATE, DELETE) permettant de lire
- * et sauvegarder les objets {@link com.eseo.steevejobs.model.Tiers} en base de données.
+ * Chaque opération s'exécute en auto-commit via {@link DatabaseConnection}.
+ * Les {@link SQLException} sont propagées à l'appelant.
  * </p>
  */
 public class TiersDAO {
 
     /**
-     * Créer un nouveau tiers
+     * Insère un nouveau tiers et récupère la clé générée.
+     * <p>
+     * SQL : {@code INSERT INTO TIERS} avec {@code RETURN_GENERATED_KEYS}.
+     * </p>
      *
-     * @param tiers le tiers à créer
-     * @return
-     * @throws SQLException exception SQL
+     * @param tiers tiers à persister ; l'identifiant est mis à jour après insertion
+     * @return {@code true} si l'insertion a réussi
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean createTiers(Tiers tiers) throws SQLException {
         String sql = "INSERT INTO TIERS (nom, prenom, type, email, adresse, tel, siret, num_tva, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -54,11 +57,14 @@ public class TiersDAO {
     }
 
     /**
-     * Mettre à jour un tiers existant
+     * Met à jour un tiers existant.
+     * <p>
+     * SQL : {@code UPDATE TIERS} filtré par {@code id_tiers}.
+     * </p>
      *
-     * @param tiers le tiers à mettre à jour
-     * @return
-     * @throws SQLException exception SQL
+     * @param tiers tiers avec identifiant et champs modifiés
+     * @return {@code true} si au moins une ligne a été modifiée
+     * @throws SQLException en cas d'erreur d'accès à la base
      */
     public boolean updateTiers(Tiers tiers) throws SQLException {
         String sql = "UPDATE TIERS SET nom = ?, prenom = ?, type = ?, email = ?, adresse = ?, tel = ?, siret = ?, num_tva = ?, actif = ? WHERE id_tiers = ?";

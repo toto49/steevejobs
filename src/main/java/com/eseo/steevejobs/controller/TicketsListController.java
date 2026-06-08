@@ -3,23 +3,20 @@ package com.eseo.steevejobs.controller;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.*;
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,33 +24,59 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Contrôleur FXML de la liste des tickets (mes tickets ou filtre par service RH/ADMIN).
+ * Liaisons FXML : {@code ticketsContainer}, filtres en cours/archives, bouton création.
+ * Implémente {@link ParametrizedController} pour le paramètre de service.
+ */
 public class TicketsListController implements ParametrizedController {
 
+    /** Service de gestion des tickets. */
     private final TicketService ticketService = new TicketServiceImpl();
+    /** Service de gestion des utilisateurs. */
     private UserService userService;
+    /** Service de session utilisateur. */
     private SessionService sessionService;
+    /** Utilisateur connecté consultant la liste. */
     private User currentUser;
 
+    /** Conteneur des cartes de tickets affichées. */
     @FXML
     private VBox ticketsContainer;
+    /** Label affichant le titre de la page tickets. */
     @FXML
     private Label titlepageticket;
 
+    /** Liste complète des tickets chargés depuis la base. */
     private List<Ticket> tousLesTicketsBDD;
+    /** Instance de la liste tickets actuellement affichée. */
     private static TicketsListController activeInstance;
+    /** Filtre de service appliqué à la liste, ou null pour mes tickets. */
     private String filtreActuel = null;
 
+    /** Bouton de filtre sur les tickets en cours. */
     @FXML
     private Button btnFiltreEnCours;
+    /** Bouton de filtre sur les tickets archivés. */
     @FXML
     private Button btnFiltreArchives;
+    /** Indique si le filtre archives est actif. */
     private boolean modeArchivesActif = false;
+    /** Indique si un chargement de tickets est en cours. */
     private boolean isFetching = false;
 
+    /**
+     * Retourne l'instance active de la liste tickets.
+     *
+     * @return contrôleur courant ou {@code null}
+     */
     public static TicketsListController getActiveInstance() {
         return activeInstance;
     }
 
+    /**
+     * Initialise les services et charge les tickets de manière asynchrone.
+     */
     @FXML
     public void initialize() {
         activeInstance = this;
@@ -63,6 +86,11 @@ public class TicketsListController implements ParametrizedController {
         chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
 
+    /**
+     * Applique le filtre par service (ex. {@code ADMIN}, {@code RH}) pour la vue staff.
+     *
+     * @param parametreService code du service cible
+     */
     @Override
     public void initData(String parametreService) {
         this.filtreActuel = parametreService;
@@ -77,6 +105,9 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Affiche les tickets créés par l'utilisateur connecté (navigation menu « Tickets »).
+     */
     public void afficherMesTickets() {
         this.filtreActuel = null;
         if (titlepageticket != null) {
@@ -90,7 +121,16 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Charge la liste des tickets en base de manière asynchrone.
+     *
+     * @param actionApresChargement callback exécuté après le chargement, ou {@code null}
+     */
     private void chargerTicketsBDDAsync(Runnable actionApresChargement) {
+        if (TestRuntime.isEnabled()) {
+            this.tousLesTicketsBDD = List.of();
+            return;
+        }
         if (isFetching) return;
         isFetching = true;
 
@@ -109,6 +149,9 @@ public class TicketsListController implements ParametrizedController {
         });
     }
 
+    /**
+     * Filtre et affiche les tickets selon le mode courant (mes tickets, service ou archives).
+     */
     private void rafraichirAffichageLocal() {
         if (tousLesTicketsBDD == null) return;
         activeInstance = this;
@@ -134,10 +177,18 @@ public class TicketsListController implements ParametrizedController {
         remplirLeContainer(listeAFicher);
     }
 
+    /**
+     * Recharge les tickets depuis la base et rafraîchit l'affichage (callback WebSocket).
+     */
     public void rafraichirAffichage() {
         chargerTicketsBDDAsync(this::rafraichirAffichageLocal);
     }
 
+    /**
+     * Trie les tickets et remplit le conteneur avec les cartes visuelles.
+     *
+     * @param liste tickets à afficher
+     */
     private void remplirLeContainer(List<Ticket> liste) {
         liste.sort((t1, t2) -> {
             boolean jeSuisAuteur1 = (t1.getAuteur() != null && t1.getAuteur().getId() == currentUser.getId());
@@ -163,6 +214,12 @@ public class TicketsListController implements ParametrizedController {
         ticketsContainer.getChildren().setAll(cartesVisuelles);
     }
 
+    /**
+     * Construit une carte cliquable représentant un ticket dans la liste.
+     *
+     * @param ticket ticket source
+     * @return conteneur graphique de la carte
+     */
     private HBox creerTicketCard(Ticket ticket) {
         String id = String.valueOf(ticket.getId());
         HBox card = new HBox();
@@ -206,129 +263,186 @@ public class TicketsListController implements ParametrizedController {
         return card;
     }
 
+    /**
+     * Ouvre la popup de création d'un nouveau ticket.
+     * Liaison FXML : bouton « Créer un ticket ».
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void handleCreateTicket(ActionEvent event) {
-        Stage popupStage = new Stage();
-        popupStage.initModality(Modality.APPLICATION_MODAL);
-        popupStage.setTitle("Créer un nouveau ticket");
-        popupStage.setResizable(false);
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Créer un nouveau ticket");
 
-        VBox root = new VBox(20);
-        root.setPadding(new Insets(30));
-        root.setStyle("-fx-background-color: white;");
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
 
-        Label titreLabel = new Label("NOUVEAU TICKET");
-        titreLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #5882D6;");
-
-        VBox sujetBox = new VBox(5);
-        Label sujetTitre = new Label("Sujet");
-        sujetTitre.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
+        // Champs
         TextField sujetField = new TextField();
         sujetField.setPromptText("Ex: Mon écran ne s'allume plus");
-        sujetField.setPrefHeight(35);
         sujetField.getStyleClass().add("champform");
-        sujetBox.getChildren().addAll(sujetTitre, sujetField);
+        sujetField.setPrefHeight(34);
 
-        VBox serviceBox = new VBox(5);
-        Label serviceTitre = new Label("Service concerné");
-        serviceTitre.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
         ComboBox<String> serviceComboBox = new ComboBox<>();
         serviceComboBox.setItems(FXCollections.observableArrayList("ADMIN", "RH"));
         serviceComboBox.setPromptText("Sélectionnez un service...");
         serviceComboBox.setMaxWidth(Double.MAX_VALUE);
         serviceComboBox.getStyleClass().add("menu-burger");
-        serviceBox.getChildren().addAll(serviceTitre, serviceComboBox);
 
-        VBox descBox = new VBox(5);
-        Label descTitre = new Label("Description détaillée");
-        descTitre.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
         TextArea descriptionArea = new TextArea();
         descriptionArea.setPromptText("Détaillez votre problème...");
         descriptionArea.setWrapText(true);
-        descriptionArea.setPrefHeight(150);
+        descriptionArea.setPrefRowCount(6);
         descriptionArea.getStyleClass().add("textarea-form");
-        VBox.setVgrow(descBox, Priority.ALWAYS);
-        descBox.getChildren().addAll(descTitre, descriptionArea);
 
-        HBox boutonsBox = new HBox(15);
-        boutonsBox.setAlignment(Pos.CENTER_RIGHT);
-        Button btnAnnuler = new Button("ANNULER");
-        btnAnnuler.setStyle("-fx-background-color: transparent; -fx-text-fill: #5882D6; -fx-border-color: #5882D6; -fx-border-radius: 5; -fx-cursor: hand;");
-        Button btnCreer = new Button("CRÉER");
-        btnCreer.setStyle("-fx-background-color: #5882D6; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand;");
+        Label errSujet = new Label("");
+        errSujet.getStyleClass().addAll("label-style", "label-erreur");
+        Label errService = new Label("");
+        errService.getStyleClass().addAll("label-style", "label-erreur");
+        Label errDesc = new Label("");
+        errDesc.getStyleClass().addAll("label-style", "label-erreur");
 
-        boutonsBox.getChildren().addAll(btnAnnuler, btnCreer);
-        root.getChildren().addAll(titreLabel, sujetBox, serviceBox, descBox, boutonsBox);
+        // GridPane 2 colonnes
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(12));
 
-        btnAnnuler.setOnAction(e -> popupStage.close());
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(160);
+        colLabel.setHalignment(HPos.LEFT);
 
-        btnCreer.setOnAction(e -> {
-            String sujet = sujetField.getText().trim();
-            String service = serviceComboBox.getValue();
-            String description = descriptionArea.getText().trim();
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
 
-            if (sujet.isEmpty() || service == null || description.isEmpty()) {
-                new Alert(Alert.AlertType.WARNING, "Veuillez remplir tous les champs.").showAndWait();
-                return;
-            }
+        grid.getColumnConstraints().addAll(colLabel, colField);
 
-            try {
-                Ticket nouveauTicket = new Ticket();
-                nouveauTicket.setSujet(sujet);
-                nouveauTicket.setService(service);
-                nouveauTicket.setDescription(description);
-                nouveauTicket.setAuteur(currentUser);
+        int row = 0;
+        grid.add(new Label("Sujet *"), 0, row);
+        grid.add(sujetField, 1, row++);
+        grid.add(errSujet, 1, row++);
 
-                ticketService.creerTicket(nouveauTicket);
-                ticketService.marquerTicketNonLu(nouveauTicket.getId(), true);
+        grid.add(new Label("Service *"), 0, row);
+        grid.add(serviceComboBox, 1, row++);
+        grid.add(errService, 1, row++);
 
-                popupStage.close();
+        grid.add(new Label("Description *"), 0, row);
+        grid.add(descriptionArea, 1, row++);
+        grid.add(errDesc, 1, row++);
 
-                if (WebSocketService.getInstance() != null) {
-                    java.util.Set<Integer> staffIds = new java.util.HashSet<>();
+        GridPane.setHgrow(sujetField, Priority.ALWAYS);
+        GridPane.setHgrow(serviceComboBox, Priority.ALWAYS);
+        GridPane.setHgrow(descriptionArea, Priority.ALWAYS);
 
-                    if ("RH".equalsIgnoreCase(service)) {
-                        List<Integer> rhIds = userService.getIdsByRole("RH");
-                        if (rhIds != null) staffIds.addAll(rhIds);
-                    } else if ("ADMIN".equalsIgnoreCase(service)) {
-                        List<Integer> adminIds = userService.getIdsByRole("ADMIN");
-                        if (adminIds != null) staffIds.addAll(adminIds);
-                    }
+        // Contenu
+        VBox contentBox = new VBox(12);
+        Label titreLabel = new Label("NOUVEAU TICKET");
+        titreLabel.getStyleClass().add("popup-header-title");
+        titreLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #5882D6;");
+        contentBox.getChildren().addAll(titreLabel, grid);
+        contentBox.getStyleClass().add("popup-contenu");
+        contentBox.setPadding(new Insets(8));
 
-                    staffIds.remove(currentUser.getId());
+        dp.setContent(contentBox);
 
-                    WebSocketService.getInstance().envoyerNotificationGroupée(
-                            new java.util.ArrayList<>(staffIds),
-                            nouveauTicket.getId(),
-                            "TECH"
-                    );
+        // Applique popup.css au DialogPane
+        appliquerStyleDialog(dp);
+
+        // Récupère boutons
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+
+        if (btnOk != null) {
+            btnOk.setText("CRÉER");
+            btnOk.getStyleClass().add("button-primary");
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                // reset erreurs
+                errSujet.setText(""); errService.setText(""); errDesc.setText("");
+                boolean valide = true;
+
+                if (sujetField.getText().trim().isEmpty()) {
+                    errSujet.setText("Le sujet est obligatoire."); valide = false;
+                }
+                if (serviceComboBox.getValue() == null) {
+                    errService.setText("Le service est obligatoire."); valide = false;
+                }
+                if (descriptionArea.getText().trim().isEmpty()) {
+                    errDesc.setText("La description est obligatoire."); valide = false;
                 }
 
-                rafraichirAffichage();
+                if (!valide) {
+                    ev.consume();
+                    return;
+                }
 
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Erreur lors de la création du ticket.").showAndWait();
-            }
-        });
+                try {
+                    Ticket nouveauTicket = new Ticket();
+                    nouveauTicket.setSujet(sujetField.getText().trim());
+                    nouveauTicket.setService(serviceComboBox.getValue());
+                    nouveauTicket.setDescription(descriptionArea.getText().trim());
+                    nouveauTicket.setAuteur(currentUser);
 
-        Scene scene = new Scene(root, 500, 550);
+                    ticketService.creerTicket(nouveauTicket);
+                    ticketService.marquerTicketNonLu(nouveauTicket.getId(), true);
 
+                    // notifications websocket
+                    if (WebSocketService.getInstance() != null) {
+                        java.util.Set<Integer> staffIds = new java.util.HashSet<>();
 
-        try {
-            String css = getClass().getResource("/style/style.css").toExternalForm();
-            scene.getStylesheets().add(css);
-        } catch (NullPointerException e) {
-            System.err.println("Fichier CSS introuvable ! Vérifie le chemin d'accès.");
+                        if ("RH".equalsIgnoreCase(nouveauTicket.getService())) {
+                            List<Integer> rhIds = userService.getIdsByRole("RH");
+                            if (rhIds != null) staffIds.addAll(rhIds);
+                        } else if ("ADMIN".equalsIgnoreCase(nouveauTicket.getService())) {
+                            List<Integer> adminIds = userService.getIdsByRole("ADMIN");
+                            if (adminIds != null) staffIds.addAll(adminIds);
+                        }
+
+                        staffIds.remove(currentUser.getId());
+
+                        WebSocketService.getInstance().envoyerNotificationGroupée(
+                                new java.util.ArrayList<>(staffIds),
+                                nouveauTicket.getId(),
+                                "TECH"
+                        );
+                    }
+
+                    dialog.close();
+                    rafraichirAffichage();
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    errDesc.setText("Erreur lors de la création.");
+                    ev.consume();
+                }
+            });
         }
 
-        popupStage.setScene(scene);
-        popupStage.showAndWait();
+        if (btnCancel != null) {
+            btnCancel.setText("ANNULER");
+            btnCancel.getStyleClass().add("button-annuler");
+        }
+
+
+        dp.setPrefWidth(720);
+        dp.setMinWidth(520);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(700);
+
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
 
+    /**
+     * Ouvre la vue détail d'un ticket dans la zone centrale du menu.
+     *
+     * @param ticketId identifiant du ticket à ouvrir
+     */
     private void handleOpenTicket(String ticketId) {
         try {
-            activeInstance = null; // On libère l'instance pour éviter les refreshs en arrière-plan
+            activeInstance = null;
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticket-view.fxml"));
             Parent view = loader.load();
             TicketController controller = loader.getController();
@@ -343,6 +457,12 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Active le filtre « en cours » (tickets non fermés).
+     * Liaison FXML : {@code btnFiltreEnCours}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void handleFiltreEnCours(ActionEvent event) {
         modeArchivesActif = false;
@@ -350,6 +470,12 @@ public class TicketsListController implements ParametrizedController {
         rafraichirAffichageLocal();
     }
 
+    /**
+     * Active le filtre « archives » (tickets fermés ou résolus).
+     * Liaison FXML : {@code btnFiltreArchives}.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void handleFiltreArchives(ActionEvent event) {
         modeArchivesActif = true;
@@ -357,6 +483,9 @@ public class TicketsListController implements ParametrizedController {
         rafraichirAffichageLocal();
     }
 
+    /**
+     * Met en surbrillance le bouton de filtre actif (en cours ou archives).
+     */
     private void mettreAJourStyleBoutons() {
         String styleActif = "-fx-background-color: #5882D6; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;";
         String styleInactif = "-fx-background-color: white; -fx-text-fill: #5882D6; -fx-border-color: #5882D6; -fx-border-radius: 5; -fx-font-weight: bold; -fx-cursor: hand;";
@@ -370,9 +499,31 @@ public class TicketsListController implements ParametrizedController {
         }
     }
 
+    /**
+     * Indique si un ticket correspond au filtre en cours ou archives.
+     *
+     * @param t ticket évalué
+     * @return {@code true} si le ticket doit apparaître dans le mode actif
+     */
     private boolean correspondAuModeActuel(Ticket t) {
         String statut = t.getStatut().name().toUpperCase();
         boolean estFerme = statut.equals("FERME") || statut.equals("RESOLU");
         return modeArchivesActif == estFerme;
+    }
+
+    /**
+     * Applique la feuille de style popup aux boutons d'une boîte de dialogue.
+     *
+     * @param dp panneau de dialogue cible
+     */
+    private void appliquerStyleDialog(DialogPane dp) {
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
     }
 }

@@ -1,77 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!--
+    Écran d'administration des permissions
+    - Layout principal : BorderPane
+    - Controller : AdminPermissionController
+    - Style global : fond bleu clair + CSS externe
+-->
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
-      style="-fx-background-color: #DDE8FF;" stylesheets="@../../../../style/style.css" xmlns="http://javafx.com/javafx/21"
-      fx:controller="com.eseo.steevejobs.controller.AdminPermissionController">
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            xmlns="http://javafx.com/javafx/21"
+            prefHeight="600.0" prefWidth="800.0"
+            fx:controller="com.eseo.steevejobs.controller.AdminPermissionController"
+            style="-fx-background-color: #DDE8FF;"
+            stylesheets="@../../../../style/style.css">
 
-    <HBox alignment="CENTER_LEFT" prefHeight="80.0"
-          style="-fx-background-color: #7A9FE0; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
-        <padding>
-            <Insets left="40.0" right="40.0"/>
-        </padding>
-        <children>
-            <Label fx:id="titlepageticket" text="GESTION DES PERMISSIONS"
-                   style="-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold;"/>
-        </children>
-    </HBox>
+    <!-- =======================
+         BARRE SUPÉRIEURE (HEADER)
+         ======================= -->
+    <top>
+        <VBox>
+            <children>
 
-    <VBox spacing="20.0" VBox.vgrow="ALWAYS">
-        <padding>
-            <Insets bottom="30.0" left="40.0" right="40.0" top="30.0"/>
-        </padding>
-        <children>
+                <!-- Bandeau bleu avec le titre -->
+                <HBox alignment="CENTER_LEFT" prefHeight="60" style="-fx-background-color: #4B78CC;">
+                    <padding>
+                        <Insets left="20" right="20"/>
+                    </padding>
 
-            <VBox spacing="20.0"
-                  style="-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #d1d5db;"
-                  VBox.vgrow="ALWAYS">
-                <padding>
-                    <Insets bottom="25.0" left="30.0" right="30.0" top="25.0"/>
-                </padding>
-                <children>
+                    <!-- Titre principal -->
+                    <Label text="GESTIONS PERMISSIONS" textFill="WHITE">
+                        <font>
+                            <Font name="System Bold" size="24"/>
+                        </font>
+                    </Label>
+                </HBox>
 
-                    <VBox spacing="5.0">
-                        <children>
-                            <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"
-                                   text="Configuration des accès"/>
-                            <Label style="-fx-text-fill: #6b7280;"
-                                   text="Sélectionnez un rôle ci-dessous pour modifier ses accès en temps réel.">
-                                <font>
-                                    <Font name="System Italic" size="14.0"/>
-                                </font>
-                            </Label>
-                        </children>
-                    </VBox>
+            </children>
+        </VBox>
+    </top>
 
-                    <ComboBox fx:id="roleComboBox" prefHeight="40.0" prefWidth="300.0" promptText="Choisir un rôle..."
-                              styleClass="combo-box" style="-fx-font-size: 14px; -fx-background-radius: 5;"/>
+    <!-- =======================
+         CONTENU CENTRAL
+         ======================= -->
+    <center>
+        <VBox spacing="20" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="30" bottom="30" left="40" right="40"/>
+            </padding>
 
-                    <Separator prefWidth="200.0">
-                        <VBox.margin>
-                            <Insets bottom="10.0" top="10.0"/>
-                        </VBox.margin>
-                    </Separator>
+            <children>
 
-                    <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #7A9FE0;"
-                           text="Permissions Actives"/>
+                <!-- Carte blanche contenant la configuration -->
+                <VBox spacing="20"
+                      style="-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #d1d5db;"
+                      VBox.vgrow="ALWAYS">
 
-                    <ScrollPane fitToWidth="true"
-                                style="-fx-background-color: transparent; -fx-background: transparent;"
-                                VBox.vgrow="ALWAYS">
-                        <content>
-                            <VBox fx:id="permissionsContainer" spacing="12.0" style="-fx-background-color: white;">
-                                <padding>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                                </padding>
-                            </VBox>
-                        </content>
-                    </ScrollPane>
+                    <padding>
+                        <Insets top="25" bottom="25" left="30" right="30"/>
+                    </padding>
 
-                </children>
-            </VBox>
-        </children>
-    </VBox>
-</VBox>
+                    <children>
+
+                        <!-- Section titre + description -->
+                        <VBox spacing="5">
+                            <children>
+
+                                <!-- Sous-titre -->
+                                <Label text="Configuration des accès"
+                                       style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+                                <!-- Texte explicatif -->
+                                <Label text="Sélectionnez un rôle ci-dessous pour modifier ses accès en temps réel."
+                                       style="-fx-text-fill: #6b7280;">
+                                    <font>
+                                        <Font name="System Italic" size="14"/>
+                                    </font>
+                                </Label>
+
+                            </children>
+                        </VBox>
+
+                        <!-- ComboBox pour choisir le rôle -->
+                        <ComboBox fx:id="roleComboBox"
+                                  prefHeight="40" prefWidth="300"
+                                  promptText="Choisir un rôle..."
+                                  styleClass="combo-box"
+                                  style="-fx-font-size: 14px; -fx-background-radius: 5;"/>
+
+                        <!-- Séparateur visuel -->
+                        <Separator prefWidth="200">
+                            <VBox.margin>
+                                <Insets top="10" bottom="10"/>
+                            </VBox.margin>
+                        </Separator>
+
+                        <!-- Titre de la section permissions -->
+                        <Label text="Permissions Actives"
+                               style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #7A9FE0;"/>
+
+                        <!-- ScrollPane contenant les permissions dynamiques -->
+                        <ScrollPane fitToWidth="true"
+                                    style="-fx-background-color: transparent; -fx-background: transparent;"
+                                    VBox.vgrow="ALWAYS">
+
+                            <content>
+
+                                <!-- Conteneur où les ToggleButtons seront injectés -->
+                                <VBox fx:id="permissionsContainer"
+                                      spacing="12"
+                                      style="-fx-background-color: white;">
+                                    <padding>
+                                        <Insets top="5" bottom="5" left="5" right="5"/>
+                                    </padding>
+                                </VBox>
+
+                            </content>
+                        </ScrollPane>
+
+                    </children>
+                </VBox>
+
+            </children>
+        </VBox>
+    </center>
+
+</BorderPane>

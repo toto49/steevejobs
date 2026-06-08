@@ -1,7 +1,7 @@
 package com.eseo.steevejobs.service;
 
-import com.eseo.steevejobs.controller.*;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.util.TestRuntime;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -21,6 +21,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Client WebSocket singleton pour le client JavaFX (tickets, visio, notifications).
+ * <p>
+ * Effets de bord : connexion réseau persistante vers {@code WS_SERVER_IP}:{@code WS_SERVER_PORT}
+ * (fichier .env) ; enregistrement JWT via {@link SessionService} ; envoi de messages
+ * {@code NOTIFY} ; rafraîchissement UI via {@link WebSocketUiBridge} (debounce 300 ms) ;
+ * notifications bureau optionnelles si préférence activée. Désactivé en mode test
+ * ({@link com.eseo.steevejobs.util.TestRuntime}).
+ * </p>
+ */
 public class WebSocketService {
 
     private static volatile WebSocketService instance;
@@ -42,11 +52,21 @@ public class WebSocketService {
     private final Set<String> pendingTypesToUpdate = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean debounceScheduled = new AtomicBoolean(false);
     private final Set<String> processedEvents = ConcurrentHashMap.newKeySet();
+    private volatile int pendingTicketId = -1;
+
+    private final WebSocketUiBridge uiBridge = WebSocketUiBridge.getInstance();
 
     private WebSocketService() {
-        scheduler.scheduleAtFixedRate(this::checkConnection, 2, 5, TimeUnit.SECONDS);
+        if (!TestRuntime.isEnabled()) {
+            scheduler.scheduleAtFixedRate(this::checkConnection, 2, 5, TimeUnit.SECONDS);
+        }
     }
 
+    /**
+     * Retourne l'instance singleton du client WebSocket.
+     *
+     * @return instance partagée
+     */
     public static WebSocketService getInstance() {
         if (instance == null) {
             synchronized (WebSocketService.class) {
@@ -70,7 +90,36 @@ public class WebSocketService {
         return dotenvInstance;
     }
 
+    /**
+     * Envoie une charge JSON brute sur le socket si la connexion est ouverte.
+     *
+     * @param message payload texte (JSON attendu par le serveur)
+     */
+    public void envoyerMessageBrut(String message) {
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
+        try {
+            if (wsClient != null && wsClient.isOpen() && isConnected.get()) {
+                wsClient.send(message);
+            } else {
+                System.err.println("⚠️ Impossible d'envoyer le message : Le WebSocket n'est pas connecté au serveur.");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Erreur d'envoi de message brut : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Établit la connexion WebSocket et envoie le message {@code REGISTER} avec le JWT de session.
+     * <p>
+     * Planifie une reconnexion périodique tant que le service reste actif.
+     * </p>
+     */
     public void connecter() {
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         if (isConnected.get() || !isConnecting.compareAndSet(false, true)) return;
 
         try {
@@ -85,12 +134,10 @@ public class WebSocketService {
             }
 
             lastUri = new URI("ws://" + ip + ":" + port);
-            System.out.println("⏳ Tentative de connexion WS vers : " + lastUri);
 
             wsClient = new WebSocketClient(lastUri) {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
-                    System.out.println("✅ WS Connecté au NAS ! Envoi du Token VIP...");
                     isConnected.set(true);
                     isConnecting.set(false);
 
@@ -113,12 +160,44 @@ public class WebSocketService {
                 @Override
                 public void onMessage(String message) {
                     try {
-                        System.out.println("[WS] Message reçu : " + message);
                         JSONObject json = new JSONObject(message);
-                        if ("UPDATE_TICKET".equals(json.optString("type"))) {
+                        String type = json.optString("type");
+                        if ("UPDATE_TICKET".equals(type)) {
                             traiterMessageUpdate(json);
-                        } else {
-                            System.out.println("[WS] Type ignoré : " + json.optString("type"));
+                        } else if ("VISIO_TOKEN_RESPONSE".equals(type)) {
+                            String status = json.optString("status", "SUCCESS");
+
+                            if ("SUCCESS".equals(status)) {
+                                String token = json.getString("token");
+                                String roomName = json.optString("roomName", "");
+                                uiBridge.dispatchVisioTokenSuccess(token, roomName);
+                            } else {
+                                String messageErreur = json.optString("message", "❌ Accès au salon refusé.");
+                                System.err.println("🛑 [WS] Accès Visio refusé par le serveur : " + messageErreur);
+                                uiBridge.dispatchVisioMessage(messageErreur);
+                            }
+                        } else if ("PLANIF_RESPONSE".equals(type)) {
+                            String status = json.optString("status");
+
+                            if ("SUCCESS".equals(status)) {
+                                uiBridge.dispatchVisioMessage("✅ Réunion planifiée avec succès !");
+                                uiBridge.dispatchRefreshReunionsRequest();
+                            } else {
+                                String messageErreur = json.optString("message",
+                                        "❌ Échec de la planification en BDD.");
+                                uiBridge.dispatchVisioMessage(messageErreur);
+                            }
+                        } else if ("MY_VISIOS_RESPONSE".equals(type)) {
+                            JSONArray reunions = json.optJSONArray("reunions");
+                            uiBridge.dispatchReunionsList(reunions);
+                        } else if ("DELETE_VISIO_RESPONSE".equals(type)) {
+                            String status = json.optString("status");
+                            String responseMessage = json.optString("message", "Suppression impossible.");
+                            if ("SUCCESS".equals(status)) {
+                                uiBridge.dispatchSalonDeleted("✅ " + responseMessage);
+                            } else {
+                                uiBridge.dispatchSalonDeleted("❌ " + responseMessage);
+                            }
                         }
                     } catch (Exception e) {
                         System.err.println("❌ WS_ERR (Parse Msg): " + e.getMessage());
@@ -134,7 +213,7 @@ public class WebSocketService {
 
                 @Override
                 public void onError(Exception ex) {
-                    System.err.println("❌ WS_ERR (Erreur de réseau): Le client n'arrive pas à atteindre l'IP " + ip);
+                    System.err.println("❌ WS_ERR (Erreur de réseau): Le client n'arrive pas à atteindre l'IP");
                     isConnected.set(false);
                     isConnecting.set(false);
                 }
@@ -149,7 +228,7 @@ public class WebSocketService {
     }
 
     private void checkConnection() {
-        if (!serviceActive.get()) return;
+        if (TestRuntime.isEnabled() || !serviceActive.get()) return;
         try {
             boolean open = (wsClient != null && wsClient.isOpen());
             if (!open && lastUri != null) connecter();
@@ -176,65 +255,57 @@ public class WebSocketService {
 
             ajouterTicketNonLu(idTicket);
             pendingTypesToUpdate.add(typeCible);
-
-            if (debounceScheduled.compareAndSet(false, true)) {
-                Platform.runLater(() -> {
-                    PauseTransition pause = new PauseTransition(Duration.millis(300));
-                    pause.setOnFinished(e -> appliquerMisesAJourUI(idTicket));
-                    pause.play();
-                });
-            }
+            pendingTicketId = idTicket;
+            planifierMiseAJourUI();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void appliquerMisesAJourUI(int dernierIdTicket) {
-        debounceScheduled.set(false);
-        try {
-            TicketController chatActif = TicketController.getActiveInstance();
-            if (chatActif != null && chatActif.getCurrentTicketId() == dernierIdTicket) {
-                chatActif.refreshChatSilently();
-            } else {
-                TicketsListController listeActive = TicketsListController.getActiveInstance();
-                if (listeActive != null) listeActive.rafraichirAffichage();
+    private void planifierMiseAJourUI() {
+        if (debounceScheduled.compareAndSet(false, true)) {
+            Platform.runLater(() -> {
+                PauseTransition pause = new PauseTransition(Duration.millis(300));
+                pause.setOnFinished(e -> appliquerMisesAJourUI());
+                pause.play();
+            });
+        }
+    }
 
-                java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(ParametresController.class);
-                boolean pushEnabled = prefs.getBoolean("push_enabled", false);
+    private void appliquerMisesAJourUI() {
+        debounceScheduled.set(false);
+        int ticketId = pendingTicketId;
+        try {
+            if (uiBridge.tryRefreshChatIfActive(ticketId)) {
+                pendingTypesToUpdate.clear();
+            } else {
+                uiBridge.dispatchRefreshTicketList();
 
                 for (String typeCible : pendingTypesToUpdate) {
-                    System.out.println("[WS] Traitement notif pour typeCible=" + typeCible);
-
-                    HomeController.ajouterNotification(typeCible);
-                    int nombre = "TECH".equals(typeCible)
-                            ? HomeController.notificationsTech
-                            : HomeController.notificationsAuteur;
-
-                    System.out.println("[WS] Valeur badge → " + typeCible + " = " + nombre);
-                    System.out.println("[WS] MenuController.getInstance() = " + MenuController.getInstance());
-
-                    MenuController mc = MenuController.getInstance();
-                    if (mc != null) {
-                        mc.allumerBadge(typeCible, Math.max(nombre, 1));
-                    } else {
-                        System.err.println("[WS] ⚠️ MenuController.getInstance() est null, badge non affiché !");
-                    }
-
-                    if (pushEnabled) {
-                        if ("AUTEUR".equals(typeCible)) {
-                            SystemNotificationService.send("SteeveJobs - Support", "Nouvelle réponse reçue");
-                        } else if ("TECH".equals(typeCible)) {
-                            SystemNotificationService.send("SteeveJobs - Admin", "Nouveau message à traiter !");
-                        }
-                    }
+                    uiBridge.dispatchTicketNotification(typeCible, isPushEnabled());
                 }
                 pendingTypesToUpdate.clear();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        if (!pendingTypesToUpdate.isEmpty() || pendingTicketId != ticketId) {
+            planifierMiseAJourUI();
+        }
     }
 
+    private boolean isPushEnabled() {
+        return java.util.prefs.Preferences.userNodeForPackage(
+                com.eseo.steevejobs.controller.ParametresController.class
+        ).getBoolean("push_enabled", false);
+    }
+
+    /**
+     * Ferme la connexion WebSocket et désactive les tentatives de reconnexion.
+     *
+     * @param onClosed callback exécuté après fermeture (peut être {@code null})
+     */
     public void deconnecter(Runnable onClosed) {
         try {
             serviceActive.set(false);
@@ -244,6 +315,13 @@ public class WebSocketService {
         if (onClosed != null) onClosed.run();
     }
 
+    /**
+     * Notifie plusieurs utilisateurs d'une mise à jour ticket via message {@code NOTIFY}.
+     *
+     * @param idsCibles  identifiants des destinataires
+     * @param idTicket   identifiant du ticket concerné
+     * @param typeCible  cible métier (ex. {@code AUTEUR}, {@code ADMIN})
+     */
     public void envoyerNotificationGroupée(List<Integer> idsCibles, int idTicket, String typeCible) {
         try {
             if (isConnected.get() && wsClient != null && wsClient.isOpen() && idsCibles != null && !idsCibles.isEmpty()) {
@@ -270,18 +348,41 @@ public class WebSocketService {
         }
     }
 
+    /**
+     * Notifie un seul utilisateur (wrapper sur {@link #envoyerNotificationGroupée}).
+     *
+     * @param idAuteurCible identifiant du destinataire
+     * @param idTicket      identifiant du ticket
+     * @param typeCible     type de cible pour l'UI
+     */
     public void envoyerNotification(int idAuteurCible, int idTicket, String typeCible) {
         envoyerNotificationGroupée(List.of(idAuteurCible), idTicket, typeCible);
     }
 
+    /**
+     * Marque un ticket comme non lu en mémoire locale (badge UI).
+     *
+     * @param idTicket identifiant du ticket
+     */
     public void ajouterTicketNonLu(int idTicket) {
         ticketsNonLus.add(idTicket);
     }
 
+    /**
+     * Retire un ticket de l'ensemble des non lus locaux.
+     *
+     * @param idTicket identifiant du ticket
+     */
     public void marquerCommeLu(int idTicket) {
         ticketsNonLus.remove(idTicket);
     }
 
+    /**
+     * Indique si un ticket est marqué non lu côté client.
+     *
+     * @param idTicket identifiant du ticket
+     * @return {@code true} si le ticket est dans l'ensemble des non lus
+     */
     public boolean isTicketNonLu(int idTicket) {
         return ticketsNonLus.contains(idTicket);
     }

@@ -1,74 +1,133 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.PlanningDAO;
-import com.eseo.steevejobs.model.HeuresTravail;
-import com.eseo.steevejobs.model.Planning;
-import com.eseo.steevejobs.model.User;
-import com.eseo.steevejobs.service.HeuresTravailService;
-import com.eseo.steevejobs.service.PlanningService;
-import com.eseo.steevejobs.service.SessionService;
+import com.eseo.steevejobs.config.ColorContrastUtil;
+import com.eseo.steevejobs.model.*;
+import com.eseo.steevejobs.service.*;
+import com.eseo.steevejobs.util.TestRuntime;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.stage.Modality;
+import javafx.util.StringConverter;
 
 import java.sql.SQLException;
-import java.time.DayOfWeek;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Contrôleur FXML du calendrier hebdomadaire (employé ou RH selon la vue chargée).
+ * Liaisons FXML : labels de jours, boutons heures, {@code gridPlanning}, {@code comboEmploye} (vue RH).
+ * Gère le planning, les heures de travail et les demandes de congés.
+ */
 public class CalendrierController {
 
-    // --- STYLES ---
-    private static final String STYLE_ACTIF = "-fx-background-color: #e1f5fe; -fx-text-fill: #01579b; -fx-border-color: #01579b; -fx-border-radius: 20; -fx-background-radius: 20; -fx-font-size: 12; -fx-cursor: hand;";
-    private static final String STYLE_INACTIF = "-fx-background-color: #e0e0e0; -fx-text-fill: #a0a0a0; -fx-background-radius: 20; -fx-font-size: 12;";
+    /** Classe CSS du bouton « Mes heures » (état par défaut). */
+    private static final String STYLE_CLASSE_HEURES = "btn-mes-heures";
+    /** Classe CSS du bouton « Mes heures » lorsque la saisie est active. */
+    private static final String STYLE_CLASSE_HEURES_ACTIF = "btn-mes-heures-actif";
+    /** Classe CSS du bouton « Mes heures » lorsque la saisie est inactive. */
+    private static final String STYLE_CLASSE_HEURES_INACTIF = "btn-mes-heures-inactif";
+    /** Nombre minimal de caractères pour déclencher la recherche d'employé (vue RH). */
+    private static final int RECHERCHE_EMPLOYE_MIN_CHARS = 2;
+    /** Nombre maximal de suggestions affichées dans le combo employé. */
+    private static final int RECHERCHE_EMPLOYE_MAX_SUGGESTIONS = 8;
 
+    /** Libellés des en-têtes : lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche. */
     @FXML
     private Label lundiLabel, mardiLabel, mercrediLabel, jeudiLabel, vendrediLabel, samediLabel, dimancheLabel;
+    /** Boutons « heures » : lundi à dimanche (saisie des heures travaillées). */
     @FXML
     private Button lundiHeuresBtn, mardiHeuresBtn, mercrediHeuresBtn, jeudiHeuresBtn, vendrediHeuresBtn, samediHeuresBtn, dimancheHeuresBtn;
+    /** Libellé affichant l'intervalle de dates de la semaine courante. */
     @FXML
     private Label labelSemaine;
+    /** Sélecteur de date pour naviguer vers une semaine donnée. */
     @FXML
     private DatePicker datePickerSemaine;
+    /** Liste déroulante de recherche et sélection d'employé (vue RH). */
+    @FXML
+    private ComboBox<User> comboEmploye;
+    /** Grille hebdomadaire affichant le planning et les événements. */
     @FXML
     private GridPane gridPlanning;
 
+    /** Date du lundi de la semaine actuellement affichée. */
     private LocalDate dateDebutSemaineAffichee;
+    /** Événements de planning chargés pour l'employé affiché. */
     private List<Planning> events;
-    private User utilisateur;
+    /** Utilisateur actuellement connecté à l'application. */
+    private User utilisateurConnecte;
+    /** Utilisateur dont le planning est affiché dans la grille. */
+    private User utilisateurAffiche;
+    /** Service d'accès aux événements de planning. */
     private PlanningService planningService;
+    /** Service de gestion des heures de travail saisies. */
     private HeuresTravailService heuresTravailService;
+    /** Service de gestion des demandes de congés. */
+    private DemandeCongeService demandeCongeService;
+    /** Service de recherche et chargement des employés. */
+    private UserService userService;
+    /** Indique une mise à jour programmatique du combo employé (évite les boucles). */
+    private boolean miseAJourRechercheEmploye;
+    /** Identifiant de l'employé actuellement sélectionné en vue RH. */
+    private int employeSelectionneId = -1;
+    /** Demandes de congés en attente affichées sur le calendrier employé. */
+    private List<DemandeConge> demandesEnAttente = new ArrayList<>();
 
 
     // ==========================================
     // INITIALISATION
     // ==========================================
 
+    /**
+     * Initialise les services, la semaine courante et le sélecteur employé (vue RH).
+     * En mode test, sort sans charger les données.
+     *
+     * @throws SQLException si le chargement initial du planning échoue
+     */
     @FXML
     public void initialize() throws SQLException {
-        PlanningDAO planningDAO = new PlanningDAO();
-        planningService = new PlanningService(planningDAO);
+        planningService = new PlanningService();
         heuresTravailService = new HeuresTravailService();
-        utilisateur = SessionService.getUtilisateurConnecte();
-
-        events = initEvent();
+        demandeCongeService = new DemandeCongeService();
+        userService = new UserService();
+        utilisateurConnecte = SessionService.getUtilisateurConnecte();
         dateDebutSemaineAffichee = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        if (TestRuntime.isEnabled()) {
+            events = new ArrayList<>();
+            demandesEnAttente = new ArrayList<>();
+            return;
+        }
+
+        if (comboEmploye != null) {
+            utilisateurAffiche = null;
+            events = new ArrayList<>();
+            initialiserSelecteurEmploye();
+        } else {
+            if (utilisateurConnecte != null) {
+                utilisateurAffiche = utilisateurConnecte;
+                rechargerDonneesPlanning();
+            } else {
+                utilisateurAffiche = null;
+                events = new ArrayList<>();
+                demandesEnAttente = new ArrayList<>();
+            }
+        }
+
         rafraichirCalendrier();
 
         datePickerSemaine.setOnAction(event -> {
@@ -80,17 +139,326 @@ public class CalendrierController {
         });
     }
 
+    /**
+     * Charge les événements de planning pour l'employé actuellement affiché.
+     *
+     * @return liste des plannings ; liste vide si aucun employé sélectionné
+     * @throws SQLException en cas d'erreur d'accès base de données
+     */
     public List<Planning> initEvent() throws SQLException {
-        return planningService.obtenirPlanningsParUtilisateur(utilisateur.getId());
+        if (utilisateurAffiche == null) {
+            return new ArrayList<>();
+        }
+        return planningService.obtenirPlanningsParUtilisateur(utilisateurAffiche.getId());
     }
 
+    /**
+     * Recharge les événements de planning et les demandes en attente pour l'employé affiché.
+     *
+     * @throws SQLException en cas d'erreur d'accès base de données
+     */
+    private void rechargerDonneesPlanning() throws SQLException {
+        events = initEvent();
+        if (estCalendrierEmploye() && utilisateurAffiche != null) {
+            demandesEnAttente = demandeCongeService.listerEnAttenteParEmploye(utilisateurAffiche.getId());
+        } else {
+            demandesEnAttente = new ArrayList<>();
+        }
+    }
+
+    /**
+     * Indique si la vue courante est le calendrier employé (sans sélecteur RH).
+     *
+     * @return {@code true} si {@code comboEmploye} est absent
+     */
+    private boolean estCalendrierEmploye() {
+        return comboEmploye == null;
+    }
+
+    /**
+     * Vue RH : consultation uniquement des heures d'un autre employé (pas de saisie RH).
+     *
+     * @return {@code true} si l'employé affiché n'est pas l'utilisateur connecté
+     */
+    private boolean estConsultationHeuresAutreEmploye() {
+        return !estCalendrierEmploye()
+                && utilisateurConnecte != null
+                && utilisateurAffiche != null
+                && utilisateurAffiche.getId() != utilisateurConnecte.getId();
+    }
+
+    /**
+     * Indique si l'événement de planning correspond à un congé.
+     *
+     * @param event événement à tester
+     * @return {@code true} si le type est un congé
+     */
+    private boolean estEvenementConge(Planning event) {
+        return event != null && CongeUtil.estTypeConge(event.getType());
+    }
+
+    /**
+     * Configure le combo de recherche d'employé pour la vue RH.
+     */
+    private void initialiserSelecteurEmploye() {
+        comboEmploye.setEditable(true);
+        comboEmploye.setItems(FXCollections.observableArrayList());
+        comboEmploye.setPromptText("Nom, prénom ou email…");
+        comboEmploye.setConverter(new StringConverter<>() {
+            /**
+             * Affiche le nom complet de l'employé dans le combo.
+             *
+             * @param user employé à afficher
+             * @return nom complet formaté
+             */
+            @Override
+            public String toString(User user) {
+                return formaterNomEmploye(user);
+            }
+
+            /**
+             * Résout un employé à partir du texte saisi dans le combo.
+             *
+             * @param string saisie utilisateur
+             * @return employé correspondant ou {@code null}
+             */
+            @Override
+            public User fromString(String string) {
+                if (string == null || string.isBlank()) {
+                    return null;
+                }
+                String recherche = string.trim();
+                for (User user : comboEmploye.getItems()) {
+                    if (formaterNomEmploye(user).equalsIgnoreCase(recherche)) {
+                        return user;
+                    }
+                }
+                return null;
+            }
+        });
+
+        miseAJourRechercheEmploye = true;
+        comboEmploye.setValue(null);
+        comboEmploye.getEditor().clear();
+        employeSelectionneId = -1;
+        miseAJourRechercheEmploye = false;
+
+        comboEmploye.getEditor().textProperty().addListener((obs, oldText, newText) -> {
+            if (miseAJourRechercheEmploye) {
+                return;
+            }
+            if (utilisateurAffiche != null && newText != null
+                    && formaterNomEmploye(utilisateurAffiche).equalsIgnoreCase(newText.trim())) {
+                return;
+            }
+            if (newText == null || newText.isBlank()) {
+                reinitialiserSelectionEmploye();
+                return;
+            }
+            proposerEmployesCorrespondants(newText);
+        });
+
+        comboEmploye.getSelectionModel().selectedItemProperty().addListener((obs, ancien, selection) -> {
+            if (miseAJourRechercheEmploye || selection == null) {
+                return;
+            }
+            try {
+                appliquerEmployeSelectionne(selection);
+            } catch (SQLException e) {
+                afficherErreur("Impossible de charger le planning : " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Efface la sélection employé et vide la grille de planning.
+     */
+    private void reinitialiserSelectionEmploye() {
+        utilisateurAffiche = null;
+        employeSelectionneId = -1;
+        events = new ArrayList<>();
+        comboEmploye.getItems().clear();
+        comboEmploye.hide();
+        try {
+            rafraichirCalendrier();
+        } catch (SQLException e) {
+            afficherErreur("Impossible de rafraîchir le calendrier : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Vérifie qu'un employé est sélectionné en vue RH ; affiche une alerte sinon.
+     *
+     * @return {@code true} si un employé est sélectionné ou si la vue est employé
+     */
+    private boolean employeRhSelectionne() {
+        if (comboEmploye == null) {
+            return true;
+        }
+        if (utilisateurAffiche != null) {
+            return true;
+        }
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Employé requis");
+        alert.setHeaderText(null);
+        alert.setContentText("Recherchez et sélectionnez un employé pour afficher son planning.");
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
+        return false;
+    }
+
+    /**
+     * Lance une recherche asynchrone d'employés correspondant à la saisie du combo RH.
+     *
+     * @param saisie texte saisi par l'utilisateur
+     */
+    private void proposerEmployesCorrespondants(String saisie) {
+        if (saisie == null || saisie.trim().length() < RECHERCHE_EMPLOYE_MIN_CHARS) {
+            Platform.runLater(() -> {
+                if (!miseAJourRechercheEmploye) {
+                    comboEmploye.getItems().clear();
+                    comboEmploye.hide();
+                }
+            });
+            return;
+        }
+
+        final String terme = saisie.trim();
+        Thread recherche = new Thread(() -> {
+            try {
+                List<User> resultats = userService.searchUsersByName(terme).stream()
+                        .limit(RECHERCHE_EMPLOYE_MAX_SUGGESTIONS)
+                        .toList();
+                Platform.runLater(() -> {
+                    if (miseAJourRechercheEmploye) {
+                        return;
+                    }
+                    String saisieActuelle = comboEmploye.getEditor().getText();
+                    if (saisieActuelle == null || !saisieActuelle.trim().equals(terme)) {
+                        return;
+                    }
+                    comboEmploye.getItems().setAll(resultats);
+                    if (resultats.isEmpty()) {
+                        comboEmploye.hide();
+                    } else {
+                        comboEmploye.show();
+                    }
+                });
+            } catch (SQLException e) {
+                Platform.runLater(() -> afficherErreur("Recherche employé impossible : " + e.getMessage()));
+            }
+        }, "recherche-employe-rh");
+        recherche.setDaemon(true);
+        recherche.start();
+    }
+    /**
+     * Applique la feuille de style popup aux boutons d'une boîte de dialogue.
+     *
+     * @param dp panneau de dialogue à styliser
+     */
+    private void appliquerStyleDialog(DialogPane dp) {
+        try {
+            java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+            if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+        } catch (Exception ignored) {}
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
+    }
+
+    /**
+     * Charge le planning de l'employé sélectionné et met à jour le combo de recherche.
+     *
+     * @param employe employé choisi
+     * @throws SQLException en cas d'erreur de chargement du planning
+     */
+    private void appliquerEmployeSelectionne(User employe) throws SQLException {
+        if (employe == null || employe.getId() == employeSelectionneId) {
+            return;
+        }
+
+        employeSelectionneId = employe.getId();
+        utilisateurAffiche = employe;
+        events = initEvent();
+        demandesEnAttente = new ArrayList<>();
+        rafraichirCalendrier();
+
+        String nomAffiche = formaterNomEmploye(employe);
+        miseAJourRechercheEmploye = true;
+        comboEmploye.getItems().setAll(employe);
+        comboEmploye.getSelectionModel().select(employe);
+        comboEmploye.setValue(employe);
+        comboEmploye.getEditor().setText(nomAffiche);
+        comboEmploye.hide();
+
+        Platform.runLater(() -> {
+            comboEmploye.hide();
+            if (gridPlanning != null) {
+                gridPlanning.requestFocus();
+            } else if (comboEmploye.getScene() != null) {
+                comboEmploye.getScene().getRoot().requestFocus();
+            }
+            miseAJourRechercheEmploye = false;
+        });
+    }
+
+    /**
+     * Formate le nom complet d'un employé (prénom + nom).
+     *
+     * @param user employé à formater
+     * @return nom affichable ou chaîne vide
+     */
+    private String formaterNomEmploye(User user) {
+        if (user == null) {
+            return "";
+        }
+        String prenom = user.getPrenom() != null ? user.getPrenom().trim() : "";
+        String nom = user.getNom() != null ? user.getNom().trim() : "";
+        return (prenom + " " + nom).trim();
+    }
+
+    /**
+     * Affiche une alerte d'erreur stylisée.
+     *
+     * @param message texte du message
+     */
+    private void afficherErreur(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Erreur");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
+    }
+
+    /**
+     * Affiche la semaine suivante.
+     *
+     * @param e événement du bouton (non utilisé)
+     * @throws SQLException si le rafraîchissement du calendrier échoue
+     */
     public void nextWeek(ActionEvent e) throws SQLException {
         dateDebutSemaineAffichee = dateDebutSemaineAffichee.plusWeeks(1); rafraichirCalendrier();
     }
+
+    /**
+     * Affiche la semaine précédente.
+     *
+     * @param e événement du bouton (non utilisé)
+     * @throws SQLException si le rafraîchissement du calendrier échoue
+     */
     public void lastWeek(ActionEvent e) throws SQLException {
         dateDebutSemaineAffichee = dateDebutSemaineAffichee.minusWeeks(1); rafraichirCalendrier();
     }
 
+    /**
+     * Met à jour les en-têtes de jours, le libellé de semaine et les blocs d'événements.
+     *
+     * @throws SQLException si le rechargement des données est nécessaire et échoue
+     */
     @FXML
     public void rafraichirCalendrier() throws SQLException {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("EEEE dd MMMM", Locale.FRENCH);
@@ -103,14 +471,7 @@ public class CalendrierController {
             LocalDate dateJour = dateDebutSemaineAffichee.plusDays(i);
             labels[i].setText(dateJour.format(dtf).toUpperCase());
 
-            // Vérification : Futur
-            if (dateJour.isAfter(aujourdhui)) {
-                boutonsHeures[i].setDisable(true);
-                boutonsHeures[i].setStyle(STYLE_INACTIF);
-            } else {
-                boutonsHeures[i].setDisable(false);
-                boutonsHeures[i].setStyle(STYLE_ACTIF);
-            }
+            appliquerStyleBoutonHeures(boutonsHeures[i], dateJour.isAfter(aujourdhui));
         }
 
         DateTimeFormatter sf = DateTimeFormatter.ofPattern("dd MMMM", Locale.FRENCH);
@@ -119,18 +480,92 @@ public class CalendrierController {
         showEvent();
     }
 
+    private void appliquerStyleBoutonHeures(Button bouton, boolean desactive) {
+        bouton.getStyleClass().removeAll(STYLE_CLASSE_HEURES_ACTIF, STYLE_CLASSE_HEURES_INACTIF);
+        if (!bouton.getStyleClass().contains(STYLE_CLASSE_HEURES)) {
+            bouton.getStyleClass().add(STYLE_CLASSE_HEURES);
+        }
+        bouton.setDisable(desactive);
+        bouton.getStyleClass().add(desactive ? STYLE_CLASSE_HEURES_INACTIF : STYLE_CLASSE_HEURES_ACTIF);
+    }
+
     // ==========================================
     // GESTION DES HEURES DE TRAVAIL
     // ==========================================
 
+    /**
+     * Ouvre la popup de traitement des demandes de congés (vue RH uniquement).
+     * Liaison FXML : bouton « Demandes de congés ».
+     *
+     * @param event événement du bouton (non utilisé)
+     */
+    @FXML
+    public void ouvrirPopupDemandesConge(ActionEvent event) {
+        if (comboEmploye == null) {
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                    "/com/eseo/steevejobs/view/demandes-conge-popup.fxml"));
+            VBox contenu = loader.load();
+            DemandesCongeController controller = loader.getController();
+            controller.setOnDemandeTraitee(() -> {
+                try {
+                    if (utilisateurAffiche != null) {
+                        events = initEvent();
+                        rafraichirCalendrier();
+                    }
+                } catch (SQLException e) {
+                    afficherErreur("Impossible de rafraîchir le planning : " + e.getMessage());
+                }
+            });
+
+            Dialog<Void> dialog = new Dialog<>();
+            dialog.setTitle("Demandes de congés");
+            dialog.setResizable(true);
+
+            DialogPane dp = dialog.getDialogPane();
+            dp.setContent(contenu);
+            dp.getButtonTypes().add(ButtonType.CLOSE);
+            dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+            dp.setMinWidth(1080);
+            dp.setPrefWidth(1120);
+            dp.setMinHeight(640);
+            dp.setPrefHeight(660);
+
+            Button btnFermer = (Button) dp.lookupButton(ButtonType.CLOSE);
+            if (btnFermer != null) {
+                btnFermer.setText("Fermer");
+                btnFermer.getStyleClass().add("button-cancel");
+            }
+
+            dialog.showAndWait();
+        } catch (Exception e) {
+            afficherErreur("Impossible d'ouvrir les demandes de congés : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Ouvre la popup de saisie ou consultation des heures pour le jour lié au bouton.
+     * Vérifie qu'un employé est sélectionné en vue RH. Mode lecture seule au-delà de 7 jours
+     * ou lors de la consultation des heures d'un autre employé en vue RH.
+     * Liaison FXML : boutons heures ({@code userData} = index du jour).
+     *
+     * @param event événement du bouton source
+     */
     @FXML
     public void ouvrirPopupHeures(ActionEvent event) {
+        if (!employeRhSelectionne()) {
+            return;
+        }
         Node source = (Node) event.getSource();
         int dayIndex = Integer.parseInt(source.getUserData().toString());
         LocalDate dateCible = dateDebutSemaineAffichee.plusDays(dayIndex);
 
         // --- DÉTECTION DU MODE LECTURE SEULE ---
-        boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7));
+        final boolean isReadOnly = dateCible.isBefore(LocalDate.now().minusDays(7))
+                || estConsultationHeuresAutreEmploye();
 
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(isReadOnly ? "Consultation des heures" : "Saisie des heures");
@@ -143,7 +578,7 @@ public class CalendrierController {
         // 1. récupération BDD
         HeuresTravail hr = null;
         try {
-            hr = heuresTravailService.getHeuresParDate(utilisateur.getId(), dateCible);
+            hr = heuresTravailService.getHeuresParDate(utilisateurAffiche.getId(), dateCible);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -254,7 +689,7 @@ public class CalendrierController {
                     LocalTime tTotal = LocalTime.of((int) (totalMinutes / 60), (int) (totalMinutes % 60));
 
                     // N'oublie pas d'ajouter tTotal dans les paramètres de ta méthode Service et DAO !
-                    heuresTravailService.sauvegarderHeures(utilisateur.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
+                    heuresTravailService.sauvegarderHeures(utilisateurAffiche.getId(), dateCible, tDebutM, tFinM, tDebutA, tFinA, tTotal);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -263,9 +698,15 @@ public class CalendrierController {
     }
 
     // --- CORRECTION : Tranches de 15 minutes ---
+    /**
+     * Crée une liste déroulante d'horaires par tranches de 15 minutes.
+     *
+     * @param moment {@code "matin"} ou {@code "aprem"} pour la plage horaire
+     * @return combo box éditable des horaires
+     */
     private ComboBox<String> creerComboBoxTemps(String moment) {
         ComboBox<String> cb = new ComboBox<>();
-        if (moment == "matin"){
+        if (moment.equals("matin")){
             for (int h = 6; h <= 14; h++) {
                 cb.getItems().add(String.format("%02d:00", h));
                 cb.getItems().add(String.format("%02d:15", h));
@@ -287,6 +728,13 @@ public class CalendrierController {
         return cb;
     }
 
+    /**
+     * Calcule la durée en minutes entre deux horaires au format {@code HH:mm}.
+     *
+     * @param debut heure de début
+     * @param fin heure de fin
+     * @return durée en minutes, ou 0 si le format est invalide
+     */
     private long calculerDureeMinutes(String debut, String fin) {
         try {
             LocalTime tDebut = LocalTime.parse(debut);
@@ -302,6 +750,9 @@ public class CalendrierController {
     // GESTION DE L'AFFICHAGE DES BLOCS PLANNING
     // ==========================================
 
+    /**
+     * Affiche les événements et demandes en attente dans la grille hebdomadaire.
+     */
     public void showEvent() {
         gridPlanning.getChildren().removeIf(node -> node.getStyleClass().contains("event-block"));
         LocalDate dateFinSemaine = dateDebutSemaineAffichee.plusDays(6);
@@ -320,8 +771,29 @@ public class CalendrierController {
                 dateCourante = dateCourante.plusDays(1);
             }
         }
+
+        if (estCalendrierEmploye()) {
+            for (DemandeConge demande : demandesEnAttente) {
+                LocalDate dateCourante = demande.getJourDebut().toLocalDate();
+                LocalDate dateFinDemande = demande.getJourFin().toLocalDate();
+
+                while (!dateCourante.isAfter(dateFinDemande)) {
+                    if (!dateCourante.isBefore(dateDebutSemaineAffichee) && !dateCourante.isAfter(dateFinSemaine)) {
+                        placerDemandeEnAttenteDansGrille(demande, dateCourante);
+                    }
+                    dateCourante = dateCourante.plusDays(1);
+                }
+            }
+        }
     }
 
+    /**
+     * Place un bloc d'événement de planning dans la grille pour un jour donné.
+     *
+     * @param event événement à afficher
+     * @param date jour de la cellule
+     * @param afficherBoutons {@code true} pour afficher modifier/supprimer sur la dernière case visible
+     */
     private void placerEvenementDansGrille(Planning event, LocalDate date, boolean afficherBoutons) {
         int col = date.getDayOfWeek().getValue();
         int hDebut = date.isEqual(event.getJourDebut().toLocalDate()) ? event.getJourDebut().getHour() : 8;
@@ -335,6 +807,70 @@ public class CalendrierController {
         GridPane.setMargin(eventBlock, new Insets(2));
     }
 
+    /**
+     * Place un bloc de demande de congé en attente dans la grille pour un jour donné.
+     *
+     * @param demande demande à afficher
+     * @param date jour de la cellule
+     */
+    private void placerDemandeEnAttenteDansGrille(DemandeConge demande, LocalDate date) {
+        int col = date.getDayOfWeek().getValue();
+        int hDebut = date.isEqual(demande.getJourDebut().toLocalDate()) ? demande.getJourDebut().getHour() : 8;
+        int hFin = date.isEqual(demande.getJourFin().toLocalDate()) ? demande.getJourFin().getHour() : 18;
+
+        int rowDebut = hDebut - 5;
+        int rowSpan = Math.max(1, hFin - hDebut + 1);
+
+        Node bloc = creerBlocDemandeEnAttente(demande, date);
+        gridPlanning.add(bloc, col, rowDebut, 1, rowSpan);
+        GridPane.setMargin(bloc, new Insets(2));
+    }
+
+    /**
+     * Construit le nœud visuel d'une demande de congé en attente.
+     *
+     * @param demande demande source
+     * @param date jour affiché dans la cellule
+     * @return bloc vertical stylisé
+     */
+    private Node creerBlocDemandeEnAttente(DemandeConge demande, LocalDate date) {
+        VBox box = new VBox(2);
+        box.getStyleClass().add("event-block");
+        box.setPadding(new Insets(4));
+        box.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        box.setStyle("-fx-background-color: " + CongeUtil.COULEUR_DEMANDE_EN_ATTENTE
+                + "; -fx-background-radius: 5; -fx-border-color: #FB8C00; -fx-border-width: 1; -fx-border-radius: 5;");
+
+        String textFill = ColorContrastUtil.textFillForBackground(CongeUtil.COULEUR_DEMANDE_EN_ATTENTE);
+        Label lblType = new Label(CongeUtil.TYPE_CONGE_AFFICHAGE);
+        lblType.setWrapText(true);
+        lblType.setStyle("-fx-text-fill: " + textFill + "; -fx-font-weight: bold; -fx-font-size: 11px;");
+
+        Label lblStatut = new Label("En attente RH");
+        lblStatut.setWrapText(true);
+        lblStatut.setStyle("-fx-text-fill: " + textFill + "; -fx-font-size: 10px;");
+
+        DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
+        LocalDateTime debutAffiche = date.isEqual(demande.getJourDebut().toLocalDate())
+                ? demande.getJourDebut()
+                : DemandeCongeService.debutJournee(date);
+        LocalDateTime finAffiche = date.isEqual(demande.getJourFin().toLocalDate())
+                ? demande.getJourFin()
+                : DemandeCongeService.finJournee(date);
+        Label lblTime = new Label(debutAffiche.format(tf) + " - " + finAffiche.format(tf));
+        lblTime.setStyle("-fx-text-fill: " + textFill + "; -fx-font-size: 10px;");
+
+        box.getChildren().addAll(lblType, lblStatut, lblTime);
+        return box;
+    }
+
+    /**
+     * Construit le nœud visuel d'un événement de planning.
+     *
+     * @param event événement source
+     * @param afficherBoutons {@code true} pour les boutons modifier et supprimer
+     * @return bloc vertical stylisé
+     */
     private Node creerBlocEvenement(Planning event, boolean afficherBoutons) {
         VBox box = new VBox(2);
         box.getStyleClass().add("event-block");
@@ -344,17 +880,24 @@ public class CalendrierController {
         String color = (event.getCouleur() != null && !event.getCouleur().isEmpty()) ? event.getCouleur() : "#ffcc00";
         box.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 5;");
 
-        Label lblType = new Label(event.getType());
-        lblType.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 11px;");
+        String textFill = ColorContrastUtil.textFillForBackground(color);
+        String labelStyleBold = "-fx-text-fill: " + textFill + "; -fx-font-weight: bold; -fx-font-size: 11px;";
+        String labelStyleSmall = "-fx-text-fill: " + textFill + "; -fx-font-size: 10px;";
+
+        Label lblType = new Label(CongeUtil.estTypeConge(event.getType())
+                ? CongeUtil.TYPE_CONGE_AFFICHAGE
+                : event.getType());
+        lblType.setStyle(labelStyleBold);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox header = new HBox(lblType, spacer);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        if (afficherBoutons) {
+        if (afficherBoutons && !estEvenementConge(event)) {
+            String btnTextFill = textFill;
             Button btnEdit = new Button("✎");
-            btnEdit.setStyle("-fx-background-color: rgba(255, 255, 255, 0.4); -fx-text-fill: white; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
+            btnEdit.setStyle("-fx-background-color: rgba(128, 128, 128, 0.35); -fx-text-fill: " + btnTextFill + "; -fx-padding: 1 5; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 3;");
             btnEdit.setOnAction(e -> modifierEvenement(event));
 
             Button btnSuppr = new Button("X");
@@ -367,10 +910,10 @@ public class CalendrierController {
 
         DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
         Label lblTime = new Label(event.getJourDebut().format(tf) + " - " + event.getJourFin().format(tf));
-        lblTime.setStyle("-fx-text-fill: white; -fx-font-size: 10px;");
+        lblTime.setStyle(labelStyleSmall);
 
         Label lblDesc = new Label(event.getDescription());
-        lblDesc.setStyle("-fx-text-fill: white; -fx-font-size: 10px;");
+        lblDesc.setStyle(labelStyleSmall);
         lblDesc.setWrapText(true);
 
         box.getChildren().addAll(header, lblTime, lblDesc);
@@ -381,87 +924,373 @@ public class CalendrierController {
     // ACTIONS ET FORMULAIRE (AJOUT / MODIF PLANNING)
     // ==========================================
 
+    /**
+     * Ouvre le formulaire d'ajout d'événement après vérification de la sélection employé (vue RH).
+     * Liaison FXML : bouton d'ajout.
+     *
+     * @param event événement du bouton (non utilisé)
+     */
     @FXML
     public void ouvrirPopupAjout(ActionEvent event) {
+        if (!employeRhSelectionne()) {
+            return;
+        }
         afficherFormulaire(null);
     }
 
+    /**
+     * Ouvre le formulaire de demande de congés pour l'employé connecté (vue employé uniquement).
+     * Liaison FXML : bouton « Demander des congés ».
+     *
+     * @param event événement du bouton (non utilisé)
+     */
+    @FXML
+    public void ouvrirPopupDemandeConge(ActionEvent event) {
+        if (!estCalendrierEmploye() || utilisateurConnecte == null) {
+            return;
+        }
+        utilisateurAffiche = utilisateurConnecte;
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Demander des congés");
+        dialog.setHeaderText(null);
+        dialog.setResizable(true);
+
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+        dp.setMinWidth(460);
+        dp.setPrefWidth(500);
+
+        Button okButton = (Button) dp.lookupButton(ButtonType.OK);
+        okButton.getStyleClass().add("button-ok");
+        okButton.setText("Envoyer la demande");
+
+        VBox form = new VBox(16);
+        form.setPadding(new Insets(8, 4, 4, 4));
+        form.setPrefWidth(440);
+
+        Label intro = new Label("Votre demande sera transmise à la RH pour validation.");
+        intro.setWrapText(true);
+        intro.setStyle("-fx-text-fill: #475569; -fx-font-size: 13px;");
+
+        DatePicker dateDebut = new DatePicker(LocalDate.now().plusDays(1));
+        dateDebut.setMaxWidth(Double.MAX_VALUE);
+        DatePicker dateFin = new DatePicker(LocalDate.now().plusDays(1));
+        dateFin.setMaxWidth(Double.MAX_VALUE);
+
+        TextArea commentaire = new TextArea();
+        commentaire.setPromptText("Motif ou précisions (optionnel)");
+        commentaire.setWrapText(true);
+        commentaire.setPrefRowCount(3);
+        commentaire.setMaxWidth(Double.MAX_VALUE);
+
+        ProgressBar progressSolde = new ProgressBar(0);
+        progressSolde.setMaxWidth(Double.MAX_VALUE);
+        Label lblSolde = new Label("Calcul du solde…");
+        lblSolde.setWrapText(true);
+        lblSolde.setStyle("-fx-text-fill: #4b5563; -fx-font-size: 12px;");
+
+        Runnable actualiserSolde = () -> {
+            LocalDate debut = dateDebut.getValue();
+            if (debut == null || utilisateurConnecte == null) {
+                return;
+            }
+            try {
+                SoldeConge solde = demandeCongeService.calculerSoldeConge(utilisateurConnecte.getId(), debut.getYear());
+                progressSolde.setProgress(solde.getRatioUtilise());
+                lblSolde.setText("Solde " + solde.getAnnee() + " : "
+                        + solde.getJoursRestants() + " jour(s) restant(s) sur "
+                        + solde.getJoursAcquis() + " (" + solde.getJoursPris() + " pris, "
+                        + solde.getJoursEnAttente() + " en attente).");
+            } catch (SQLException e) {
+                lblSolde.setText("Impossible de calculer le solde.");
+            }
+        };
+
+        dateDebut.valueProperty().addListener((obs, oldVal, newVal) -> actualiserSolde.run());
+        dateFin.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && dateDebut.getValue() != null && newVal.isBefore(dateDebut.getValue())) {
+                dateFin.setValue(dateDebut.getValue());
+            }
+        });
+        actualiserSolde.run();
+
+        form.getChildren().addAll(
+                intro,
+                creerChampDemandeConge("Date de début", dateDebut),
+                creerChampDemandeConge("Date de fin", dateFin),
+                creerChampDemandeConge("Commentaire (optionnel)", commentaire),
+                creerChampDemandeConge("Votre solde de congés", new VBox(8, progressSolde, lblSolde))
+        );
+
+        dp.setContent(form);
+
+        dialog.showAndWait().ifPresent(res -> {
+            if (res == ButtonType.OK) {
+                try {
+                    LocalDate debut = dateDebut.getValue();
+                    LocalDate fin = dateFin.getValue();
+                    if (debut == null || fin == null) {
+                        afficherErreur("Les dates sont obligatoires.");
+                        return;
+                    }
+                    if (fin.isBefore(debut)) {
+                        afficherErreur("La date de fin doit être postérieure à la date de début.");
+                        return;
+                    }
+
+                    LocalDateTime start = DemandeCongeService.debutJournee(debut);
+                    LocalDateTime end = DemandeCongeService.finJournee(fin);
+                    demandeCongeService.creerDemande(utilisateurConnecte, start, end, commentaire.getText());
+                    rechargerDonneesPlanning();
+                    rafraichirCalendrier();
+
+                    Alert info = new Alert(Alert.AlertType.INFORMATION);
+                    info.setTitle("Demande envoyée");
+                    info.setHeaderText(null);
+                    info.setContentText("Votre demande de congés a été transmise à la RH.");
+                    appliquerStyleAlert(info);
+                    info.showAndWait();
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (SQLException ex) {
+                    afficherErreur("Impossible d'envoyer la demande : " + ex.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * Ouvre le formulaire de modification pour un événement non lié aux congés.
+     *
+     * @param event événement à modifier
+     */
     private void modifierEvenement(Planning event) {
+        if (estEvenementConge(event)) {
+            afficherInfoCongeNonModifiable();
+            return;
+        }
         afficherFormulaire(event);
     }
 
+    /**
+     * Affiche le dialogue d'ajout ou de modification d'un événement de planning.
+     *
+     * @param eventToEdit événement existant à modifier, ou {@code null} pour une création
+     */
     private void afficherFormulaire(Planning eventToEdit) {
         boolean isEdit = (eventToEdit != null);
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(isEdit ? "Modifier l'événement" : "Ajouter un événement");
 
         DialogPane dp = dialog.getDialogPane();
-        dp.getButtonTypes().add(ButtonType.OK);
-        dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
+        appliquerStyleDialog(dp);
 
-        Button okButton = (Button) dp.lookupButton(ButtonType.OK);
-        okButton.getStyleClass().add("button-ok");
-        okButton.setText(isEdit ? "Enregistrer" : "Ajouter");
-
+        // GridPane 2 colonnes
         GridPane grid = new GridPane();
-        grid.setHgap(20); grid.setVgap(15); grid.setPrefWidth(450);
+        grid.setHgap(12);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(12));
 
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(140);
+        colLabel.setHalignment(HPos.LEFT);
+
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
+
+        grid.getColumnConstraints().addAll(colLabel, colField);
+
+        // Champs
         ComboBox<String> typeBox = new ComboBox<>();
-        typeBox.getItems().addAll("Cours", "Réunion", "Vacances", "Autre");
+        typeBox.getItems().addAll("Réunion", "Autre");
         typeBox.setMaxWidth(Double.MAX_VALUE);
 
-        ColorPicker colorPicker = new ColorPicker();
-
         TextField descField = new TextField();
+        descField.getStyleClass().add("champform");
+
         DatePicker dDP = new DatePicker();
-        TextField hDF = new TextField(); hDF.setPrefWidth(80);
         DatePicker dFP = new DatePicker();
-        TextField hFF = new TextField(); hFF.setPrefWidth(80);
+
+        ComboBox<String> hDF = new ComboBox<>();
+        ComboBox<String> hFF = new ComboBox<>();
+        for (int h = 6; h <= 22; h++) {
+            hDF.getItems().add(String.format("%02d:00", h));
+            hDF.getItems().add(String.format("%02d:30", h));
+            hFF.getItems().add(String.format("%02d:00", h));
+            hFF.getItems().add(String.format("%02d:30", h));
+        }
+        hDF.setEditable(false);
+        hFF.setEditable(false);
+        hDF.setPrefWidth(90);
+        hFF.setPrefWidth(90);
+
+        ColorPicker colorPicker = new ColorPicker(Color.web("#7298E0"));
 
         if (isEdit) {
+            if (estEvenementConge(eventToEdit)) {
+                afficherInfoCongeNonModifiable();
+                return;
+            }
             typeBox.setValue(eventToEdit.getType());
             descField.setText(eventToEdit.getDescription());
             dDP.setValue(eventToEdit.getJourDebut().toLocalDate());
-            hDF.setText(eventToEdit.getJourDebut().format(DateTimeFormatter.ofPattern("HH:mm")));
+            hDF.setValue(eventToEdit.getJourDebut().format(DateTimeFormatter.ofPattern("HH:mm")));
             dFP.setValue(eventToEdit.getJourFin().toLocalDate());
-            hFF.setText(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
-
-            if (eventToEdit.getCouleur() != null) {
-                colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
+            hFF.setValue(eventToEdit.getJourFin().format(DateTimeFormatter.ofPattern("HH:mm")));
+            if (eventToEdit.getCouleur() != null && !eventToEdit.getCouleur().isEmpty()) {
+                try {
+                    colorPicker.setValue(Color.web(eventToEdit.getCouleur()));
+                } catch (Exception ignored) {}
             }
         } else {
             typeBox.setValue("Réunion");
             colorPicker.setValue(Color.web("#7298E0"));
             dDP.setValue(LocalDate.now());
-            hDF.setText("08:00");
+            hDF.setValue("08:00");
             dFP.setValue(LocalDate.now());
-            hFF.setText("10:00");
+            hFF.setValue("10:00");
         }
 
-        ajouterLigneForm(grid, "TYPE :", typeBox, 0);
-        ajouterLigneForm(grid, "DESCRIPTION :", descField, 1);
-        ajouterLigneForm(grid, "DÉBUT :", new HBox(10, dDP, hDF), 2);
-        ajouterLigneForm(grid, "FIN :", new HBox(10, dFP, hFF), 3);
-        ajouterLigneForm(grid, "COULEUR :", colorPicker, 4);
+        int row = 0;
+        grid.add(new Label("TYPE :"), 0, row);
+        grid.add(typeBox, 1, row++);
 
-        dp.setContent(grid);
+        grid.add(new Label("DESCRIPTION :"), 0, row);
+        grid.add(descField, 1, row++);
 
-        dialog.showAndWait().ifPresent(res -> {
-            if (res == ButtonType.OK) {
-                try {
-                    LocalDateTime start = LocalDateTime.of(dDP.getValue(), LocalTime.parse(hDF.getText()));
-                    LocalDateTime end = LocalDateTime.of(dFP.getValue(), LocalTime.parse(hFF.getText()));
+        grid.add(new Label("DÉBUT :"), 0, row);
+        HBox debutBox = new HBox(8, dDP, hDF);
+        HBox.setHgrow(dDP, Priority.ALWAYS);
+        grid.add(debutBox, 1, row++);
 
-                    String hexColor = "#" + colorPicker.getValue().toString().substring(2, 8);
+        grid.add(new Label("FIN :"), 0, row);
+        HBox finBox = new HBox(8, dFP, hFF);
+        HBox.setHgrow(dFP, Priority.ALWAYS);
+        grid.add(finBox, 1, row++);
 
-                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(), hexColor, isEdit ? eventToEdit.getId() : -1);
-                } catch (Exception e) {
-                    e.printStackTrace();
+        grid.add(new Label("COULEUR :"), 0, row);
+        grid.add(colorPicker, 1, row++);
+
+        GridPane.setHgrow(typeBox, Priority.ALWAYS);
+        GridPane.setHgrow(descField, Priority.ALWAYS);
+
+        VBox content = new VBox(12);
+        Label titre = new Label(isEdit ? "MODIFIER L'ÉVÉNEMENT" : "AJOUTER UN ÉVÉNEMENT");
+        titre.getStyleClass().add("popup-header-title");
+        titre.setStyle("-fx-font-size:16px; -fx-font-weight:bold; -fx-text-fill:#5882D6;");
+        content.getChildren().addAll(titre, grid);
+        content.getStyleClass().add("popup-contenu");
+        content.setPadding(new Insets(8));
+        content.setFillWidth(true);
+
+        dp.setContent(content);
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) {
+            btnOk.setText(isEdit ? "Enregistrer" : "Ajouter");
+            btnOk.getStyleClass().add("button-primary");
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                // Validation
+                if (typeBox.getValue() == null || typeBox.getValue().trim().isEmpty()) {
+                    afficherErreur("Le type est obligatoire.");
+                    ev.consume();
+                    return;
                 }
-            }
-        });
+                if (dDP.getValue() == null || dFP.getValue() == null) {
+                    afficherErreur("Les dates de début et de fin sont obligatoires.");
+                    ev.consume();
+                    return;
+                }
+                try {
+                    LocalTime tDeb = LocalTime.parse(hDF.getValue());
+                    LocalTime tFin = LocalTime.parse(hFF.getValue());
+                    LocalDateTime start = LocalDateTime.of(dDP.getValue(), tDeb);
+                    LocalDateTime end = LocalDateTime.of(dFP.getValue(), tFin);
+                    if (!end.isAfter(start)) {
+                        afficherErreur("La date de fin doit être après la date de début.");
+                        ev.consume();
+                        return;
+                    }
+
+                    String hexColor;
+                    try {
+                        String raw = colorPicker.getValue().toString();
+                        hexColor = "#" + raw.substring(2, 8);
+                    } catch (Exception ex) {
+                        hexColor = "#7298E0";
+                    }
+
+                    traiterSauvegardeEvenement(start, end, typeBox.getValue(), descField.getText(),
+                            hexColor, isEdit ? eventToEdit.getId() : -1, isEdit ? eventToEdit : null);
+
+                } catch (Exception ex) {
+                    afficherErreur("Format d'heure invalide.");
+                    ev.consume();
+                }
+            });
+        }
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) {
+            btnCancel.setText("Annuler");
+            btnCancel.getStyleClass().add("button-cancel");
+        }
+
+        dp.setPrefWidth(720);
+        dp.setMinWidth(520);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(800);
+
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
 
+
+    /**
+     * Crée un bloc label + champ pour le formulaire de demande de congés.
+     *
+     * @param titre libellé du champ
+     * @param champ contrôle JavaFX associé
+     * @return conteneur vertical
+     */
+    private VBox creerChampDemandeConge(String titre, Node champ) {
+        Label lbl = new Label(titre);
+        lbl.setStyle("-fx-font-weight: bold; -fx-text-fill: #475569; -fx-font-size: 12px;");
+        VBox bloc = new VBox(6, lbl, champ);
+        return bloc;
+    }
+
+    /**
+     * Informe l'utilisateur que les congés ne sont pas modifiables depuis le calendrier.
+     */
+    private void afficherInfoCongeNonModifiable() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Congés");
+        alert.setHeaderText(null);
+        if (estCalendrierEmploye()) {
+            alert.setContentText("Les congés validés ne peuvent pas être modifiés ici. "
+                    + "Pour une nouvelle absence, utilisez « Demander des congés ».");
+        } else {
+            alert.setContentText("Les congés ne peuvent pas être modifiés depuis le calendrier. "
+                    + "Utilisez le bouton « Demandes de congés » pour modifier, valider ou refuser.");
+        }
+        appliquerStyleAlert(alert);
+        alert.showAndWait();
+    }
+
+    /**
+     * Ajoute une ligne label + champ à une grille de formulaire.
+     *
+     * @param g grille cible
+     * @param label texte du label
+     * @param field contrôle associé
+     * @param row index de ligne
+     */
     private void ajouterLigneForm(GridPane g, String label, Node field, int row) {
         Label lbl = new Label(label);
         lbl.getStyleClass().add("label-style");
@@ -469,35 +1298,83 @@ public class CalendrierController {
         g.add(field, 1, row);
     }
 
-    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc, String couleur, int idToDelete) throws SQLException {
-        if (idToDelete != -1) {
-            planningService.supprimerPlanning(idToDelete);
+    /**
+     * Enregistre ou met à jour un événement de planning puis rafraîchit l'affichage.
+     *
+     * @param start date-heure de début
+     * @param end date-heure de fin
+     * @param type type d'événement
+     * @param desc description
+     * @param couleur couleur hexadécimale
+     * @param idExistant identifiant existant, ou valeur négative pour une création
+     * @param existant instance existante en mode édition
+     * @throws SQLException en cas d'erreur persistance
+     */
+    private void traiterSauvegardeEvenement(LocalDateTime start, LocalDateTime end, String type, String desc,
+                                             String couleur, int idExistant, Planning existant) throws SQLException {
+        if (utilisateurAffiche == null) {
+            afficherErreur("Sélectionnez d'abord un employé.");
+            return;
         }
 
-        PlanningDAO dao = new PlanningDAO();
-        Planning newEvent = new Planning(0, start, end, type, desc, couleur, utilisateur);
-        dao.createPlanning(newEvent);
-
-        events = initEvent();
-        rafraichirCalendrier();
+        try {
+            if (CongeUtil.estTypeConge(type)) {
+                afficherErreur("Les congés ne peuvent pas être créés ou modifiés depuis le calendrier. "
+                        + "Utilisez « Demandes de congés » pour la validation RH.");
+                return;
+            }
+            if (idExistant > 0 && existant != null) {
+                Planning modifie = new Planning(idExistant, start, end, type, desc, couleur, utilisateurAffiche);
+                planningService.modifierPlanning(modifie);
+            } else {
+                Planning nouveau = new Planning(0, start, end, type, desc, couleur, utilisateurAffiche);
+                planningService.ajouterPlanning(nouveau);
+            }
+            rechargerDonneesPlanning();
+            rafraichirCalendrier();
+        } catch (IllegalArgumentException ex) {
+            afficherErreur(ex.getMessage());
+        } catch (RuntimeException ex) {
+            afficherErreur(ex.getMessage());
+        }
     }
 
+    /**
+     * Demande confirmation puis supprime un événement de planning non lié aux congés.
+     *
+     * @param event événement à supprimer
+     */
     private void supprimerEvenement(Planning event) {
+        if (estEvenementConge(event)) {
+            afficherInfoCongeNonModifiable();
+            return;
+        }
+
         Alert a = new Alert(Alert.AlertType.CONFIRMATION, "Voulez-vous vraiment supprimer cet événement ?", ButtonType.YES, ButtonType.NO);
         appliquerStyleAlert(a);
 
         a.showAndWait().ifPresent(res -> {
             if (res == ButtonType.YES) {
                 try {
-                    PlanningDAO dao = new PlanningDAO();
-                    dao.deletePlanning(event.getId());
-                    events = initEvent();
+                    planningService.supprimerPlanning(event.getId());
+                    rechargerDonneesPlanning();
                     rafraichirCalendrier();
-                } catch (SQLException e) { e.printStackTrace(); }
+                } catch (IllegalArgumentException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (RuntimeException ex) {
+                    afficherErreur(ex.getMessage());
+                } catch (SQLException e) {
+                    afficherErreur("Impossible de supprimer l'événement : " + e.getMessage());
+                }
             }
         });
     }
 
+    /**
+     * Applique la feuille de style popup aux boutons d'une alerte.
+     *
+     * @param alert alerte à styliser
+     */
     private void appliquerStyleAlert(Alert alert) {
         DialogPane dp = alert.getDialogPane();
         dp.getStylesheets().add(getClass().getResource("/style/popup.css").toExternalForm());

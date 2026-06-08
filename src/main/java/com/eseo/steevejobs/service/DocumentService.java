@@ -12,16 +12,40 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Gestion des documents commerciaux (devis, factures, bons de commande) et de leurs lignes.
+ * <p>
+ * Règles métier : tiers et montants obligatoires ; date non future ; TTC ≥ HT ;
+ * lignes avec produit, quantité et prix valides. Effets de bord :
+ * génération PDF locale via {@link PdfGeneratorService} ;
+ * suppression asynchrone du fichier sur le NAS ({@link WebDavService}) après suppression BDD.
+ * </p>
+ */
 public class DocumentService {
 
+    /** Accès persistance aux documents commerciaux. */
     private final DocumentDAO         documentDAO;
+    /** Accès persistance aux lignes de composition. */
     private final ComposerDAO         composerDAO;
+    /** Générateur PDF local pour les documents commerciaux. */
     private final PdfGeneratorService pdfService;
 
+    /**
+     * Constructeur avec DAO document et dépendances par défaut.
+     *
+     * @param documentDAO accès persistance des documents
+     */
     public DocumentService(DocumentDAO documentDAO) {
         this(documentDAO, new ComposerDAO(), new PdfGeneratorService());
     }
 
+    /**
+     * Constructeur avec injection complète (tests).
+     *
+     * @param documentDAO accès documents
+     * @param composerDAO accès lignes
+     * @param pdfService  générateur PDF
+     */
     public DocumentService(DocumentDAO documentDAO, ComposerDAO composerDAO,
                            PdfGeneratorService pdfService) {
         this.documentDAO = documentDAO;
@@ -29,6 +53,51 @@ public class DocumentService {
         this.pdfService  = pdfService;
     }
 
+    /**
+     * Constructeur par défaut.
+     */
+    public DocumentService() {
+        this(new DocumentDAO());
+    }
+
+    /**
+     * Charge un document par identifiant.
+     *
+     * @param idDocument identifiant strictement positif
+     * @return document ou {@code null} selon le DAO
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
+    public Document getDocumentById(int idDocument) throws SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+        return documentDAO.getById(idDocument);
+    }
+
+    /**
+     * Liste les lignes de composition d'un document.
+     *
+     * @param idDocument identifiant du document
+     * @return lignes produit associées
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
+    public List<Composer> findLignesByDocumentId(int idDocument) throws SQLException {
+        if (idDocument <= 0) {
+            throw new IllegalArgumentException("L'ID du document est invalide.");
+        }
+        return composerDAO.findByDocumentId(idDocument);
+    }
+
+    /**
+     * Crée un document et ses lignes après validation.
+     *
+     * @param document entête document (identifiant renseigné après création)
+     * @param lignes   lignes de détail
+     * @throws IllegalArgumentException si données invalides
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
     public void ajouterDocument(Document document, List<Composer> lignes)
             throws IllegalArgumentException, SQLException {
 
@@ -43,6 +112,14 @@ public class DocumentService {
         }
     }
 
+    /**
+     * Met à jour l'entête document sans toucher aux lignes.
+     *
+     * @param document document avec identifiant valide
+     * @throws IllegalArgumentException si données invalides
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la mise à jour BDD échoue
+     */
     public void modifierDocument(Document document)
             throws IllegalArgumentException, SQLException {
 
@@ -58,6 +135,33 @@ public class DocumentService {
         }
     }
 
+    /**
+     * Met à jour l'entête puis remplace l'ensemble des lignes (suppression puis recréation).
+     *
+     * @param document document à modifier
+     * @param lignes   nouvelles lignes
+     * @throws IllegalArgumentException si données invalides
+     * @throws SQLException             en cas d'erreur d'accès base
+     */
+    public void modifierDocumentAvecLignes(Document document, List<Composer> lignes)
+            throws IllegalArgumentException, SQLException {
+        modifierDocument(document);
+        validerLignes(lignes);
+        composerDAO.deleteByDocumentId(document.getId());
+        for (Composer ligne : lignes) {
+            ligne.setIdDocument(document.getId());
+            composerDAO.createLigne(ligne);
+        }
+    }
+
+    /**
+     * Supprime le document en base puis déclenche la suppression du PDF sur le NAS (asynchrone).
+     *
+     * @param idDocument identifiant du document
+     * @throws IllegalArgumentException si l'identifiant est invalide
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la suppression BDD échoue
+     */
     public void supprimerDocument(int idDocument) throws IllegalArgumentException, SQLException {
         if (idDocument <= 0) {
             throw new IllegalArgumentException("L'ID du document est invalide.");
@@ -80,6 +184,15 @@ public class DocumentService {
                 WebDavService.supprimerFichierDuNAS("documents_commerciaux", nomFichier));
     }
 
+    /**
+     * Génère le PDF du document, met à jour l'URL en base et retourne le chemin local.
+     *
+     * @param idDocument identifiant du document
+     * @return chemin ou URL du fichier PDF généré
+     * @throws IllegalArgumentException si document introuvable
+     * @throws SQLException             en cas d'erreur d'accès base
+     * @throws RuntimeException         si la génération PDF échoue
+     */
     public String exporterPdf(int idDocument) throws IllegalArgumentException, SQLException {
         if (idDocument <= 0) {
             throw new IllegalArgumentException("L'ID du document est invalide.");
@@ -98,56 +211,34 @@ public class DocumentService {
         return url;
     }
 
-    public void regenererPdf(int idDocument) throws IllegalArgumentException, SQLException {
-        exporterPdf(idDocument);
-    }
-
-    public boolean changerStatut(int idDocument, DocumentStatut nouveauStatut)
-            throws IllegalArgumentException, SQLException {
-
-        if (idDocument <= 0) {
-            throw new IllegalArgumentException("L'ID du document est invalide.");
-        }
-        if (nouveauStatut == null) {
-            throw new IllegalArgumentException("Le nouveau statut est obligatoire.");
-        }
-
-        return documentDAO.updateStatut(idDocument, nouveauStatut);
-    }
-
-    public Document getDocumentById(int id) throws IllegalArgumentException, SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("L'ID du document est invalide.");
-        }
-        return documentDAO.getById(id);
-    }
-
-    public List<Document> obtenirTousLesDocuments() throws SQLException {
-        return documentDAO.findAll();
-    }
-
-    public List<Document> getByTiersId(int tiersId) throws IllegalArgumentException, SQLException {
-        if (tiersId <= 0) {
-            throw new IllegalArgumentException("L'ID du tiers est invalide.");
-        }
-        return documentDAO.findByTiersId(tiersId);
-    }
-
-    public List<Composer> getLignes(int idDocument) throws IllegalArgumentException, SQLException {
-        if (idDocument <= 0) {
-            throw new IllegalArgumentException("L'ID du document est invalide.");
-        }
-        return composerDAO.findByDocumentId(idDocument);
-    }
-
+    /**
+     * Liste tous les documents.
+     *
+     * @return liste complète
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public List<Document> findAll() throws SQLException {
         return documentDAO.findAll();
     }
 
+    /**
+     * Met à jour le statut workflow d'un document.
+     *
+     * @param id     identifiant du document
+     * @param statut nouveau statut
+     * @return {@code true} si la mise à jour a réussi
+     * @throws SQLException en cas d'erreur d'accès base
+     */
     public boolean updateStatut(int id, DocumentStatut statut) throws SQLException {
         return documentDAO.updateStatut(id, statut);
     }
 
+    /**
+     * Valide l'entête d'un document commercial avant persistance.
+     *
+     * @param document entité document à contrôler
+     * @throws IllegalArgumentException si un champ obligatoire est absent ou incohérent
+     */
     private void validerDocument(Document document) throws IllegalArgumentException {
         if (document == null) {
             throw new IllegalArgumentException("Les données du document sont vides.");
@@ -181,6 +272,12 @@ public class DocumentService {
         }
     }
 
+    /**
+     * Valide la liste des lignes de détail d'un document.
+     *
+     * @param lignes lignes produit à contrôler (non nulles)
+     * @throws IllegalArgumentException si une ligne contient un produit, une quantité ou un prix invalide
+     */
     private void validerLignes(List<Composer> lignes) throws IllegalArgumentException {
         if (lignes == null) {
             throw new IllegalArgumentException("La liste des lignes produits est nulle.");

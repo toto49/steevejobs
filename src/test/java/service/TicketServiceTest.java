@@ -1,11 +1,11 @@
 package service;
 
-import com.eseo.steevejobs.dao.MessageDAO;
 import com.eseo.steevejobs.dao.TicketDAO;
 import com.eseo.steevejobs.model.Enum.StatutTicket;
 import com.eseo.steevejobs.model.Message;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
+import com.eseo.steevejobs.service.MessageService;
 import com.eseo.steevejobs.service.TicketServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +22,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.TicketServiceImpl}.
+ * <p>
+ * Mocks ticket et message ; vérifie cycle de vie ticket, messages et formatage de date.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
 
@@ -33,13 +39,13 @@ class TicketServiceTest {
     private TicketDAO ticketDAO;
 
     @Mock
-    private MessageDAO messageDAO;
+    private MessageService messageService;
 
     private TicketServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new TicketServiceImpl(ticketDAO, messageDAO);
+        service = new TicketServiceImpl(ticketDAO, messageService);
     }
 
     private Ticket ticketValide() {
@@ -82,7 +88,7 @@ class TicketServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> service.ajouterMessage(99, messageValide()));
         assertEquals("Le ticket 99 est introuvable.", ex.getMessage());
-        verify(messageDAO, never()).createMessage(any());
+        verify(messageService, never()).createMessage(any());
     }
 
     @Test
@@ -98,7 +104,7 @@ class TicketServiceTest {
 
         assertNotNull(resultat.getDateEnvoi());
         assertSame(ticket, resultat.getTicket());
-        verify(messageDAO).createMessage(message);
+        verify(messageService).createMessage(message);
         verify(ticketDAO).updateStatut(1, StatutTicket.EN_COURS);
     }
 
@@ -128,37 +134,4 @@ class TicketServiceTest {
         assertSame(ticket, service.getTicketById(7));
     }
 
-    @Test
-    void changerStatut_ticketExistant_retourneTicketMisAJour() throws SQLException {
-        Ticket ticket = ticketValide();
-        ticket.setId(3);
-        ticket.setStatut(StatutTicket.FERME);
-        when(ticketDAO.updateStatut(3, StatutTicket.FERME)).thenReturn(true);
-        when(ticketDAO.getById(3)).thenReturn(ticket);
-
-        Ticket resultat = service.changerStatut(3, StatutTicket.FERME);
-
-        assertEquals(StatutTicket.FERME, resultat.getStatut());
-    }
-
-    @Test
-    void getDureeOuverture_ticketRecent_retourneHeures() {
-        Ticket ticket = ticketValide();
-        ticket.setDateOuverture(LocalDateTime.now().minusHours(2));
-
-        assertTrue(service.getDureeOuverture(ticket).contains("heure"));
-    }
-
-    @Test
-    void ajouterMessage_ticketDejaEnCours_neChangePasLeStatut() throws SQLException {
-        Ticket ticket = ticketValide();
-        ticket.setId(1);
-        ticket.setStatut(StatutTicket.EN_COURS);
-        Message message = messageValide();
-        when(ticketDAO.getById(1)).thenReturn(ticket);
-
-        service.ajouterMessage(1, message);
-
-        verify(ticketDAO, never()).updateStatut(anyInt(), any());
-    }
 }

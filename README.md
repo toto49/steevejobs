@@ -1,295 +1,193 @@
-# 💼 SteeveJobs
+<div align="center">
 
-[![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/fr/java/technologies/downloads/#java25)
-[![JavaFX](https://img.shields.io/badge/JavaFX-GUI-4780bc?style=for-the-badge&logo=java&logoColor=white)](https://openjfx.io/)
-[![Liberica](https://img.shields.io/badge/Liberica%20JDK-25-0A7BBB?style=for-the-badge&logo=java&logoColor=white)](https://bell-sw.com/pages/downloads/#jdk-25-lts)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/fr/)
-[![Maven](https://img.shields.io/badge/Maven-Build-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
-[![Docker](https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+# SteeveJobs
 
-**SteeveJobs** est un logiciel de bureau moderne conçu pour la gestion complète d’une entreprise de type PME
+**Suite de gestion PME — RH, commerce, support & visioconférence**
 
-Développé en **Java 25** avec **JavaFX**, l’application propose une interface fluide, intuitive et pensée pour faciliter
-le travail quotidien des employés de l'entreprise.
+Application de bureau **JavaFX** pour le quotidien des équipes : plannings, documents commerciaux, tickets, paie et visio.
 
----
+<br>
 
-## ✨ Fonctionnalités principales
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-25+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![JavaFX](https://img.shields.io/badge/JavaFX-25-4780bc?style=flat-square&logo=java&logoColor=white)](https://openjfx.io/)
+[![MySQL](https://img.shields.io/badge/MySQL-8+-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![CI](https://img.shields.io/github/actions/workflow/status/toto49/steevejobs/build.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI)](https://github.com/toto49/steevejobs/actions)
 
-### 🛡️ Souveraineté & Sécurité (SecNumCloud)
+<br>
 
-- **Conformité anticipée :** Prêt pour les réglementations françaises, incluant l'obligation de réception des factures
-  électroniques (réforme 2026).
-- **Sécurité des accès :** Authentification robuste (JBCrypt) et gestion fine des permissions par module.
+[**Guide utilisateur**](docs/GUIDE_UTILISATEUR.md) · [**Installation**](docs/SETUP.md) · [**Architecture**](docs/ARCHITECTURE.md) · [**Contribuer**](CONTRIBUTING.md)
 
-### 👥 Ressources Humaines (RH)
-
-- **Gestion du personnel :** Accès, création et suivi des fiches de paie.
-- **Plannings :** Organisation et gestion des emplois du temps des équipes.
-
-### 📦 Gestion Commerciale & Logistique
-
-- **Catalogue :** Gestion complète des produits.
-- **Réseau (Tiers) :** Annuaire centralisé pour le suivi des clients et fournisseurs.
-- **Gestion Documentaire :** Suivi des statuts et types de documents de l'entreprise.
-
-### 💬 Support & Communication
-
-- **Ticketing :** Système interne de création et de suivi des tickets de support.
-
-### 🛠️ Administration
-
-- **Gestion des utilisateurs :** Création, modification, suppréssion des utilisateurs.
-- **Gestion des permissions :** Gestion des permissions d'accès aux modules interne de l'application.
+</div>
 
 ---
 
-## 🛠️ Stack technique & architecture
+## Sommaire
 
-Le projet repose sur une architecture en couches de type **MVC (Modèle-Vue-Contrôleur)** afin de garantir une base de
-code claire, sécurisée et maintenable.
+- [À propos](#à-propos)
+- [Fonctionnalités](#fonctionnalités)
+- [Démarrage rapide](#démarrage-rapide)
+- [Documentation](#documentation)
+- [Stack technique](#stack-technique)
+- [Structure du projet](#structure-du-projet)
+- [Contribuer & licence](#contribuer--licence)
 
-- **Langage :** Java 25
-- **Interface graphique :** JavaFX (avec Scene Builder FXML & AtlantaFX)
-- **Base de données :** MySQL (JDBC direct)
-- **Synology MailPlus Server**
-- **Conteneur docker** : websocket
-- **JWT**
-- **Outils externes :** JavaFX, ControlsFX, Atlantafx, JUnit, Kotlin Stdlib, Kotlin Test, jBCrypt, Dotenv Java, MySQL
-  Connector/J, Jakarta Mail (API + Impl), JavaFX Maven Plugin, Kotlin Maven Plugin, Maven Compiler Plugin
+---
+
+## À propos
+
+SteeveJobs centralise les outils internes d'une PME dans une interface unique :
+
+- **App Center** — tuiles modulaires selon les droits de chaque utilisateur
+- **Menu latéral** — planning, tickets, documents, visio, paramètres
+- **Temps réel** — WebSocket pour tickets et visioconférence
+- **Stockage fichiers** — PDF et pièces jointes sur WebDAV (NAS)
+
+L'architecture client suit le pattern **MVC** (modèle / DAO / service / contrôleur JavaFX).
+
+---
+
+## Fonctionnalités
+
+<table>
+<tr>
+<td width="50%">
+
+**Administration**
+- Gestion utilisateurs & rôles
+- Permissions par module
+- Authentification sécurisée (jBCrypt)
+
+**Commerce & stocks**
+- Devis, BC, factures + PDF
+- Catalogue produits & alertes stock
+- Annuaire clients / fournisseurs
+
+</td>
+<td width="50%">
+
+**Ressources humaines**
+- Fiches de paie & heures
+- Calendrier RH & plannings
+- Demandes de congé (validation RH)
+
+**Collaboration**
+- Tickets support + messagerie live
+- Visioconférence (LiveKit)
+- Notifications WebSocket
+
+</td>
+</tr>
+</table>
+
+---
+
+## Démarrage rapide
+
+```bash
+git clone https://github.com/toto49/steevejobs.git
+cd steevejobs
+cp .env.example .env          # adapter DB, SMTP, WS…
+mysql -u root -p steevejobs < sql/steevejobs.sql
+./mvnw clean install && ./mvnw javafx:run   # Launcher → HelloApplication
+```
+
+| Étape         | Détail                                                                      |
+|---------------|-----------------------------------------------------------------------------|
+| JDK           | 25+ — [Liberica Full](https://bell-sw.com/pages/downloads/) recommandé      |
+| BDD           | MySQL 8 — script `sql/steevejobs.sql`                                       |
+| Config        | [`.env.example`](.env.example) → `.env` (ne pas committer)                  |
+| Admin initial | Exécuter `DatabaseSeeder` une fois, puis changer le mot de passe admin      |
+| Exécutable    | `mvn package` → image applicative dans `target/dist/SteeveJobs/` (jpackage) |
+
+Guide complet : **[docs/SETUP.md](docs/SETUP.md)**
+
+---
+
+## Documentation
+
+| Document                                               | Pour qui ?                                                                                            |
+|--------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| 📘 [**Guide utilisateur**](docs/GUIDE_UTILISATEUR.md)  | Employés, RH, commerciaux — utilisation quotidienne                                                   |
+| 🛠 [**Installation & config**](docs/SETUP.md)          | Développeurs — BDD, `.env`, client JavaFX                                                             |
+| 🐳 [**Déploiement Docker**](docs/DOCKER.md)            | DevOps — Compose, LiveKit, branche [`websocket`](https://github.com/toto49/steevejobs/tree/websocket) |
+| 🎥 [**Front visio LiveKit**](docs/livekit/README.md)   | DevOps — page web statique (`index.html`, `config.js`)                                                |
+| 🏗 [**Architecture production**](docs/ARCHITECTURE.md) | DevOps — NAS, reverse proxy, LiveKit, WebDAV                                                          |
+| 🧪 [**Tests unitaires**](docs/TESTS.md)                | Développeurs — JUnit 5, Mockito                                                                       |
+| 🤖 [**Transparence IA**](docs/TRANSPARENCE_IA.md)      | Dossier projet — usage de l'IA (obligatoire)                                                          |
+| 📚 [**Index docs**](docs/README.md)                    | Vue d'ensemble de la documentation                                                                    |
+
+---
+
+## Stack technique
+
+<p align="center">
+<img src="https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java"/>
+<img src="https://img.shields.io/badge/JavaFX-25-4780bc?style=for-the-badge&logo=java&logoColor=white" alt="JavaFX"/>
+<img src="https://img.shields.io/badge/MySQL-8+-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL"/>
+<img src="https://img.shields.io/badge/Maven-mvnw-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven"/>
+<img src="https://img.shields.io/badge/Docker-WS-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
+<img src="https://img.shields.io/badge/LiveKit-Visio-FF6358?style=for-the-badge&logo=livekit&logoColor=white" alt="LiveKit"/>
+<img src="https://img.shields.io/badge/JUnit_5-Tests-25A162?style=for-the-badge&logo=junit5&logoColor=white" alt="JUnit"/>
+</p>
+
+<details>
+<summary><strong>Stack complète & infrastructure</strong></summary>
+
+<br>
+
+**Client :** HikariCP · AtlantaFX · OpenPDF · Jakarta Mail · Java-WebSocket · WebDAV (HttpURLConnection) · Auth0 JWT ·
+jBCrypt · dotenv-java · jpackage
+
+**Production :** Synology NAS · Web Station (reverse proxy) · Let's Encrypt · MailPlus · WebDAV · branche Git
+`websocket` · front visio statique (`docs/livekit/`)
+
+→ Détails : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+</details>
+
+---
+
+## Structure du projet
 
 ```text
-/model       → Entités métiers (Livre, DVD, Adherent, Emprunt...)
-/dao         → Accès aux données sécurisé (PreparedStatement)
-/service     → Logique métier (règles d’emprunt, orchestration)
-/controller  → Interface JavaFX et gestion des événements utilisateur
-/config      → Contient tout ce qui concerne la configuration de base de l’application
+steevejobs/
+├── src/main/java/com/eseo/steevejobs/
+│   ├── model/       # Entités métier + enums (AppModule, statuts…)
+│   ├── dao/         # Accès MySQL (HikariCP)
+│   ├── service/     # Logique métier (~20 services)
+│   ├── controller/  # 19 contrôleurs JavaFX (FXML)
+│   ├── config/      # DatabaseSeeder, ColorContrastUtil
+│   ├── util/        # TestRuntime (mode test silencieux)
+│   ├── Launcher.java
+│   └── HelloApplication.java
+├── src/main/resources/   # FXML (19 vues), CSS, images
+├── src/test/java/        # Tests JUnit 5 + Mockito + H2 (~150 scénarios)
+├── sql/                  # Schéma BDD
+├── docs/                 # Documentation + front visio (docs/livekit/)
+├── .github/workflows/    # CI Maven (Windows, Linux, macOS)
+├── .env.example          # Modèle de configuration client
+└── pom.xml               # JavaFX 25, jpackage, Surefire
 ```
 
 ---
 
-## 🚀 Installation & démarrage
+## Contribuer & licence
 
-### Prérequis
+| Ressource | Lien |
+|-----------|------|
+| Contribuer | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Code de conduite | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
+| Sécurité | [SECURITY.md](SECURITY.md) |
+| Transparence IA | [docs/TRANSPARENCE_IA.md](docs/TRANSPARENCE_IA.md) |
+| Licence | [MIT](LICENSE) |
 
-- **Java JDK 25+** installé (Nous recommandons fortement Liberica JDK 25 Full pour inclure JavaFX nativement)
-- **MySQL 8.0+** fonctionnel
-- **Maven** (inclus via le wrapper `mvnw` du projet, ou installable manuellement)
-- **Serveur STMP** installé et fonctionnel pour pouvoir envoyer des mails
-- **Docker** installé et fonctionnel pour pouvoir éxécuter des conteneurs
-
-### 1. Configuration de l'environnement (JDK & Maven)
-
-#### ☕ Installer Liberica JDK Full 25
-
-Le projet utilisant JavaFX, l'utilisation de la version "Full" de Liberica JDK est recommandée car elle intègre les
-modules JavaFX directement.
-
-1. Rendez-vous sur la [page de téléchargement de BellSoft (Liberica JDK)](https://bell-sw.com/pages/downloads/).
-2. Sélectionnez **Java 25** et votre système d'exploitation.
-3. **Important :** Veillez à bien télécharger le package **"Full JDK"** (et non "Standard JDK").
-4. Installez-le. Si vous utilisez IntelliJ IDEA ou Eclipse, allez dans les paramètres du projet et sélectionnez ce
-   nouveau JDK comme SDK par défaut.
-
-#### 🏗️ Installer Maven (si vous ne souhaitez pas utiliser le wrapper)
-
-Ce projet inclut déjà un wrapper Maven (`mvnw` / `mvnw.cmd`) qui permet d'exécuter Maven sans l'installer. Vous pouvez
-simplement utiliser `./mvnw` à la place de `mvn` dans les commandes ci-dessous.
-Cependant, pour l'installer globalement sur votre machine :
-
-* **Windows :** Téléchargez l'archive sur le site d'Apache Maven, extrayez-la, puis ajoutez le chemin du dossier `bin` à
-  votre variable d'environnement `PATH`. (Alternative via Winget : `winget install Microsoft.Maven`).
-* **macOS (via Homebrew) :** `brew install maven`
-* **Linux (Debian/Ubuntu) :** `sudo apt install maven`
-
-### 2. Préparation de la base de données
-
-Connectez-vous à votre serveur MySQL et créez la base de données :
-
-```sql
-CREATE
-DATABASE steevejobs;
-```
-
-Ensuite, importez la structure des tables en exécutant le script fourni : `sql/steevejobs.sql`.
-
-### 3. Déploiement du serveur WebSocket (Docker)
-
-Le système de notifications en temps réel repose sur un serveur WebSocket indépendant. Les fichiers de configuration
-Docker (`Dockerfile`, etc.) étant déjà présents à la racine de la branche dédiée, le déploiement se fait rapidement.
-
-#### Étape A — Basculer sur la branche du serveur
-
-Basculez sur la branche Git contenant l'application serveur :
-
-```bash
-git checkout websocket
-```
-
-#### Étape B — Compiler et générer le fichier .jar
-
-Générez l'exécutable Java autonome à l'aide de Maven :
-
-```bash
-mvn clean package
-```
-
-Maven génère deux fichiers dans `target/` : le jar standard et le jar avec dépendances. Renommez ce dernier pour
-correspondre à ce qu'attend le `Dockerfile` :
-
-```bash
-mv target/websocket-server-with-dependencies.jar target/serveur.jar
-```
-
-#### Étape C — Construction et déploiement du conteneur
-
-Avant de construire l'image, créez un fichier `.env` à la racine de la branche avec la variable d'environnement  :
-
-```env
-JWT_SECRET=cle_secrete_pour_signer_les_tokens
-```
-
-> ⚠️ Ne commitez jamais ce fichier `.env` — vérifiez qu'il est bien présent dans votre `.gitignore`.
-
-Construisez ensuite l'image et lancez le conteneur en arrière-plan (idéal pour votre Synology NAS) :
-
-```bash
-# Construire l'image Docker à partir du Dockerfile existant
-docker build -t steevejobs-websocket .
-
-# Lancer le conteneur sur le port 8887
-docker run -d -p 8887:8887 --name steevejobs-ws-serveurr --restart always steevejobs-websocket
-```
-
-### 4. Configuration sécurisée
-
-Pour que l'application puisse se connecter à la base de données, vous devez créer un fichier nommé exactement `.env` et
-y ajouter vos identifiants MySQL. Son emplacement dépend de votre utilisation :
-
-- **Si vous lancez le projet depuis les sources :** Placez le fichier `.env` à la racine du projet (au même niveau que
-  le fichier `pom.xml`).
-- **Si vous avez téléchargé l'application compilée (.exe, .jar, etc.) :** Placez le fichier `.env` dans le même dossier
-  que l'exécutable.
-
-Contenu à ajouter dans le fichier `.env` :
-
-```env
-
-# 🔌 Base de données MySQL
-
-DB_URL=jdbc:mysql://localhost:3306/steevejobs
-DB_USER=root
-DB_PASSWORD=votre_mot_de_passe_ici
-
-
-# 📧 Serveur SMTP (envoi d’e-mails)
-
-SMTP_URL=lien_de_votre_serveur_mail
-EXPEDITEUR=adresse_mail_de_votre_expediteur
-
-
-# 🔗 WebSocket sécurisé
-
-WS_SERVER_IP=adresse_ip
-WS_SERVER_PORT=port_du_serveur_ws
-
-
-# 🔐 JWT (authentification)
-
-JWT_SECRET=cle_secrete_pour_signer_les_tokens
-
-
-# 📁 WebDAV (stockage fichiers)
-
-WEBDAV_BASE_URL=url_du_serveur_webdav
-WEBDAV_USERNAME=nom_utilisateur_webdav
-WEBDAV_PASSWORD=mot_de_passe_webdav
-
-```
-
-### 🌱 Initialisation de la base de données (premier lancement)
-
-Lors du tout premier lancement, exécutez la classe utilitaire `DatabaseSeeder.java`
-(package `com.eseo.steevejobs.config`) directement depuis votre IDE pour :
-
-- générer un compte administrateur par défaut pour la première connexion
-
-> ⚠️ Cette étape est fortement recommandée : elle vous fournit un environnement
-> fonctionnel "clé en main", sans avoir à créer les données initiales manuellement.
-
-### 4. Compilation et lancement
-
-Ouvrez un terminal à la racine du projet et exécutez les commandes suivantes :
-
-```bash
-# Compiler le projet et télécharger les dépendances
-mvn clean install
-
-# Exécuter les tests unitaires
-mvn test
-
-# Lancer l'application JavaFX
-mvn javafx:run
-```
+Les contributions sont les bienvenues — merci de lire le guide de contribution avant d'ouvrir une PR.
 
 ---
 
-## 📖 Documentation technique (Javadoc)
+<div align="center">
 
-Conformément aux bonnes pratiques de versionnement avec Git, les fichiers HTML générés automatiquement (comme la
-Javadoc) ne sont pas inclus dans ce dépôt. Ce choix permet de :
+**SteeveJobs** — Projet ESEO / gestion d'entreprise
 
-- garder un historique Git plus propre,
-- éviter les conflits de fusion sur des fichiers générés,
-- ne pas alourdir inutilement le dépôt.
-
-### Méthode 1 — Génération via Maven en ligne de commande
-
-Depuis la racine du projet, exécutez :
-
-```bash
-mvn javadoc:javadoc
-```
-
-Les fichiers générés seront disponibles dans :
-
-```text
-target/site/apidocs/
-```
-
-### Méthode 2 — Génération via IntelliJ IDEA avec Maven
-
-Si vous utilisez **IntelliJ IDEA**, vous pouvez générer la Javadoc directement depuis l’interface :
-
-1. Ouvrez l’onglet **Maven** situé dans la barre latérale droite d’IntelliJ IDEA.
-2. Déroulez votre projet **SteeveJobs**.
-3. Ouvrez la section **Plugins**.
-4. Déroulez **javadoc**.
-5. Double-cliquez sur **javadoc:javadoc**.
-
-Vous pouvez également retrouver la documentation générée dans le même dossier :
-
-```text
-target/site/apidocs/
-```
-
-> 💡 **Astuce :** si l’onglet Maven n’apparaît pas dans IntelliJ IDEA, vérifiez que le projet a bien été importé comme
-> projet **Maven** à partir du fichier `pom.xml`.
-
----
-
-## 🤝 Contribuer & documentation
-
-Les contributions sont les bienvenues ! Merci de consulter les fichiers suivants avant toute Pull Request :
-
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) : règles de contribution
-- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) : code de conduite
-- [`SECURITY.md`](SECURITY.md) : signalement de failles
-
-Retrouvez la documentation complète dans le dossier [`/docs`](docs/README-DOCS.md).
-
----
-
-## 📄 Licence
-
-Ce projet est distribué sous licence **MIT**. Voir le fichier [`LICENSE`](LICENSE) pour plus de détails.
+</div>

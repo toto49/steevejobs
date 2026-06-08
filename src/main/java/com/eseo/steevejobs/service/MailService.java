@@ -8,9 +8,22 @@ import jakarta.mail.internet.MimeMessage;
 import java.net.URI;
 import java.util.Properties;
 
+/**
+ * Envoi de courriels transactionnels via SMTP (configuration NAS / Synology dans le .env).
+ * <p>
+ * Variables requises : {@code SMTP_URL}, {@code EXPEDITEUR}.
+ * Effet de bord : envoi réseau SMTP (TLS 1.2). Les erreurs sont journalisées sans relancer d'exception.
+ * </p>
+ */
 public class MailService {
 
-
+    /**
+     * Envoie un message texte brut en UTF-8 au destinataire indiqué.
+     *
+     * @param destinataire adresse e-mail du destinataire
+     * @param objet        objet du message
+     * @param contenu      corps en texte brut
+     */
     public static void EnvoyerMail(String destinataire, String objet, String contenu) {
         try {
             Dotenv dotenv = Dotenv.load();
@@ -32,6 +45,11 @@ public class MailService {
             props.put("mail.smtp.starttls.required", "true");
 
             Session session = Session.getInstance(props, new Authenticator() {
+                /**
+                 * Fournit les identifiants SMTP extraits de l'URL de configuration.
+                 *
+                 * @return couple utilisateur / mot de passe pour l'authentification du serveur mail
+                 */
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(usernameNAS, passwordNAS);

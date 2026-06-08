@@ -24,17 +24,38 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Génération locale de PDF (documents commerciaux et bulletins de paie) via OpenPDF.
+ * <p>
+ * Effet de bord fichier : écriture dans le répertoire {@code Downloads} de l'utilisateur
+ * système ({@code user.home}). Aucun envoi réseau ; le chemin absolu retourné sert
+ * d'URL stockée en base. Les méthodes privées construisent la mise en page.
+ * </p>
+ */
 public class PdfGeneratorService {
 
-    // CORRECTION : On pointe directement vers le dossier "Downloads" du PC
+    /** Répertoire de sortie des PDF générés ({@code Downloads} de l'utilisateur courant). */
     private static final String OUTPUT_DIR = System.getProperty("user.home") + File.separator + "Downloads" + File.separator;
 
+    /** Couleur d'accentuation des en-têtes et titres de section. */
     private static final Color COULEUR_PRINCIPALE = new Color(75, 120, 204);
+    /** Couleur des libellés secondaires et mentions discrètes. */
     private static final Color COULEUR_GRIS       = new Color(107, 114, 128);
+    /** Couleur de fond des lignes alternées des tableaux. */
     private static final Color COULEUR_FOND_LIGNE = new Color(244, 245, 247);
+    /** Couleur des bordures de cellules et séparateurs. */
     private static final Color COULEUR_BORDURE    = new Color(209, 213, 219);
+    /** Couleur du corps de texte principal. */
     private static final Color COULEUR_TEXTE      = new Color(50, 50, 50);
 
+    /**
+     * Génère le PDF d'un document commercial (devis, facture ou bon de commande).
+     *
+     * @param document entête document (type, tiers, montants)
+     * @param lignes   lignes de détail produit
+     * @return chemin absolu du fichier PDF créé sous {@code Downloads}
+     * @throws RuntimeException si la génération ou l'écriture disque échoue
+     */
     public String genererDocument(com.eseo.steevejobs.model.Document document, List<Composer> lignes) {
         creerDossier();
         String nomFichier = String.format("%s_%d.pdf",
@@ -54,6 +75,18 @@ public class PdfGeneratorService {
         return chemin;
     }
 
+    /**
+     * Génère le bulletin de paie PDF avec déduction congés et cotisations.
+     *
+     * @param fiche                       fiche persistée (employé, période)
+     * @param salaireBrut                 salaire brut de référence
+     * @param tauxCotisationsPatronales   taux patronal (0–1)
+     * @param joursConge                  jours de congé sur le mois (planning)
+     * @param heuresTravaillees           heures travaillées affichées
+     * @param tauxHoraire                 taux horaire affiché
+     * @return chemin absolu du PDF sous {@code Downloads}
+     * @throws RuntimeException si la génération ou l'écriture disque échoue
+     */
     public String genererFichePaye(FichePaye fiche, double salaireBrut,
                                    double tauxCotisationsPatronales, long joursConge,
                                    double heuresTravaillees, double tauxHoraire) {
@@ -77,6 +110,11 @@ public class PdfGeneratorService {
         return chemin;
     }
 
+    /**
+     * Charge le logo applicatif depuis les ressources classpath.
+     *
+     * @return image redimensionnée pour l'en-tête PDF, ou {@code null} si indisponible
+     */
     private Image chargerLogo() {
         try {
             InputStream is = getClass().getResourceAsStream("/images/logo.png");
@@ -93,6 +131,14 @@ public class PdfGeneratorService {
     // CONTENU — DOCUMENT (devis, facture, bon de commande)
     // -------------------------------------------------------
 
+    /**
+     * Assemble le contenu PDF d'un document commercial (en-tête, client, lignes, totaux).
+     *
+     * @param doc      document OpenPDF ouvert
+     * @param document entête métier du document
+     * @param lignes   lignes de détail produit
+     * @throws DocumentException en cas d'erreur de composition PDF
+     */
     private void ajouterContenuDocument(com.lowagie.text.Document doc,
                                         com.eseo.steevejobs.model.Document document,
                                         List<Composer> lignes) throws DocumentException {
@@ -231,6 +277,18 @@ public class PdfGeneratorService {
     // CONTENU — FICHE DE PAIE
     // -------------------------------------------------------
 
+    /**
+     * Assemble le contenu PDF d'un bulletin de paie (employé, rémunération, charges, net).
+     *
+     * @param doc                         document OpenPDF ouvert
+     * @param fiche                       fiche de paie persistée
+     * @param salaireBrut                 salaire brut de référence
+     * @param tauxCotisationsPatronales   taux patronal appliqué
+     * @param joursConge                  jours de congé déduits sur le mois
+     * @param heuresTravaillees           heures travaillées affichées
+     * @param tauxHoraire                 taux horaire affiché
+     * @throws DocumentException en cas d'erreur de composition PDF
+     */
     private void ajouterContenuFichePaye(com.lowagie.text.Document doc, FichePaye fiche,
                                          double salaireBrut, double tauxCotisationsPatronales,
                                          long joursConge, double heuresTravaillees, double tauxHoraire) throws DocumentException {
@@ -395,6 +453,11 @@ public class PdfGeneratorService {
     // HELPERS
     // -------------------------------------------------------
 
+    /**
+     * Crée le répertoire de sortie des PDF s'il n'existe pas encore.
+     *
+     * @throws RuntimeException si la création du dossier {@link #OUTPUT_DIR} échoue
+     */
     private void creerDossier() {
         try {
             Files.createDirectories(Paths.get(OUTPUT_DIR));
@@ -403,6 +466,12 @@ public class PdfGeneratorService {
         }
     }
 
+    /**
+     * Insère une ligne de séparation horizontale dans le document PDF.
+     *
+     * @param doc document OpenPDF cible
+     * @throws DocumentException en cas d'erreur d'ajout au document
+     */
     private void ajouterSeparateur(com.lowagie.text.Document doc) throws DocumentException {
         PdfPTable ligne = new PdfPTable(1);
         ligne.setWidthPercentage(100);
@@ -417,6 +486,15 @@ public class PdfGeneratorService {
         doc.add(ligne);
     }
 
+    /**
+     * Ajoute une paire libellé / valeur dans un tableau d'informations.
+     *
+     * @param table  tableau PDF cible
+     * @param label  libellé de la ligne
+     * @param valeur texte affiché (chaîne vide si {@code null})
+     * @param fLabel police du libellé
+     * @param fValeur police de la valeur
+     */
     private void ajouterInfoLigne(PdfPTable table, String label, String valeur,
                                   Font fLabel, Font fValeur) {
         PdfPCell cL = new PdfPCell(new Phrase(label, fLabel));
@@ -429,6 +507,15 @@ public class PdfGeneratorService {
         table.addCell(cV);
     }
 
+    /**
+     * Ajoute une cellule de ligne de détail dans un tableau produit.
+     *
+     * @param table      tableau PDF cible
+     * @param texte      contenu de la cellule
+     * @param font       police appliquée
+     * @param fond       couleur de fond de la ligne
+     * @param alignement alignement horizontal ({@link Element#ALIGN_LEFT}, etc.)
+     */
     private void ajouterCelluleLigne(PdfPTable table, String texte, Font font,
                                      Color fond, int alignement) {
         PdfPCell cell = new PdfPCell(new Phrase(texte, font));
@@ -439,6 +526,16 @@ public class PdfGeneratorService {
         table.addCell(cell);
     }
 
+    /**
+     * Ajoute une ligne de montant (libellé, détail, montant) dans le tableau de rémunération.
+     *
+     * @param table    tableau PDF cible
+     * @param libelle  intitulé de la ligne
+     * @param detail   complément (taux, formule, etc.)
+     * @param montant  montant formaté affiché à droite
+     * @param font     police appliquée
+     * @param alterne  {@code true} pour appliquer la couleur de fond alternée
+     */
     private void ajouterLigneMontant(PdfPTable table, String libelle, String detail,
                                      String montant, Font font, boolean alterne) {
         Color fond = alterne ? COULEUR_FOND_LIGNE : Color.WHITE;
@@ -462,6 +559,14 @@ public class PdfGeneratorService {
         table.addCell(cM);
     }
 
+    /**
+     * Ajoute une ligne de total (libellé et montant) dans un tableau de synthèse.
+     *
+     * @param table   tableau PDF cible
+     * @param label   intitulé du total
+     * @param montant montant formaté aligné à droite
+     * @param font    police appliquée
+     */
     private void ajouterLigneTotaux(PdfPTable table, String label,
                                     String montant, Font font) {
         PdfPCell cL = new PdfPCell(new Phrase(label, font));

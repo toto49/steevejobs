@@ -1,7 +1,5 @@
 package com.eseo.steevejobs.controller;
 
-import com.eseo.steevejobs.dao.DocumentDAO;
-import com.eseo.steevejobs.dao.TiersDAO;
 import com.eseo.steevejobs.model.*;
 import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.model.Enum.DocumentType;
@@ -36,30 +34,53 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Contrôleur FXML de la liste des documents commerciaux.
+ * Liaisons FXML : {@code tableDocuments}, filtres, panneau détail et actions PDF.
+ */
 public class DocumentController implements Initializable {
 
+    /** Champ de recherche textuelle sur les documents. */
     @FXML private TextField searchField;
+    /** Filtre par type de document commercial. */
     @FXML private ComboBox<DocumentType> comboTypeFiltre;
+    /** Filtre par statut du document. */
     @FXML private ComboBox<DocumentStatut> comboStatutFiltre;
+    /** Tableau listant les documents filtrés. */
     @FXML private TableView<Document> tableDocuments;
+    /** Colonnes du tableau : {@code colType}, {@code colClient}, {@code colDate}, {@code colHT}, {@code colTTC}, {@code colStatut}. */
     @FXML private TableColumn<Document, String> colType, colClient, colDate, colHT, colTTC, colStatut;
+    /** Colonne des actions rapides par ligne. */
     @FXML private TableColumn<Document, Void> colActions;
+    /** Libellé indiquant le nombre de documents affichés. */
     @FXML private Label lblNbDocs;
 
-    // Labels du panneau détail
+    /** Labels du panneau détail : {@code detailType}, {@code detailClient}, {@code detailDate}, {@code detailHT}, {@code detailTTC}, {@code detailStatut}. */
     @FXML private Label detailType, detailClient, detailDate, detailHT, detailTTC, detailStatut;
+    /** Coordonnées client : {@code detailEmail}, {@code detailTel}, {@code detailAdresse}. */
     @FXML private Label detailEmail, detailTel, detailAdresse;
+    /** Actions document : {@code btnExporterPdf}, {@code btnOuvrirPdf}, {@code btnModifier}, {@code btnChanger}, {@code btnSupprimer}. */
     @FXML private Button btnExporterPdf, btnOuvrirPdf, btnModifier, btnChanger, btnSupprimer;
 
-    private final DocumentService documentService = new DocumentService(new DocumentDAO());
-    private final TiersDAO tiersDAO = new TiersDAO();
+    /** Service d'accès et de persistance des documents commerciaux. */
+    private final DocumentService documentService = new DocumentService();
+    /** Liste observable complète des documents chargés. */
     private final ObservableList<Document> tousLesDocuments = FXCollections.observableArrayList();
+    /** Document actuellement sélectionné dans le tableau. */
     private Document documentSelectionne = null;
 
+    /** Format d'affichage des dates de document. */
     private static final DateTimeFormatter FMT_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    /** Utilisateur connecté, auteur des nouveaux documents. */
     private User utilisateurConnecte;
 
+    /**
+     * Configure colonnes, filtres, chargement initial et état des boutons d'action.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerColonnes();
@@ -80,10 +101,21 @@ public class DocumentController implements Initializable {
         btnSupprimer.setDisable(true);
     }
 
+    /**
+     * Définit l'utilisateur créateur pour les nouveaux documents.
+     *
+     * @param user utilisateur connecté
+     */
     public void setUtilisateurConnecte(User user) {
         this.utilisateurConnecte = user;
     }
 
+    /**
+     * Ouvre la fenêtre de création d'un nouveau document commercial.
+     * Liaison FXML : bouton de création.
+     *
+     * @throws IOException affichée via alerte si le chargement FXML échoue
+     */
     @FXML
     private void ouvrirFormulaireCreation() {
         try {
@@ -102,6 +134,12 @@ public class DocumentController implements Initializable {
         }
     }
 
+    /**
+     * Ouvre la fenêtre de modification du document sélectionné.
+     * Liaison FXML : {@code btnModifier}.
+     *
+     * @throws IOException affichée via alerte si le chargement FXML échoue
+     */
     @FXML
     private void modifierDocument() {
         if (documentSelectionne == null) return;
@@ -121,6 +159,10 @@ public class DocumentController implements Initializable {
         }
     }
 
+    /**
+     * Génère et exporte le PDF du document sélectionné vers le NAS.
+     * Liaison FXML : {@code btnExporterPdf}.
+     */
     @FXML
     private void exporterPdf() {
         if (documentSelectionne == null) return;
@@ -154,6 +196,10 @@ public class DocumentController implements Initializable {
         });
     }
 
+    /**
+     * Télécharge si nécessaire puis ouvre le PDF du document sélectionné.
+     * Liaison FXML : {@code btnOuvrirPdf}.
+     */
     @FXML
     private void ouvrirPdf() {
         if (documentSelectionne == null) return;
@@ -200,6 +246,12 @@ public class DocumentController implements Initializable {
         });
     }
 
+    /**
+     * Permet de changer le statut du document sélectionné et régénère le PDF.
+     * Liaison FXML : {@code btnChanger}.
+     *
+     * @throws SQLException affichée via alerte en cas d'échec de mise à jour
+     */
     @FXML
     private void changerStatut() {
         if (documentSelectionne == null) return;
@@ -229,6 +281,12 @@ public class DocumentController implements Initializable {
         });
     }
 
+    /**
+     * Supprime le document sélectionné après confirmation.
+     * Liaison FXML : {@code btnSupprimer}.
+     *
+     * @throws SQLException affichée via alerte en cas d'échec
+     */
     @FXML
     private void supprimerDocument() {
         if (documentSelectionne == null) return;
@@ -250,6 +308,10 @@ public class DocumentController implements Initializable {
         });
     }
 
+    /**
+     * Filtre le tableau selon la recherche, le type et le statut.
+     * Liaison FXML : champs de filtre.
+     */
     @FXML
     private void filtrer() {
         String recherche = searchField.getText().toLowerCase();
@@ -264,6 +326,9 @@ public class DocumentController implements Initializable {
         lblNbDocs.setText(filtres.size() + " document(s)");
     }
 
+    /**
+     * Configure les fabriques de valeurs des colonnes du tableau documents.
+     */
     private void configurerColonnes() {
         // Supprime les underscores dans l'affichage du type et du statut
         colType.setCellValueFactory(data -> {
@@ -281,26 +346,56 @@ public class DocumentController implements Initializable {
         tableDocuments.getColumns().setAll(colType, colClient, colDate, colHT, colTTC, colStatut, colActions);
     }
 
+    /**
+     * Initialise les listes déroulantes de filtre par type et par statut.
+     */
     private void configurerFiltres() {
         comboTypeFiltre.setItems(FXCollections.observableArrayList(DocumentType.values()));
         comboTypeFiltre.getItems().add(0, null);
         comboTypeFiltre.setConverter(new StringConverter<>() {
+            /**
+             * Affiche le libellé du type dans le filtre combo.
+             *
+             * @param t type de document ou {@code null} pour « Tous »
+             * @return libellé affiché dans le filtre
+             */
             @Override
             public String toString(DocumentType t) {
                 if (t == null) return "Tous les types";
                 if (t == DocumentType.BON_COMMANDE) return "BON DE COMMANDE";
                 return t.name();
             }
+            /**
+             * Non utilisé pour un filtre en lecture seule.
+             *
+             * @param s chaîne saisie
+             * @return toujours {@code null}
+             */
             @Override public DocumentType fromString(String s) { return null; }
         });
         comboStatutFiltre.setItems(FXCollections.observableArrayList(DocumentStatut.values()));
         comboStatutFiltre.getItems().add(0, null);
         comboStatutFiltre.setConverter(new StringConverter<>() {
+            /**
+             * Affiche le libellé du statut dans le filtre combo.
+             *
+             * @param s statut ou {@code null} pour « Tous »
+             * @return libellé affiché
+             */
             @Override public String toString(DocumentStatut s) { return s == null ? "Tous les statuts" : s.name().replace("_", " "); }
+            /**
+             * Non utilisé pour un filtre en lecture seule.
+             *
+             * @param s chaîne saisie
+             * @return toujours {@code null}
+             */
             @Override public DocumentStatut fromString(String s) { return null; }
         });
     }
 
+    /**
+     * Branche la sélection du tableau sur le panneau de détail et les boutons d'action.
+     */
     private void configurerSelectionTableau() {
         tableDocuments.getSelectionModel().selectedItemProperty().addListener((obs, ancien, nouveau) -> {
             if (nouveau != null) {
@@ -318,6 +413,9 @@ public class DocumentController implements Initializable {
         });
     }
 
+    /**
+     * Recharge la liste complète des documents depuis la base de données.
+     */
     private void chargerTousDocuments() {
         try {
             tousLesDocuments.setAll(documentService.findAll());
@@ -328,6 +426,11 @@ public class DocumentController implements Initializable {
         }
     }
 
+    /**
+     * Affiche le détail du document dans le panneau latéral.
+     *
+     * @param doc document sélectionné
+     */
     private void afficherDetail(Document doc) {
         // Type
         String type = doc.getType().name();
@@ -360,6 +463,9 @@ public class DocumentController implements Initializable {
 
     }
 
+    /**
+     * Vide le panneau de détail et désactive les boutons d'action.
+     */
     private void viderDetail() {
         documentSelectionne = null;
         detailType.setText("");
@@ -378,12 +484,22 @@ public class DocumentController implements Initializable {
         btnSupprimer.setDisable(true);
     }
 
+    /**
+     * Affiche une alerte d'erreur.
+     *
+     * @param msg message affiché
+     */
     private void afficherErreur(String msg) {
         Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
         alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
         alert.showAndWait();
     }
 
+    /**
+     * Affiche une alerte de succès.
+     *
+     * @param msg message affiché
+     */
     private void afficherSucces(String msg) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
         alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");

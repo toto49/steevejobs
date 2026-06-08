@@ -19,19 +19,19 @@ jobs:
           - os: windows-latest
             os_name: Windows-x64
             jfx_classifier: win
-            # Icône pour Windows (.ico)
+            app_dir_name: SteeveJobs
             icon_path: src/main/resources/images/logo.ico
 
           - os: ubuntu-latest
             os_name: Linux-x64
             jfx_classifier: linux
-            # Icône pour Linux (.png)
+            app_dir_name: SteeveJobs
             icon_path: src/main/resources/images/logo.png
 
           - os: macos-latest
             os_name: macOS-Silicon-ARM64
             jfx_classifier: mac-aarch64
-            # Icône pour Mac (.icns)
+            app_dir_name: SteeveJobs.app
             icon_path: src/main/resources/images/logo.icns
 
     runs-on: ${{ matrix.os }}
@@ -54,14 +54,31 @@ jobs:
       - name: Compilation
         run: mvn -B clean compile "-Djfx.os=${{ matrix.jfx_classifier }}"
 
-      - name: Tests Unitaires
+      - name: Dépendances système JavaFX et jpackage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libgl1 fakeroot
+
+      - name: Tests Unitaires (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a mvn -B test "-Djfx.os=${{ matrix.jfx_classifier }}"
+
+      - name: Tests Unitaires (Windows / macOS)
+        if: runner.os != 'Linux'
         run: mvn -B test "-Djfx.os=${{ matrix.jfx_classifier }}"
 
       - name: Création de l'exécutable (Packaging)
         run: mvn -B package -DskipTests "-Djfx.os=${{ matrix.jfx_classifier }}" "-Dapp.icon=${{ matrix.icon_path }}"
+
+      - name: Vérification de l'image applicative
+        run: |
+          test -d "target/dist/${{ matrix.app_dir_name }}" || (echo "Répertoire applicatif introuvable" && ls -laR target/dist target/jpackage-input 2>/dev/null || true && exit 1)
+          ls -la "target/dist/${{ matrix.app_dir_name }}"
 
       - name: Archivage de l'application (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: SteeveJobs-App-${{ matrix.os_name }}
           path: target/dist/
+          if-no-files-found: error

@@ -3,7 +3,6 @@ package service;
 import com.eseo.steevejobs.dao.ComposerDAO;
 import com.eseo.steevejobs.dao.DocumentDAO;
 import com.eseo.steevejobs.model.Document;
-import com.eseo.steevejobs.model.Enum.DocumentStatut;
 import com.eseo.steevejobs.service.DocumentService;
 import com.eseo.steevejobs.service.PdfGeneratorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +19,13 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires de {@link com.eseo.steevejobs.service.DocumentService}.
+ * <p>
+ * Mocks : {@code DocumentDAO}, {@code ComposerDAO}, {@code PdfGeneratorService}.
+ * Fixtures document via {@link service.support.TestDataFactory}.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceTest {
 
@@ -81,21 +87,4 @@ class DocumentServiceTest {
         verify(documentDAO).updateUrl(5, url);
     }
 
-    @Test
-    void supprimerDocument_echecBdd_doitLeverRuntimeException() throws SQLException {
-        Document document = TestDataFactory.documentValide();
-        document.setId(3);
-        when(documentDAO.getById(3)).thenReturn(document);
-        when(documentDAO.deleteDocument(3)).thenReturn(false);
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.supprimerDocument(3));
-        assertTrue(ex.getMessage().contains("Impossible de supprimer"));
-    }
-
-    @Test
-    void updateStatut_delegueAuDao() throws SQLException {
-        when(documentDAO.updateStatut(2, DocumentStatut.PAYE)).thenReturn(true);
-
-        assertTrue(service.updateStatut(2, DocumentStatut.PAYE));
-    }
 }

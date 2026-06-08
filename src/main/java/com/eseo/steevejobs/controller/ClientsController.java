@@ -6,35 +6,177 @@ import com.eseo.steevejobs.service.TiersService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.stage.Stage;
+import javafx.scene.layout.*;
+import javafx.stage.Modality;
+import javafx.scene.layout.Region;
 
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Optional;
 import java.util.ResourceBundle;
 
+/**
+ * Contrôleur FXML de gestion des clients et fournisseurs ({@code tiers}).
+ * Liaisons FXML : {@code tableClients}, {@code searchField}, {@code comboTypeFiltre}, panneau détail.
+ */
 public class ClientsController implements Initializable {
 
+    /** Champ de recherche textuelle sur les clients et fournisseurs. */
     @FXML private TextField searchField;
+    /** Filtre par type de tiers (tous, client, fournisseur). */
     @FXML private ComboBox<String> comboTypeFiltre;
+    /** Tableau listant les tiers filtrés. */
     @FXML private TableView<Tiers> tableClients;
+    /** Colonnes du tableau : {@code colType}, {@code colNom}, {@code colPrenom}, {@code colEmail}, {@code colTel}, {@code colSiret}. */
     @FXML private TableColumn<Tiers, String> colType, colNom, colPrenom, colEmail, colTel, colSiret;
+    /** Libellé indiquant le nombre de clients affichés. */
     @FXML private Label lblNbClients;
+    /** Labels détail : {@code detailType}, {@code detailNom}, {@code detailPrenom}, {@code detailEmail}, {@code detailTel}, {@code detailAdresse}, {@code detailSiret}, {@code detailNumTva}. */
     @FXML private Label detailType, detailNom, detailPrenom, detailEmail, detailTel, detailAdresse, detailSiret, detailNumTva;
+    /** Boutons {@code btnModifier} et {@code btnSupprimer} du tiers sélectionné. */
     @FXML private Button btnModifier, btnSupprimer;
 
+    /** Service d'accès et de persistance des tiers. */
     private final TiersService tiersService = new TiersService();
+    /** Liste observable complète des clients et fournisseurs chargés. */
     private ObservableList<Tiers> tousLesClients = FXCollections.observableArrayList();
+    /** Tiers actuellement sélectionné dans le tableau. */
     private Tiers clientSelectionne = null;
 
+    // ─────────────────────────────────────────────────────────────
+    // CSS
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Applique les feuilles de style principale et popup à une scène.
+     *
+     * @param scene scène cible
+     */
+    private void applyCSS(Scene scene) {
+        java.net.URL styleUrl = getClass().getResource("/style/style.css");
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (styleUrl != null) scene.getStylesheets().add(styleUrl.toExternalForm());
+        if (popupUrl != null) scene.getStylesheets().add(popupUrl.toExternalForm());
+    }
+
+    /**
+     * Applique la feuille de style popup et les classes des boutons OK/Annuler.
+     *
+     * @param dp panneau de dialogue
+     */
+    private void appliquerStyleDialog(DialogPane dp) {
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers UI
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Crée un champ texte vide avec style formulaire.
+     *
+     * @param prompt texte d'aide
+     * @return champ texte configuré
+     */
+    private TextField champForm(String prompt) {
+        TextField tf = new TextField();
+        tf.setPromptText(prompt);
+        tf.getStyleClass().add("champform");
+        return tf;
+    }
+
+    /**
+     * Crée un champ texte prérempli avec style formulaire.
+     *
+     * @param valeur valeur initiale
+     * @return champ texte configuré
+     */
+    private TextField champFormValeur(String valeur) {
+        TextField tf = new TextField(valeur != null ? valeur : "");
+        tf.getStyleClass().add("champform");
+        return tf;
+    }
+
+    /**
+     * Crée une liste déroulante des types de tiers pour un formulaire.
+     *
+     * @return combo box des types client/fournisseur
+     */
+    private ComboBox<TiersType> comboFormType() {
+        ComboBox<TiersType> cb = new ComboBox<>();
+        cb.setItems(FXCollections.observableArrayList(TiersType.values()));
+        cb.setPromptText("Choisir un type");
+        cb.getStyleClass().add("champform");
+        cb.setMaxWidth(Double.MAX_VALUE);
+        return cb;
+    }
+
+    /**
+     * Construit l'en-tête stylisé d'une popup de formulaire.
+     *
+     * @param titre titre affiché
+     * @return barre d'en-tête horizontale
+     */
+    private HBox buildHeader(String titre) {
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("popup-header");
+        Label titreLabel = new Label(titre);
+        titreLabel.getStyleClass().add("popup-header-title");
+        // un peu de padding pour coller le texte à gauche
+        titreLabel.setPadding(new Insets(0, 0, 0, 4));
+        header.getChildren().add(titreLabel);
+        return header;
+    }
+
+    /**
+     * Crée un label de formulaire avec la classe CSS dédiée.
+     *
+     * @param texte libellé
+     * @return label stylisé
+     */
+    private Label labelChamp(String texte) {
+        Label l = new Label(texte);
+        l.getStyleClass().add("label-style");
+        return l;
+    }
+
+    /**
+     * Crée un label réservé aux messages d'erreur de validation.
+     *
+     * @return label d'erreur vide
+     */
+    private Label erreurLabel() {
+        Label l = new Label("");
+        l.getStyleClass().addAll("label-style", "label-erreur");
+        return l;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Initialisation
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Configure les colonnes, charge les tiers et initialise filtres et sélection.
+     *
+     * @param url URL du FXML (non utilisée)
+     * @param rb ressources de localisation (non utilisées)
+     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurerColonnes();
@@ -46,20 +188,32 @@ public class ClientsController implements Initializable {
         btnSupprimer.setDisable(true);
     }
 
+    /**
+     * Configure les fabriques de valeurs des colonnes du tableau des tiers.
+     */
     private void configurerColonnes() {
         colType.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getType().name()));
         colNom.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getNom()));
-        colPrenom.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getPrenom() != null ? data.getValue().getPrenom() : ""));
+        colPrenom.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getPrenom() != null ? data.getValue().getPrenom() : ""));
         colEmail.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getEmail()));
-        colTel.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTel() != null ? data.getValue().getTel() : ""));
-        colSiret.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getSiret() != null ? data.getValue().getSiret() : ""));
+        colTel.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getTel() != null ? data.getValue().getTel() : ""));
+        colSiret.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getSiret() != null ? data.getValue().getSiret() : ""));
     }
 
+    /**
+     * Initialise la liste des filtres par type (tous, client, fournisseur).
+     */
     private void configurerFiltreType() {
         comboTypeFiltre.setItems(FXCollections.observableArrayList("Tous", "Client", "Fournisseur"));
         comboTypeFiltre.setValue("Tous");
     }
 
+    /**
+     * Branche la sélection du tableau sur l'affichage du détail et l'état des boutons.
+     */
     private void configurerSelectionTableau() {
         tableClients.getSelectionModel().selectedItemProperty().addListener((obs, ancien, nouveau) -> {
             if (nouveau != null) {
@@ -71,388 +225,389 @@ public class ClientsController implements Initializable {
         });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Popup Nouveau Client
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Ouvre le dialogue de création d'un client ou fournisseur.
+     * Liaison FXML : bouton d'ajout.
+     */
     @FXML
     private void ouvrirFormulaireCreation() {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Nouveau");
-        dialog.setHeaderText("Créer un nouveau client");
-        dialog.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Nouveau client / fournisseur");
 
-        ButtonType btnCreer = new ButtonType("Créer", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnCreer, ButtonType.CANCEL);
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
 
-        // Création du GridPane
+        // ── Champs ────────────────────────────────────────────────
+        ComboBox<TiersType> comboType = comboFormType();
+        TextField txtNom     = champForm("Nom");
+        TextField txtPrenom  = champForm("Prénom");
+        TextField txtEmail   = champForm("Email");
+        TextField txtTel     = champForm("Téléphone");
+        TextField txtAdresse = champForm("Adresse");
+        TextField txtSiret   = champForm("SIRET (14 chiffres)");
+        TextField txtNumTva  = champForm("N° TVA");
+
+        Label errType    = erreurLabel();
+        Label errNom     = erreurLabel();
+        Label errEmail   = erreurLabel();
+        Label errSiret   = erreurLabel();
+
+        // ── Header ────────────────────────────────────────────────
+        HBox header = buildHeader("Nouveau client / fournisseur");
+
+        // ── GridPane 2 colonnes ────────────────────────────────────
         GridPane grid = new GridPane();
-        grid.setHgap(20);
-        grid.setVgap(12);
-        grid.setPadding(new Insets(20));
-        grid.setStyle("-fx-background-color: white;");
+        grid.setHgap(12);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(6, 6, 6, 6));
 
-        // Configuration des colonnes
-        ColumnConstraints col1 = new ColumnConstraints();
-        col1.setHgrow(Priority.NEVER);
-        col1.setPrefWidth(120);
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setHalignment(HPos.LEFT);   // texte du label aligné à gauche
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(140);
+        colLabel.setMaxWidth(180);
 
-        ColumnConstraints col2 = new ColumnConstraints();
-        col2.setHgrow(Priority.ALWAYS);
-        col2.setFillWidth(true);
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
 
-        grid.getColumnConstraints().addAll(col1, col2);
+        grid.getColumnConstraints().addAll(colLabel, colField);
 
-        // CHAMPS du formulaire
-        ComboBox<TiersType> comboType = new ComboBox<>();
-        TextField txtNom = new TextField();
-        TextField txtPrenom = new TextField();
-        TextField txtEmail = new TextField();
-        TextField txtTel = new TextField();
-        TextField txtAdresse = new TextField();
-        TextField txtSiret = new TextField();
-        TextField txtNumTva = new TextField();
+        int row = 0;
+        grid.add(new Label("Type *"), 0, row);
+        grid.add(comboType, 1, row++);
+        grid.add(errType, 1, row++);
 
-        // Configuration du ComboBox Type
-        comboType.setItems(FXCollections.observableArrayList(TiersType.values()));
-        comboType.setPromptText("Choisir un type");
-        comboType.setValue(null);
+        grid.add(new Label("Nom *"), 0, row);
+        grid.add(txtNom, 1, row++);
+        grid.add(errNom, 1, row++);
 
-        // Configuration des champs texte
-        txtNom.setPromptText("Nom");
-        txtPrenom.setPromptText("Prénom");
-        txtEmail.setPromptText("Email");
-        txtTel.setPromptText("Téléphone");
-        txtAdresse.setPromptText("Adresse");
-        txtSiret.setPromptText("SIRET (14 chiffres)");
-        txtNumTva.setPromptText("N° TVA");
+        grid.add(new Label("Prénom"), 0, row);
+        grid.add(txtPrenom, 1, row++);
 
-        // Faire prendre toute la largeur aux champs
-        comboType.setMaxWidth(Double.MAX_VALUE);
-        txtNom.setMaxWidth(Double.MAX_VALUE);
-        txtPrenom.setMaxWidth(Double.MAX_VALUE);
-        txtEmail.setMaxWidth(Double.MAX_VALUE);
-        txtTel.setMaxWidth(Double.MAX_VALUE);
-        txtAdresse.setMaxWidth(Double.MAX_VALUE);
-        txtSiret.setMaxWidth(Double.MAX_VALUE);
-        txtNumTva.setMaxWidth(Double.MAX_VALUE);
+        grid.add(new Label("Email *"), 0, row);
+        grid.add(txtEmail, 1, row++);
+        grid.add(errEmail, 1, row++);
 
-        // Forcer la même hauteur pour tous les champs
-        double prefHeight = 32;
-        comboType.setPrefHeight(prefHeight);
-        txtNom.setPrefHeight(prefHeight);
-        txtPrenom.setPrefHeight(prefHeight);
-        txtEmail.setPrefHeight(prefHeight);
-        txtTel.setPrefHeight(prefHeight);
-        txtAdresse.setPrefHeight(prefHeight);
-        txtSiret.setPrefHeight(prefHeight);
-        txtNumTva.setPrefHeight(prefHeight);
+        grid.add(new Label("Téléphone"), 0, row);
+        grid.add(txtTel, 1, row++);
 
-        // Style des champs
-        String fieldStyle = "-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 5; -fx-padding: 6; -fx-text-fill: black;";
-        comboType.setStyle(fieldStyle);
-        txtNom.setStyle(fieldStyle);
-        txtPrenom.setStyle(fieldStyle);
-        txtEmail.setStyle(fieldStyle);
-        txtTel.setStyle(fieldStyle);
-        txtAdresse.setStyle(fieldStyle);
-        txtSiret.setStyle(fieldStyle);
-        txtNumTva.setStyle(fieldStyle);
+        grid.add(new Label("Adresse"), 0, row);
+        grid.add(txtAdresse, 1, row++);
 
-        // Labels avec style
-        String labelStyle = "-fx-text-fill: #333333; -fx-font-weight: bold;";
+        grid.add(new Label("SIRET"), 0, row);
+        grid.add(txtSiret, 1, row++);
+        grid.add(errSiret, 1, row++);
 
-        Label lblType = new Label("Type :");
-        Label lblNom = new Label("Nom :");
-        Label lblPrenom = new Label("Prénom :");
-        Label lblEmail = new Label("Email :");
-        Label lblTel = new Label("Téléphone :");
-        Label lblAdresse = new Label("Adresse :");
-        Label lblSiret = new Label("SIRET :");
-        Label lblNumTva = new Label("N° TVA :");
+        grid.add(new Label("N° TVA"), 0, row);
+        grid.add(txtNumTva, 1, row++);
 
-        lblType.setStyle(labelStyle);
-        lblNom.setStyle(labelStyle);
-        lblPrenom.setStyle(labelStyle);
-        lblEmail.setStyle(labelStyle);
-        lblTel.setStyle(labelStyle);
-        lblAdresse.setStyle(labelStyle);
-        lblSiret.setStyle(labelStyle);
-        lblNumTva.setStyle(labelStyle);
+        // Assure que chaque champ grandit horizontalement
+        GridPane.setHgrow(comboType, Priority.ALWAYS);
+        GridPane.setHgrow(txtNom, Priority.ALWAYS);
+        GridPane.setHgrow(txtPrenom, Priority.ALWAYS);
+        GridPane.setHgrow(txtEmail, Priority.ALWAYS);
+        GridPane.setHgrow(txtTel, Priority.ALWAYS);
+        GridPane.setHgrow(txtAdresse, Priority.ALWAYS);
+        GridPane.setHgrow(txtSiret, Priority.ALWAYS);
+        GridPane.setHgrow(txtNumTva, Priority.ALWAYS);
 
-        // Ajout au grid (SANS le label d'exemple)
-        grid.add(lblType, 0, 0);
-        grid.add(comboType, 1, 0);
+        // ── Contenu  ───────────────────────────────
+        VBox contentBox = new VBox(12, header, grid);
+        contentBox.getStyleClass().addAll("popup-contenu");
+        contentBox.setPadding(new Insets(12));
+        contentBox.setFillWidth(true);
 
-        grid.add(lblNom, 0, 1);
-        grid.add(txtNom, 1, 1);
+        // On met le content directement dans le DialogPane pour que la taille s'ajuste
+        dp.setContent(contentBox);
 
-        grid.add(lblPrenom, 0, 2);
-        grid.add(txtPrenom, 1, 2);
+        // Applique le CSS du popup
+        appliquerStyleDialog(dp);
 
-        grid.add(lblEmail, 0, 3);
-        grid.add(txtEmail, 1, 3);
-
-        grid.add(lblTel, 0, 4);
-        grid.add(txtTel, 1, 4);
-
-        grid.add(lblAdresse, 0, 5);
-        grid.add(txtAdresse, 1, 5);
-
-        grid.add(lblSiret, 0, 6);
-        grid.add(txtSiret, 1, 6);
-
-        grid.add(lblNumTva, 0, 7);
-        grid.add(txtNumTva, 1, 7);
-
-        dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().setPrefWidth(550);
-
-        // Style des boutons
-        Button btnOk = (Button) dialog.getDialogPane().lookupButton(btnCreer);
-        Button btnCancel = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        // Récupère les boutons
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
 
         if (btnOk != null) {
-            btnOk.setStyle("-fx-background-color: #4B78CC; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand; -fx-padding: 8 16;");
+            btnOk.setText("Créer le client");
+            btnOk.getStyleClass().add("button-primary");
+            // Empêche fermeture si validation échoue
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                errType.setText(""); errNom.setText(""); errEmail.setText(""); errSiret.setText("");
+                boolean valide = true;
+
+                if (comboType.getValue() == null) {
+                    errType.setText("Veuillez sélectionner un type."); valide = false;
+                }
+                if (txtNom.getText().trim().isEmpty()) {
+                    errNom.setText("Le nom est obligatoire."); valide = false;
+                }
+                if (txtEmail.getText().trim().isEmpty()) {
+                    errEmail.setText("L'email est obligatoire."); valide = false;
+                }
+                String siret = txtSiret.getText().trim();
+                if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
+                    errSiret.setText("Le SIRET doit contenir exactement 14 chiffres."); valide = false;
+                }
+
+                if (!valide) {
+                    ev.consume();
+                    return;
+                }
+
+                Tiers client = new Tiers(
+                        0,
+                        txtNom.getText().trim(),
+                        txtPrenom.getText().trim(),
+                        comboType.getValue(),
+                        txtEmail.getText().trim(),
+                        txtAdresse.getText().trim(),
+                        txtTel.getText().trim(),
+                        siret,
+                        txtNumTva.getText().trim()
+                );
+
+                try {
+                    tiersService.ajouterTiers(client);
+                    dialog.close();
+                    chargerTousClients();
+                    showInfo("Succès", "Client/Fournisseur créé avec succès !");
+                } catch (Exception ex) {
+                    errNom.setText("Erreur : " + ex.getMessage());
+                    ev.consume();
+                }
+            });
         }
+
         if (btnCancel != null) {
-            btnCancel.setStyle("-fx-background-color: #e5e7eb; -fx-text-fill: #333333; -fx-background-radius: 5; -fx-cursor: hand; -fx-padding: 8 16;");
+            btnCancel.setText("Annuler");
+            btnCancel.getStyleClass().add("button-annuler");
         }
 
-        Optional<ButtonType> result = dialog.showAndWait();
-        if (result.isEmpty() || result.get() != btnCreer) return;
+        // Ajuste la taille du DialogPane : plus large par défaut, hauteur calculée sur le contenu
+        dp.setPrefWidth(720);
+        dp.setMinWidth(560);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(600);
 
-        // Validation
-        if (comboType.getValue() == null) {
-            afficherErreur("Veuillez sélectionner un type (Client ou Fournisseur).");
-            return;
-        }
-        if (txtNom.getText().trim().isEmpty()) {
-            afficherErreur("Le nom est obligatoire.");
-            return;
-        }
-        if (txtEmail.getText().trim().isEmpty()) {
-            afficherErreur("L'email est obligatoire.");
-            return;
-        }
-
-        String siret = txtSiret.getText().trim();
-        if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
-            afficherErreur("Le SIRET doit contenir exactement 14 chiffres.");
-            return;
-        }
-
-        Tiers client = new Tiers(
-                0,
-                txtNom.getText().trim(),
-                txtPrenom.getText().trim(),
-                comboType.getValue(),
-                txtEmail.getText().trim(),
-                txtAdresse.getText().trim(),
-                txtTel.getText().trim(),
-                siret,
-                txtNumTva.getText().trim()
-        );
-
-        try {
-            tiersService.ajouterTiers(client);
-            afficherSucces("Client/Fournisseur créé avec succès !");
-            chargerTousClients();
-        } catch (Exception e) {
-            afficherErreur("Erreur création : " + e.getMessage());
-        }
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Popup Modifier Client
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Ouvre le dialogue de modification du tiers sélectionné.
+     * Liaison FXML : {@code btnModifier}.
+     */
     @FXML
     private void modifierClient() {
         if (clientSelectionne == null) return;
+        Tiers c = clientSelectionne;
 
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Modifier");
-        dialog.setHeaderText("Modifier les informations du client/fournisseur");
-        dialog.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Modifier le client");
 
-        ButtonType btnModifier = new ButtonType("Modifier", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnModifier, ButtonType.CANCEL);
+        DialogPane dp = dialog.getDialogPane();
+        dp.getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
 
-        // Création du GridPane
+        ComboBox<TiersType> comboType = comboFormType();
+        comboType.setValue(c.getType());
+
+        TextField txtNom     = champFormValeur(c.getNom());
+        TextField txtPrenom  = champFormValeur(c.getPrenom());
+        TextField txtEmail   = champFormValeur(c.getEmail());
+        TextField txtTel     = champFormValeur(c.getTel());
+        TextField txtAdresse = champFormValeur(c.getAdresse());
+        TextField txtSiret   = champFormValeur(c.getSiret());
+        TextField txtNumTva  = champFormValeur(c.getNum_tva());
+
+        Label errType  = erreurLabel();
+        Label errNom   = erreurLabel();
+        Label errEmail = erreurLabel();
+        Label errSiret = erreurLabel();
+
+        HBox header = buildHeader("Modifier : " + c.getNom());
+
         GridPane grid = new GridPane();
-        grid.setHgap(20);
-        grid.setVgap(12);
-        grid.setPadding(new Insets(20));
-        grid.setStyle("-fx-background-color: white;");
+        grid.setHgap(12);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(6, 6, 6, 6));
 
-        // Configuration des colonnes
-        ColumnConstraints col1 = new ColumnConstraints();
-        col1.setHgrow(Priority.NEVER);
-        col1.setPrefWidth(120);
+        ColumnConstraints colLabel = new ColumnConstraints();
+        colLabel.setHalignment(HPos.LEFT);
+        colLabel.setMinWidth(120);
+        colLabel.setPrefWidth(140);
+        colLabel.setMaxWidth(180);
 
-        ColumnConstraints col2 = new ColumnConstraints();
-        col2.setHgrow(Priority.ALWAYS);
-        col2.setFillWidth(true);
+        ColumnConstraints colField = new ColumnConstraints();
+        colField.setHgrow(Priority.ALWAYS);
 
-        grid.getColumnConstraints().addAll(col1, col2);
+        grid.getColumnConstraints().addAll(colLabel, colField);
 
-        // CHAMPS du formulaire
-        ComboBox<TiersType> comboType = new ComboBox<>();
-        TextField txtNom = new TextField(clientSelectionne.getNom());
-        TextField txtPrenom = new TextField(clientSelectionne.getPrenom());
-        TextField txtEmail = new TextField(clientSelectionne.getEmail());
-        TextField txtTel = new TextField(clientSelectionne.getTel());
-        TextField txtAdresse = new TextField(clientSelectionne.getAdresse());
-        TextField txtSiret = new TextField(clientSelectionne.getSiret());
-        TextField txtNumTva = new TextField(clientSelectionne.getNum_tva());
+        int row = 0;
+        grid.add(new Label("Type *"), 0, row);
+        grid.add(comboType, 1, row++);
+        grid.add(errType, 1, row++);
 
-        // Configuration du ComboBox Type
-        comboType.setItems(FXCollections.observableArrayList(TiersType.values()));
-        comboType.setValue(clientSelectionne.getType());
+        grid.add(new Label("Nom *"), 0, row);
+        grid.add(txtNom, 1, row++);
+        grid.add(errNom, 1, row++);
 
-        // Faire prendre toute la largeur aux champs
-        comboType.setMaxWidth(Double.MAX_VALUE);
-        txtNom.setMaxWidth(Double.MAX_VALUE);
-        txtPrenom.setMaxWidth(Double.MAX_VALUE);
-        txtEmail.setMaxWidth(Double.MAX_VALUE);
-        txtTel.setMaxWidth(Double.MAX_VALUE);
-        txtAdresse.setMaxWidth(Double.MAX_VALUE);
-        txtSiret.setMaxWidth(Double.MAX_VALUE);
-        txtNumTva.setMaxWidth(Double.MAX_VALUE);
+        grid.add(new Label("Prénom"), 0, row);
+        grid.add(txtPrenom, 1, row++);
 
-        // Forcer la même hauteur pour tous les champs
-        double prefHeight = 32;
-        comboType.setPrefHeight(prefHeight);
-        txtNom.setPrefHeight(prefHeight);
-        txtPrenom.setPrefHeight(prefHeight);
-        txtEmail.setPrefHeight(prefHeight);
-        txtTel.setPrefHeight(prefHeight);
-        txtAdresse.setPrefHeight(prefHeight);
-        txtSiret.setPrefHeight(prefHeight);
-        txtNumTva.setPrefHeight(prefHeight);
+        grid.add(new Label("Email *"), 0, row);
+        grid.add(txtEmail, 1, row++);
+        grid.add(errEmail, 1, row++);
 
-        // Style des champs
-        String fieldStyle = "-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 5; -fx-padding: 6; -fx-text-fill: black;";
-        comboType.setStyle(fieldStyle);
-        txtNom.setStyle(fieldStyle);
-        txtPrenom.setStyle(fieldStyle);
-        txtEmail.setStyle(fieldStyle);
-        txtTel.setStyle(fieldStyle);
-        txtAdresse.setStyle(fieldStyle);
-        txtSiret.setStyle(fieldStyle);
-        txtNumTva.setStyle(fieldStyle);
+        grid.add(new Label("Téléphone"), 0, row);
+        grid.add(txtTel, 1, row++);
 
-        // Labels avec style
-        String labelStyle = "-fx-text-fill: #333333; -fx-font-weight: bold;";
+        grid.add(new Label("Adresse"), 0, row);
+        grid.add(txtAdresse, 1, row++);
 
-        Label lblType = new Label("Type :");
-        Label lblNom = new Label("Nom :");
-        Label lblPrenom = new Label("Prénom :");
-        Label lblEmail = new Label("Email :");
-        Label lblTel = new Label("Téléphone :");
-        Label lblAdresse = new Label("Adresse :");
-        Label lblSiret = new Label("SIRET :");
-        Label lblNumTva = new Label("N° TVA :");
+        grid.add(new Label("SIRET"), 0, row);
+        grid.add(txtSiret, 1, row++);
+        grid.add(errSiret, 1, row++);
 
-        lblType.setStyle(labelStyle);
-        lblNom.setStyle(labelStyle);
-        lblPrenom.setStyle(labelStyle);
-        lblEmail.setStyle(labelStyle);
-        lblTel.setStyle(labelStyle);
-        lblAdresse.setStyle(labelStyle);
-        lblSiret.setStyle(labelStyle);
-        lblNumTva.setStyle(labelStyle);
+        grid.add(new Label("N° TVA"), 0, row);
+        grid.add(txtNumTva, 1, row++);
 
-        // Ajout au grid
-        grid.add(lblType, 0, 0);
-        grid.add(comboType, 1, 0);
+        GridPane.setHgrow(comboType, Priority.ALWAYS);
+        GridPane.setHgrow(txtNom, Priority.ALWAYS);
+        GridPane.setHgrow(txtPrenom, Priority.ALWAYS);
+        GridPane.setHgrow(txtEmail, Priority.ALWAYS);
+        GridPane.setHgrow(txtTel, Priority.ALWAYS);
+        GridPane.setHgrow(txtAdresse, Priority.ALWAYS);
+        GridPane.setHgrow(txtSiret, Priority.ALWAYS);
+        GridPane.setHgrow(txtNumTva, Priority.ALWAYS);
 
-        grid.add(lblNom, 0, 1);
-        grid.add(txtNom, 1, 1);
+        VBox contentBox = new VBox(12, header, grid);
+        contentBox.getStyleClass().addAll("popup-contenu");
+        contentBox.setPadding(new Insets(12));
+        contentBox.setFillWidth(true);
 
-        grid.add(lblPrenom, 0, 2);
-        grid.add(txtPrenom, 1, 2);
+        dp.setContent(contentBox);
 
-        grid.add(lblEmail, 0, 3);
-        grid.add(txtEmail, 1, 3);
+        appliquerStyleDialog(dp);
 
-        grid.add(lblTel, 0, 4);
-        grid.add(txtTel, 1, 4);
-
-        grid.add(lblAdresse, 0, 5);
-        grid.add(txtAdresse, 1, 5);
-
-        grid.add(lblSiret, 0, 6);
-        grid.add(txtSiret, 1, 6);
-
-        grid.add(lblNumTva, 0, 7);
-        grid.add(txtNumTva, 1, 7);
-
-        dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().setPrefWidth(550);
-
-        // Style des boutons
-        Button btnOk = (Button) dialog.getDialogPane().lookupButton(btnModifier);
-        Button btnCancel = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
 
         if (btnOk != null) {
-            btnOk.setStyle("-fx-background-color: #F59E0B; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand; -fx-padding: 8 16;");
+            btnOk.setText("Enregistrer les modifications");
+            btnOk.getStyleClass().add("button-primary");
+            btnOk.addEventFilter(ActionEvent.ACTION, ev -> {
+                errType.setText(""); errNom.setText(""); errEmail.setText(""); errSiret.setText("");
+                boolean valide = true;
+
+                if (comboType.getValue() == null) {
+                    errType.setText("Veuillez sélectionner un type."); valide = false;
+                }
+                if (txtNom.getText().trim().isEmpty()) {
+                    errNom.setText("Le nom est obligatoire."); valide = false;
+                }
+                if (txtEmail.getText().trim().isEmpty()) {
+                    errEmail.setText("L'email est obligatoire."); valide = false;
+                }
+                String siret = txtSiret.getText().trim();
+                if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
+                    errSiret.setText("Le SIRET doit contenir exactement 14 chiffres."); valide = false;
+                }
+
+                if (!valide) {
+                    ev.consume();
+                    return;
+                }
+
+                c.setType(comboType.getValue());
+                c.setNom(txtNom.getText().trim());
+                c.setPrenom(txtPrenom.getText().trim());
+                c.setEmail(txtEmail.getText().trim());
+                c.setTel(txtTel.getText().trim());
+                c.setAdresse(txtAdresse.getText().trim());
+                c.setSiret(siret);
+                c.setNum_tva(txtNumTva.getText().trim());
+
+                try {
+                    tiersService.modifierTiers(c);
+                    dialog.close();
+                    chargerTousClients();
+                    afficherDetail(c);
+                    showInfo("Succès", "Client/Fournisseur modifié avec succès !");
+                } catch (Exception ex) {
+                    errNom.setText("Erreur : " + ex.getMessage());
+                    ev.consume();
+                }
+            });
         }
+
         if (btnCancel != null) {
-            btnCancel.setStyle("-fx-background-color: #e5e7eb; -fx-text-fill: #333333; -fx-background-radius: 5; -fx-cursor: hand; -fx-padding: 8 16;");
+            btnCancel.setText("Annuler");
+            btnCancel.getStyleClass().add("button-annuler");
         }
 
-        Optional<ButtonType> result = dialog.showAndWait();
-        if (result.isEmpty() || result.get() != btnModifier) return;
+        dp.setPrefWidth(720);
+        dp.setMinWidth(560);
+        dp.setMinHeight(Region.USE_PREF_SIZE);
+        dp.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        dp.setMaxHeight(600);
 
-        // Validation (COMME DANS CREATION)
-        if (comboType.getValue() == null || txtNom.getText().trim().isEmpty() || txtEmail.getText().trim().isEmpty()) {
-            afficherErreur("Le type, le nom et l'email sont obligatoires.");
-            return;
-        }
-
-        String siret = txtSiret.getText().trim();
-        if (!siret.isEmpty() && (siret.length() != 14 || !siret.matches("\\d+"))) {
-            afficherErreur("Le SIRET doit contenir exactement 14 chiffres.");
-            return;
-        }
-
-        clientSelectionne.setType(comboType.getValue());
-        clientSelectionne.setNom(txtNom.getText().trim());
-        clientSelectionne.setPrenom(txtPrenom.getText().trim());
-        clientSelectionne.setEmail(txtEmail.getText().trim());
-        clientSelectionne.setTel(txtTel.getText().trim());
-        clientSelectionne.setAdresse(txtAdresse.getText().trim());
-        clientSelectionne.setSiret(siret);
-        clientSelectionne.setNum_tva(txtNumTva.getText().trim());
-
-        try {
-            tiersService.modifierTiers(clientSelectionne);
-            afficherSucces("Client/Fournisseur modifié avec succès !");
-            chargerTousClients();
-            afficherDetail(clientSelectionne);
-        } catch (Exception e) {
-            afficherErreur("Erreur modification : " + e.getMessage());
-        }
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.showAndWait();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Suppression
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Supprime le tiers sélectionné après confirmation.
+     * Liaison FXML : {@code btnSupprimer}.
+     *
+     * @throws SQLException affichée via alerte en cas d'échec
+     */
     @FXML
     private void supprimerClient() {
         if (clientSelectionne == null) return;
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Supprimer");
-        confirm.setHeaderText("Supprimer le client " + clientSelectionne.getNom() + " ?");
+        confirm.setHeaderText("Supprimer " + clientSelectionne.getNom() + " ?");
         confirm.setContentText("Cette action est irréversible.");
-        confirm.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
+        appliquerStyleDialog(confirm.getDialogPane());
 
         confirm.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.OK) {
                 try {
                     tiersService.supprimerTiers(clientSelectionne.getId());
-                    afficherSucces("Client supprimé avec succès !");
                     viderDetail();
                     chargerTousClients();
+                    showInfo("Succès", "Client supprimé avec succès !");
                 } catch (SQLException e) {
-                    afficherErreur("Erreur suppression : " + e.getMessage());
+                    showError("Erreur suppression", e.getMessage());
                 }
             }
         });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Filtre / Recherche
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Filtre le tableau selon la recherche textuelle et le type sélectionné.
+     * Liaison FXML : {@code searchField}, {@code comboTypeFiltre}.
+     */
     @FXML
     private void filtrer() {
         String recherche = searchField.getText().toLowerCase().trim();
@@ -465,7 +620,7 @@ public class ClientsController implements Initializable {
                         c.getEmail().toLowerCase().contains(recherche))
                 .filter(c -> {
                     if (typeFiltre == null || typeFiltre.equals("Tous")) return true;
-                    if (typeFiltre.equals("Client")) return c.getType() == TiersType.CLIENT;
+                    if (typeFiltre.equals("Client"))      return c.getType() == TiersType.CLIENT;
                     if (typeFiltre.equals("Fournisseur")) return c.getType() == TiersType.FOURNISSEUR;
                     return true;
                 })
@@ -475,16 +630,28 @@ public class ClientsController implements Initializable {
         lblNbClients.setText(filtres.size() + " client(s)");
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Chargement & détail
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Recharge la liste complète des tiers depuis la base de données.
+     */
     private void chargerTousClients() {
         try {
             tousLesClients.setAll(tiersService.obtenirTousLesTiers());
             tableClients.setItems(tousLesClients);
             lblNbClients.setText(tousLesClients.size() + " client(s)");
         } catch (SQLException e) {
-            afficherErreur("Impossible de charger les clients : " + e.getMessage());
+            showError("Erreur SQL", "Impossible de charger les clients : " + e.getMessage());
         }
     }
 
+    /**
+     * Affiche les informations du tiers dans le panneau de détail.
+     *
+     * @param client tiers sélectionné
+     */
     private void afficherDetail(Tiers client) {
         detailType.setText(client.getType().name());
         detailNom.setText(client.getNom());
@@ -496,35 +663,45 @@ public class ClientsController implements Initializable {
         detailNumTva.setText(client.getNum_tva() != null ? client.getNum_tva() : "Non renseigné");
     }
 
+    /**
+     * Vide le panneau de détail et désactive les actions.
+     */
     private void viderDetail() {
         clientSelectionne = null;
-        detailType.setText("");
-        detailNom.setText("");
-        detailPrenom.setText("");
-        detailEmail.setText("");
-        detailTel.setText("");
-        detailAdresse.setText("");
-        detailSiret.setText("");
-        detailNumTva.setText("");
+        detailType.setText(""); detailNom.setText(""); detailPrenom.setText("");
+        detailEmail.setText(""); detailTel.setText(""); detailAdresse.setText("");
+        detailSiret.setText(""); detailNumTva.setText("");
         btnModifier.setDisable(true);
         btnSupprimer.setDisable(true);
     }
 
-    private void afficherErreur(String msg) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Erreur");
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
-        alert.showAndWait();
+    // ─────────────────────────────────────────────────────────────
+    // Dialogs utilitaires
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Affiche une alerte d'erreur.
+     *
+     * @param title titre de la fenêtre
+     * @param msg message affiché
+     */
+    private void showError(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.ERROR);
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg);
+        appliquerStyleDialog(a.getDialogPane());
+        a.showAndWait();
     }
 
-    private void afficherSucces(String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Succès");
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.getDialogPane().setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10;");
-        alert.showAndWait();
+    /**
+     * Affiche une alerte d'information.
+     *
+     * @param title titre de la fenêtre
+     * @param msg message affiché
+     */
+    private void showInfo(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg);
+        appliquerStyleDialog(a.getDialogPane());
+        a.showAndWait();
     }
 }

@@ -19,23 +19,40 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 
+/**
+ * Contrôleur FXML de la page de connexion ({@code bienvenue-view.fxml}).
+ * Liaisons FXML : {@code mail_connexion}, {@code mdp_connexion}, {@code save_connexion}, {@code errror_connexion}.
+ * Navigation post-authentification vers {@code menu-view.fxml} via {@link HelloApplication#changerPageGlobale}.
+ */
 public class BienvenueController {
 
+    /** Texte d'accueil affiché sur la page de connexion. */
     @FXML
     private Label welcomeText;
 
+    /** Service de mémorisation de l'e-mail de connexion. */
     private final SessionService prefService = new SessionService();
+    /** Service d'authentification et de gestion des utilisateurs. */
     private final UserService userService = new UserService();
 
+    /** Message d'erreur ou de confirmation affiché sous le formulaire. */
     @FXML
     private Text errror_connexion;
+    /** Champ de saisie de l'adresse e-mail. */
     @FXML
     private TextField mail_connexion;
+    /** Champ de saisie du mot de passe. */
     @FXML
     private PasswordField mdp_connexion;
+    /** Case à cocher pour mémoriser l'e-mail saisi. */
     @FXML
     private CheckBox save_connexion;
 
+    /**
+     * Préremplit l'email sauvegardé et lie la touche Entrée du mot de passe à la connexion.
+     *
+     * @throws RuntimeException non propagée ; erreurs affichées dans l'interface
+     */
     @FXML
     public void initialize() {
         if (prefService.hasEmailSauvegarde()) {
@@ -45,6 +62,12 @@ public class BienvenueController {
         mdp_connexion.setOnAction(event -> onLoginClick(null));
     }
 
+    /**
+     * Ouvre une popup de réinitialisation de mot de passe par email.
+     * Liaison FXML : action du lien « mot de passe oublié ».
+     *
+     * @param actionEvent événement du bouton ou lien (non utilisé)
+     */
     @FXML
     public void mdpOublieClicked(ActionEvent actionEvent) {
         Label message = new Label("Entrez votre adresse mail de récupération :");
@@ -91,10 +114,8 @@ public class BienvenueController {
                     }
 
                     String token = ConnexionService.generateRandomMdp(12);
-                    String hashedToken = userService.hashPassword(token);
-
                     User user = userService.getUserByEmail(email);
-                    userService.updateUserPassword(user.getId(), hashedToken);
+                    userService.updateUserPassword(user.getId(), token);
 
                     MailService.EnvoyerMail(
                             email,
@@ -120,6 +141,13 @@ public class BienvenueController {
         });
     }
 
+    /**
+     * Authentifie l'utilisateur, ouvre la session JWT/WebSocket et navigue vers le menu principal.
+     * Liaison FXML : bouton de connexion et action Entrée sur le champ mot de passe.
+     *
+     * @param actionEvent événement du bouton (peut être {@code null} lors d'un déclenchement clavier)
+     * @throws SecurityException propagée si le compte est verrouillé ou inactif
+     */
     @FXML
     protected void onLoginClick(ActionEvent actionEvent) {
         String mail = mail_connexion.getText();
@@ -133,8 +161,7 @@ public class BienvenueController {
         }
 
         try {
-            String passwordHash = userService.hashPassword(password);
-            User connectedUser = userService.authenticate(mail, passwordHash);
+            User connectedUser = userService.authenticate(mail, password);
 
             if (connectedUser == null) {
                 errror_connexion.setText("Erreur : identifiants incorrects.");

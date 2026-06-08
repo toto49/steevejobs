@@ -5,7 +5,7 @@ import com.eseo.steevejobs.model.Message;
 import com.eseo.steevejobs.model.Ticket;
 import com.eseo.steevejobs.model.User;
 import com.eseo.steevejobs.service.*;
-
+import com.eseo.steevejobs.util.TestRuntime;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -24,47 +24,81 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Contrôleur FXML du détail d'un ticket (fil de messages).
+ * Liaisons FXML : {@code chatMessagesContainer}, {@code messageInput}, en-tête et statut.
+ */
 public class TicketController {
 
+    /** Service de gestion des tickets. */
     private final TicketService ticketService = new TicketServiceImpl();
+    /** Service de gestion des utilisateurs. */
     private final UserService userService = new UserService();
 
+    /** Instance du contrôleur de détail ticket actuellement affichée. */
     private static TicketController activeInstance;
 
+    /** Label affichant le numéro du ticket. */
     @FXML
     private Label ticketTitleLabel;
+    /** Label affichant l'objet du ticket. */
     @FXML
     private Label ticketObjectLabel;
+    /** Conteneur des bulles de messages du fil de discussion. */
     @FXML
     private VBox chatMessagesContainer;
+    /** Champ de saisie d'un nouveau message. */
     @FXML
     private TextField messageInput;
+    /** Label affichant le service du ticket. */
     @FXML
     private Label serviceLabel;
+    /** Label affichant le statut du ticket. */
     @FXML
     private Label statusLabel;
+    /** Label affichant la date de création du ticket. */
     @FXML
     private Label dateLabel;
+    /** Bouton de fermeture ou réouverture du ticket. */
     @FXML
     private Button actionButton;
+    /** Panneau défilant contenant les messages. */
     @FXML
     private ScrollPane messageScrollPane;
+    /** Label affichant la description du ticket. */
     @FXML
     private Label descriptionLabel;
 
+    /** Ticket actuellement affiché dans le chat. */
     private Ticket currentTicket;
+    /** Identifiant du ticket affiché, ou -1 si aucun. */
+    private int viewingTicketId = -1;
+    /** Utilisateur connecté consultant le ticket. */
     private User currentUser;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM à HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy\nHH:mm:ss");
 
+    /**
+     * Retourne l'instance active du chat ticket.
+     *
+     * @return contrôleur ouvert ou {@code null}
+     */
     public static TicketController getActiveInstance() {
         return activeInstance;
     }
 
+    /**
+     * Identifiant du ticket actuellement affiché.
+     *
+     * @return identifiant ticket ou {@code -1} si aucun chat actif
+     */
     public int getCurrentTicketId() {
-        return currentTicket != null ? currentTicket.getId() : -1;
+        return viewingTicketId;
     }
 
+    /**
+     * Initialise l'utilisateur courant et le défilement automatique du fil de messages.
+     */
     @FXML
     public void initialize() {
         this.currentUser = SessionService.getUtilisateurConnecte();
@@ -76,13 +110,32 @@ public class TicketController {
         });
     }
 
+    /**
+     * Libère la session chat active (appelé lors d'un changement de page menu).
+     */
     public static void fermerChat() {
+        if (activeInstance != null) {
+            activeInstance.viewingTicketId = -1;
+            activeInstance.currentTicket = null;
+        }
         activeInstance = null;
     }
 
+    /**
+     * Réinitialise l'état interne du chat actif sans fermer la vue.
+     */
+    private void libererSessionChat() {
+        viewingTicketId = -1;
+        currentTicket = null;
+        activeInstance = null;
+    }
+
+    /**
+     * Recharge le fil de messages sans indicateur de chargement (callback WebSocket).
+     */
     public void refreshChatSilently() {
-        if (currentTicket == null) return;
-        int ticketId = currentTicket.getId();
+        if (TestRuntime.isEnabled() || viewingTicketId <= 0) return;
+        int ticketId = viewingTicketId;
         CompletableFuture.supplyAsync(() -> {
             currentTicket = ticketService.getTicketById(ticketId);
             return ticketService.getMessagesDuTicket(ticketId);
@@ -100,6 +153,9 @@ public class TicketController {
         });
     }
 
+    /**
+     * Marque le ticket comme non lu et envoie une notification WebSocket aux destinataires concernés.
+     */
     private void notifierMiseAJourTicket() {
         try {
             if (WebSocketService.getInstance() != null) {
@@ -144,6 +200,10 @@ public class TicketController {
         }
     }
 
+    /**
+     * Envoie le message saisi et notifie les destinataires via WebSocket.
+     * Liaison FXML : bouton d'envoi ou action Entrée sur {@code messageInput}.
+     */
     @FXML
     public void handleSendMessage() {
         String texte = messageInput.getText().trim();
@@ -180,6 +240,12 @@ public class TicketController {
         });
     }
 
+    /**
+     * Construit une bulle de message alignée selon l'auteur.
+     *
+     * @param message message à afficher
+     * @return conteneur graphique du message
+     */
     private HBox creerMessageBubble(Message message) {
         HBox messageWrapper = new HBox();
         messageWrapper.setPadding(new Insets(5, 0, 5, 0));
@@ -216,6 +282,12 @@ public class TicketController {
         return messageWrapper;
     }
 
+    /**
+     * Bascule le statut du ticket entre ouvert et fermé.
+     * Liaison FXML : {@code actionButton}.
+     *
+     * @param actionEvent événement du bouton (non utilisé)
+     */
     @FXML
     public void handleToggleTicketStatus(ActionEvent actionEvent) {
         if (currentTicket == null) return;
@@ -242,6 +314,9 @@ public class TicketController {
         });
     }
 
+    /**
+     * Met à jour les labels de statut et l'état du champ de saisie selon le ticket courant.
+     */
     private void updateStatusUI() {
         if (currentTicket == null) return;
 
@@ -262,13 +337,19 @@ public class TicketController {
             actionButton.setStyle("-fx-background-color: #E74C3C; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand;");
 
             messageInput.setDisable(false);
-            messageInput.setPromptText("Écrivez ici...");
+            messageInput.setPromptText("Ecrivez votre message...");
         }
     }
 
+    /**
+     * Retourne à la liste des tickets (mes tickets ou filtre service selon le rôle).
+     * Liaison FXML : bouton retour.
+     *
+     * @param actionEvent événement du bouton (non utilisé)
+     */
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
-        activeInstance = null;
+        libererSessionChat();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticketsList-view.fxml"));
             Parent view = loader.load();
@@ -291,17 +372,53 @@ public class TicketController {
         }
     }
 
+    /**
+     * Affiche une alerte d'avertissement stylisée.
+     *
+     * @param title titre de la fenêtre
+     * @param content message affiché
+     */
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
+        appliquerStyleDialog(alert.getDialogPane());
         alert.showAndWait();
     }
 
+    /**
+     * Applique la feuille de style popup aux boutons d'une boîte de dialogue.
+     *
+     * @param dp panneau de dialogue cible
+     */
+    private void appliquerStyleDialog(DialogPane dp) {
+        java.net.URL popupUrl = getClass().getResource("/style/popup.css");
+        if (popupUrl != null) dp.getStylesheets().add(popupUrl.toExternalForm());
+
+        Button btnOk = (Button) dp.lookupButton(ButtonType.OK);
+        if (btnOk != null) btnOk.getStyleClass().add("button-ok");
+
+        Button btnCancel = (Button) dp.lookupButton(ButtonType.CANCEL);
+        if (btnCancel != null) btnCancel.getStyleClass().add("button-cancel");
+    }
+
+    /**
+     * Charge un ticket par identifiant et affiche le fil de messages.
+     * Implémentation de {@link ParametrizedController#initData(String)} avec conversion entière.
+     *
+     * @param ticketId identifiant du ticket à ouvrir
+     */
     public void initData(int ticketId) {
         activeInstance = this;
+        viewingTicketId = ticketId;
+        if (TestRuntime.isEnabled()) {
+            return;
+        }
         chatMessagesContainer.getChildren().clear();
+        messageInput.clear();
+        messageInput.setDisable(false);
+        messageInput.setPromptText("Ecrivez votre message...");
 
         ProgressIndicator loader = new ProgressIndicator();
         loader.setMaxSize(50, 50);
