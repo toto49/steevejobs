@@ -93,7 +93,8 @@
                                                                         <Label text="NOTIFICATIONS PUSH :"
                                                                                style="-fx-text-fill: black;"/>
                                                                         <CheckBox fx:id="pushNotificationsToggle"
-                                                                                  mnemonicParsing="false"/>
+                                                                                  mnemonicParsing="false"
+                                                                                  onAction="#togglePushNotification"/>
                                                                     </children>
                                                                 </HBox>
 
@@ -224,19 +225,25 @@
                                                                    GridPane.columnIndex="1"
                                                                    GridPane.rowIndex="1"
                                                                    styleClass="champform"/>
-
-                                                        <Label text="NOM :" GridPane.rowIndex="2"
+                                                        <Label text="ADRESSE :" GridPane.rowIndex="2"
                                                                style="-fx-text-fill: black;"/>
-                                                        <TextField fx:id="nomField"
+                                                        <TextField fx:id="adresseField"
                                                                    GridPane.columnIndex="1"
                                                                    GridPane.rowIndex="2"
                                                                    styleClass="champform"/>
 
-                                                        <Label text="PRÉNOM :" GridPane.rowIndex="3"
+                                                        <Label text="NOM :" GridPane.rowIndex="3"
+                                                               style="-fx-text-fill: black;"/>
+                                                        <TextField fx:id="nomField"
+                                                                   GridPane.columnIndex="1"
+                                                                   GridPane.rowIndex="3"
+                                                                   styleClass="champform"/>
+
+                                                        <Label text="PRÉNOM :" GridPane.rowIndex="4"
                                                                style="-fx-text-fill: black;"/>
                                                         <TextField fx:id="prenomField"
                                                                    GridPane.columnIndex="1"
-                                                                   GridPane.rowIndex="3"
+                                                                   GridPane.rowIndex="4"
                                                                    styleClass="champform"/>
                                                     </children>
                                                 </GridPane>

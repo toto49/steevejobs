@@ -48,6 +48,8 @@ public class ParametresController {
     /** Champ de saisie du prénom. */
     @FXML
     private TextField prenomField;
+    @FXML
+    private TextField adresseField;
 
     /** Case à cocher d'activation des notifications push. */
     @FXML
@@ -101,6 +103,7 @@ public class ParametresController {
             nomField.setText(user.getNom() != null ? user.getNom() : "");
             prenomField.setText(user.getPrenom() != null ? user.getPrenom() : "");
             telField.setText(user.getTel() != null ? user.getTel() : "");
+            adresseField.setText(user.getAdresse() != null ? user.getAdresse() : "");
         }
     }
 
@@ -122,6 +125,28 @@ public class ParametresController {
     }
 
     /**
+     * Active ou désactive les notifications push directement lors du clic sur la case à cocher.
+     * Liaison FXML : {@code pushNotificationsToggle}.
+     *
+     * @param event événement de la case à cocher (non utilisé)
+     */
+    @FXML
+    void togglePushNotification(ActionEvent event) {
+        boolean isPushEnabled = pushNotificationsToggle.isSelected();
+
+        // Sauvegarde immédiate dans les préférences locales de la machine
+        prefs.putBoolean("push_enabled", isPushEnabled);
+
+        if (isPushEnabled) {
+            // Envoi instantané du test système pour confirmer l'activation à l'utilisateur
+            SystemNotificationService.send("SteeveJobs - Notifications", "Les notifications push sont désormais activées !");
+        } else {
+            // Optionnel : Une petite alerte discrète ou un log pour confirmer la désactivation
+            SystemNotificationService.send("SteeveJobs - Notifications", "Les notifications push ne sont désormais plus activées !");
+
+        }
+    }
+    /**
      * Enregistre les informations personnelles modifiées et envoie un email de confirmation.
      * Liaison FXML : bouton d'enregistrement du profil.
      *
@@ -142,6 +167,7 @@ public class ParametresController {
             currentUser.setNom(nomField.getText().trim());
             currentUser.setPrenom(prenomField.getText().trim());
             currentUser.setTel(telField.getText().trim());
+            currentUser.setAdresse(adresseField.getText().trim());
             userService.updateUser(currentUser);
             SessionService.setUtilisateurConnecte(currentUser);
 

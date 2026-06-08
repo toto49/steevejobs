@@ -372,6 +372,10 @@ public class AdminUserController {
         emailField.setPromptText("Email");
         emailField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
 
+        TextField adresseField = new TextField(user.getAdresse() != null ? user.getAdresse() : "");
+        adresseField.setPromptText("Adresse");
+        adresseField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
         TextField telField = new TextField(user.getTel() != null ? user.getTel() : "");
         telField.setPromptText("Téléphone");
         telField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
@@ -398,13 +402,13 @@ public class AdminUserController {
         HBox buttonBox = new HBox(15, btnResetPwd, btnSave);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
 
-        VBox layout = new VBox(10, message, nomField, prenomField, emailField, telField, roleBox, posteField, popupMessageLabel, buttonBox);
+        VBox layout = new VBox(10, message, nomField, prenomField, emailField, adresseField, telField, roleBox, posteField, popupMessageLabel, buttonBox);
         layout.setStyle("-fx-background-color: #f4f5f7; -fx-padding: 20; -fx-border-color: #d1d5db;");
 
         Stage popup = new Stage();
         popup.initModality(Modality.APPLICATION_MODAL);
         popup.setTitle("Modifier l'Utilisateur");
-        popup.setScene(new Scene(layout, 400, 450));
+        popup.setScene(new Scene(layout, 400, 550));
         popup.setResizable(false);
         popup.show();
 
@@ -412,6 +416,7 @@ public class AdminUserController {
             String nom = nomField.getText().trim();
             String prenom = prenomField.getText().trim();
             String email = emailField.getText().trim();
+            String adresse = adresseField.getText().trim();
             String tel = telField.getText().trim();
             String role = roleBox.getValue();
             String poste = posteField.getText().trim();
@@ -426,6 +431,7 @@ public class AdminUserController {
                 user.setNom(nom);
                 user.setPrenom(prenom);
                 user.setEmail(email);
+                user.setAdresse(adresse);
                 user.setTel(tel);
                 user.setRole(role);
                 user.setPoste(poste);
@@ -502,6 +508,10 @@ public class AdminUserController {
         emailField.setPromptText("Email");
         emailField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
 
+        TextField adresseField = new TextField();
+        adresseField.setPromptText("Adresse");
+        adresseField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
+
         TextField telField = new TextField();
         telField.setPromptText("Téléphone");
         telField.setStyle("-fx-background-color: white; -fx-text-fill: black; -fx-border-color: #d1d5db; -fx-font-size: 14px; -fx-border-radius: 5;");
@@ -525,13 +535,13 @@ public class AdminUserController {
         HBox buttonBox = new HBox(button);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
 
-        VBox layout = new VBox(10, message, nomField, prenomField, emailField, telField, roleBox, posteField, popupMessageLabel, buttonBox);
+        VBox layout = new VBox(10, message, nomField, prenomField, emailField, adresseField, telField, roleBox, posteField, popupMessageLabel, buttonBox);
         layout.setStyle("-fx-background-color: #f4f5f7; -fx-padding: 20; -fx-border-color: #d1d5db;");
 
         Stage popup = new Stage();
         popup.initModality(Modality.APPLICATION_MODAL);
         popup.setTitle("Ajouter un Utilisateur");
-        popup.setScene(new Scene(layout, 350, 450));
+        popup.setScene(new Scene(layout, 350, 550));
         popup.setResizable(false);
         popup.show();
 
@@ -539,6 +549,7 @@ public class AdminUserController {
             String nom = nomField.getText().trim();
             String prenom = prenomField.getText().trim();
             String email = emailField.getText().trim();
+            String adresse = adresseField.getText().trim();
             String tel = telField.getText().trim();
             String role = roleBox.getValue();
             String poste = posteField.getText().trim();
@@ -560,7 +571,7 @@ public class AdminUserController {
                     }
 
                     String plainToken = ConnexionService.generateRandomMdp(12);
-                    User newUser = new User(0, nom, prenom, email, plainToken, "", role, tel, poste, true);
+                    User newUser = new User(0, nom, prenom, email, plainToken, adresse, role, tel, poste, true);
                     userService.createUser(newUser);
 
                     MailService.EnvoyerMail(
