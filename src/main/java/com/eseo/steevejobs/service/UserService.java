@@ -73,9 +73,10 @@ public class UserService {
     }
 
     /**
-     * Met à jour un utilisateur existant.
+     * Met à jour le profil d'un utilisateur existant (données personnelles, rôle, etc.).
+     * Le mot de passe n'est jamais modifié ici : utiliser {@link #updateUserPassword(int, String)}.
      *
-     * @param user utilisateur avec identifiant valide
+     * @param user utilisateur avec identifiant valide et champs à persister
      * @throws IllegalArgumentException si identifiant ou email invalides
      * @throws SQLException             en cas d'erreur d'accès base
      */
@@ -97,7 +98,17 @@ public class UserService {
             throw new IllegalArgumentException("Cet email est déjà utilisé par un autre utilisateur");
         }
 
-        userDAO.updateUser(user);
+        existingUser.setNom(user.getNom());
+        existingUser.setPrenom(user.getPrenom());
+        existingUser.setEmail(user.getEmail());
+        existingUser.setAdresse(user.getAdresse());
+        existingUser.setTel(user.getTel());
+        existingUser.setRole(user.getRole());
+        existingUser.setPoste(user.getPoste());
+        existingUser.setActif(user.isActif());
+        existingUser.setTaux(user.getTaux());
+
+        userDAO.updateUser(existingUser);
     }
 
     /**
