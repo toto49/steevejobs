@@ -349,18 +349,23 @@ public class TicketController {
      */
     @FXML
     public void handleRetour(ActionEvent actionEvent) {
+        boolean jeSuisAuteur = true;
+        String serviceDuTicket = "RH";
+
+        if (currentTicket != null) {
+            jeSuisAuteur = (currentTicket.getAuteur().getId() == currentUser.getId());
+            serviceDuTicket = currentTicket.getService();
+        }
         libererSessionChat();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/eseo/steevejobs/view/ticketsList-view.fxml"));
             Parent view = loader.load();
             TicketsListController controller = loader.getController();
 
-            boolean jeSuisAuteur = (currentTicket.getAuteur().getId() == currentUser.getId());
-
             if (jeSuisAuteur) {
                 controller.afficherMesTickets();
             } else {
-                controller.initData(currentTicket.getService());
+                controller.initData(serviceDuTicket);
             }
 
             if (MenuController.getInstance() != null) {
@@ -368,7 +373,16 @@ public class TicketController {
                 MenuController.getInstance().changerTitre("Tickets");
             }
         } catch (Exception e) {
+            System.err.println("❌ Erreur lors du chargement de la liste des tickets au retour : " + e.getMessage());
             e.printStackTrace();
+            try {
+                if (MenuController.getInstance() != null) {
+                    MenuController.getInstance().chargerPage("home");
+                    MenuController.getInstance().changerTitre("Tableau de bord");
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
