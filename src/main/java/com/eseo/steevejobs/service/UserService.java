@@ -40,9 +40,10 @@ public class UserService {
     }
 
     /**
-     * Crée un utilisateur après validation et contrôle d'unicité de l'email.
+     * Crée un utilisateur après validation, contrôle d'unicité de l'email,
+     * et hachage automatique du mot de passe en jBCrypt.
      *
-     * @param user entité utilisateur (mot de passe déjà haché côté appelant si applicable)
+     * @param user entité utilisateur contenant le mot de passe en clair
      * @throws IllegalArgumentException si champs obligatoires manquants ou email existant
      * @throws SQLException             en cas d'erreur d'accès base
      */
@@ -62,6 +63,10 @@ public class UserService {
         if (userDAO.emailExists(user.getEmail())) {
             throw new IllegalArgumentException("Un utilisateur avec cet email existe déjà");
         }
+        String mdpClair = user.getPasswordHash();
+        String mdpHache = hashPassword(mdpClair);
+        user.setPasswordHash(mdpHache);
+
         userDAO.createUser(user);
     }
 
