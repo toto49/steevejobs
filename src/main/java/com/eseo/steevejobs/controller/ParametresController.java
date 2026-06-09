@@ -6,6 +6,7 @@ import com.eseo.steevejobs.service.MailService;
 import com.eseo.steevejobs.service.SessionService;
 import com.eseo.steevejobs.service.SystemNotificationService;
 import com.eseo.steevejobs.service.UserService;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -138,17 +139,15 @@ public class ParametresController {
         prefs.putBoolean("push_enabled", isPushEnabled);
 
         if (isPushEnabled) {
-            // Envoi instantané du test système pour confirmer l'activation à l'utilisateur
             SystemNotificationService.send("SteeveJobs - Notifications", "Les notifications push sont désormais activées !");
         } else {
-            // Optionnel : Une petite alerte discrète ou un log pour confirmer la désactivation
             SystemNotificationService.send("SteeveJobs - Notifications", "Les notifications push ne sont désormais plus activées !");
-
         }
     }
+
     /**
      * Enregistre les informations personnelles modifiées et envoie un email de confirmation.
-     * Liaison FXML : bouton d'enregistrement du profil.
+     * CORRECTION : Déporté dans un thread asynchrone pour éviter le gel de l'UI lors de l'accès BDD et de l'envoi de mail.
      *
      * @param event événement du bouton (non utilisé)
      */
@@ -156,45 +155,55 @@ public class ParametresController {
     void enregistrerInformations(ActionEvent event) {
         if (currentUser == null) return;
 
-        try {
-            String nouvelEmail = mailField.getText().trim();
+        // Récupération immédiate des données textuelles depuis le thread UI avant de basculer en arrière-plan
+        String nouvelEmail = mailField.getText().trim();
+        String nom = nomField.getText().trim();
+        String prenom = prenomField.getText().trim();
+        String tel = telField.getText().trim();
+        String adresse = adresseField.getText().trim();
+        boolean mémorisationEmailActive = ConnexionCheck.isSelected();
 
-            if (nouvelEmail.isEmpty() || nomField.getText().trim().isEmpty()) {
-                showAlert(Alert.AlertType.WARNING, "Attention", "L'email et le nom sont obligatoires.");
-                return;
-            }
-            currentUser.setEmail(nouvelEmail);
-            currentUser.setNom(nomField.getText().trim());
-            currentUser.setPrenom(prenomField.getText().trim());
-            currentUser.setTel(telField.getText().trim());
-            currentUser.setAdresse(adresseField.getText().trim());
-            userService.updateUser(currentUser);
-            SessionService.setUtilisateurConnecte(currentUser);
-
-            if (ConnexionCheck.isSelected()) {
-                sessionService.sauvegarderEmail(nouvelEmail);
-            }
-
-            String contenuemail =
-                    "Bonjour,\n\n" +
-                            "Vos informations personnelles ont été modifiées.\n" +
-                            "Si vous n’êtes pas à l’origine de ce changement, veuillez contacter immédiatement le service informatique.\n\n" +
-                            "Cordialement,\n" +
-                            "Le support technique";
-
-            MailService.EnvoyerMail(nouvelEmail, "Changement de vos informations", contenuemail);
-            showAlert(Alert.AlertType.INFORMATION, "Succès", "Vos informations ont été mises à jour avec succès.");
-
-        } catch (IllegalArgumentException e) {
-            showAlert(Alert.AlertType.WARNING, "Validation", e.getMessage());
-        } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Erreur serveur", "Impossible de mettre à jour vos informations.");
+        if (nouvelEmail.isEmpty() || nom.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Attention", "L'email et le nom sont obligatoires.");
+            return;
         }
+
+        // Création d'un thread de traitement en arrière-plan
+        new Thread(() -> {
+            try {
+                currentUser.setEmail(nouvelEmail);
+                currentUser.setNom(nom);
+                currentUser.setPrenom(prenom);
+                currentUser.setTel(tel);
+                currentUser.setAdresse(adresse);
+
+                userService.updateUser(currentUser);
+                SessionService.setUtilisateurConnecte(currentUser);
+
+                if (mémorisationEmailActive) {
+                    sessionService.sauvegarderEmail(nouvelEmail);
+                }
+                String contenuemail =
+                        "Bonjour,\n\n" +
+                                "Vos informations personnelles ont été modifiées.\n" +
+                                "Si vous n’êtes pas à l’origine de ce changement, veuillez contacter immédiatement le service informatique.\n\n" +
+                                "Cordialement,\n" +
+                                "Le support technique";
+
+                MailService.EnvoyerMail(nouvelEmail, "Changement de vos informations", contenuemail);
+                Platform.runLater(() -> showAlert(Alert.AlertType.INFORMATION, "Succès", "Vos informations ont été mises à jour avec succès."));
+
+            } catch (IllegalArgumentException e) {
+                Platform.runLater(() -> showAlert(Alert.AlertType.WARNING, "Validation", e.getMessage()));
+            } catch (SQLException e) {
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "Erreur serveur", "Impossible de mettre à jour vos informations."));
+            }
+        }).start();
     }
 
     /**
      * Valide et enregistre le nouveau mot de passe après vérification de l'ancien.
-     * Liaison FXML : bouton de validation sécurité.
+     * CORRECTION : Déporté dans un thread asynchrone pour l'exécution sécurisée et l'envoi de mail.
      *
      * @param event événement du bouton (non utilisé)
      */
@@ -220,35 +229,42 @@ public class ParametresController {
             return;
         }
 
-        try {
-            String contenuemail =
-                    "Bonjour,\n\n" +
-                            "Vos informations de connexion ont été modifiées.\n" +
-                            "Si vous n’êtes pas à l’origine de ce changement, veuillez contacter immédiatement le service informatique.\n\n" +
-                            "Cordialement,\n" +
-                            "Le support technique";
+        String emailDestinataire = currentUser.getEmail();
+        int idUtilisateur = currentUser.getId();
 
-            MailService.EnvoyerMail(currentUser.getEmail(), "Changement de vos informations de connexion", contenuemail);
-            userService.updateUserPassword(currentUser.getId(), nouveauMdp);
-            String nouveauHash = userService.hashPassword(nouveauMdp);
-            currentUser.setPasswordHash(nouveauHash);
+        new Thread(() -> {
+            try {
+                String contenuemail =
+                        "Bonjour,\n\n" +
+                                "Vos informations de connexion ont été modifiées.\n" +
+                                "Si vous n’êtes pas à l’origine de ce changement, veuillez contacter immédiatement le service informatique.\n\n" +
+                                "Cordialement,\n" +
+                                "Le support technique";
 
-            SessionService.setUtilisateurConnecte(currentUser);
-            ancienMdpField.clear();
-            nouveauMdpField.clear();
-            confirmerMdpField.clear();
+                MailService.EnvoyerMail(emailDestinataire, "Changement de vos informations de connexion", contenuemail);
 
-            showAlert(Alert.AlertType.INFORMATION, "Succès", "Votre mot de passe a été modifié.");
-        } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Erreur serveur", "Impossible de mettre à jour le mot de passe.");
-        }
+                userService.updateUserPassword(idUtilisateur, nouveauMdp);
+                String nouveauHash = userService.hashPassword(nouveauMdp);
+                currentUser.setPasswordHash(nouveauHash);
+
+                SessionService.setUtilisateurConnecte(currentUser);
+                Platform.runLater(() -> {
+                    ancienMdpField.clear();
+                    nouveauMdpField.clear();
+                    confirmerMdpField.clear();
+                    showAlert(Alert.AlertType.INFORMATION, "Succès", "Votre mot de passe a été modifié.");
+                });
+
+            } catch (SQLException e) {
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "Erreur serveur", "Impossible de mettre à jour le mot de passe."));
+            }
+        }).start();
     }
 
     /**
      * Enregistre la préférence de notifications push et envoie un message de test si activé.
-     * Liaison FXML : {@code pushNotificationsToggle}.
      *
-     * @param event événement de la case à cocher (non utilisé)
+     * @param event événement du bouton (non utilisé)
      */
     @FXML
     void testpush(ActionEvent event) {
@@ -263,7 +279,6 @@ public class ParametresController {
 
     /**
      * Gère le clic sur le bouton retour (journalisation uniquement).
-     * Liaison FXML : bouton retour.
      *
      * @param event événement du bouton (non utilisé)
      */
@@ -274,12 +289,17 @@ public class ParametresController {
 
     /**
      * Affiche une boîte de dialogue modale.
+     * Assure l'affichage correct peu importe si elle est appelée depuis le thread UI ou un thread secondaire.
      *
      * @param type type d'alerte
      * @param title titre de la fenêtre
      * @param content message affiché
      */
     private void showAlert(Alert.AlertType type, String title, String content) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> showAlert(type, title, content));
+            return;
+        }
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
@@ -289,7 +309,6 @@ public class ParametresController {
 
     /**
      * Réinitialise la session et navigue vers l'écran de connexion.
-     * Liaison FXML : bouton de déconnexion.
      *
      * @param actionEvent événement du bouton (non utilisé)
      */

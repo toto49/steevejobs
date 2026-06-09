@@ -458,6 +458,8 @@ public class AdminUserController {
                     try {
                         String plainToken = ConnexionService.generateRandomMdp(12);
                         userService.updateUserPassword(user.getId(), plainToken);
+                        String nouveauHash = userService.hashPassword(plainToken);
+                        user.setPasswordHash(nouveauHash);
 
                         MailService.EnvoyerMail(
                                 user.getEmail(),
