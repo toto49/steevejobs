@@ -63,9 +63,11 @@ public class UserService {
         if (userDAO.emailExists(user.getEmail())) {
             throw new IllegalArgumentException("Un utilisateur avec cet email existe déjà");
         }
-        String mdpClair = user.getPasswordHash();
-        String mdpHache = hashPassword(mdpClair);
-        user.setPasswordHash(mdpHache);
+        String mdp = user.getPasswordHash();
+        if (!isBcryptHash(mdp)) {
+            mdp = hashPassword(mdp);
+        }
+        user.setPasswordHash(mdp);
 
         userDAO.createUser(user);
     }
@@ -395,6 +397,12 @@ public class UserService {
      */
     public String hashPassword(String password) {
         return BCrypt.hashpw(password, BCrypt.gensalt(12));
+    }
+
+    private static boolean isBcryptHash(String value) {
+        return value != null
+                && value.length() == 60
+                && (value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$"));
     }
 
     /**

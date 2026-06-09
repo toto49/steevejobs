@@ -28,8 +28,7 @@ public class DatabaseSeeder {
                 admin.setNom("Administrateur");
                 admin.setPrenom("Principal");
                 admin.setEmail("admin@admin.fr");
-                String hashedMdp = userService.hashPassword("admin123");
-                admin.setPasswordHash(hashedMdp);
+                admin.setPasswordHash("admin123");
                 admin.setRole("ADMIN");
                 admin.setPoste("Directeur Général");
                 admin.setActif(true);
